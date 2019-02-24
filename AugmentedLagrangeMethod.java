@@ -199,27 +199,27 @@ public class AugmentedLagrangeMethod {
 		
 			if(unconstrained_optimizer == "Newton"){
 				
-				NewtonMethod unconstOptimizer = new NewtonMethod(1);
+				NewtonMethod unconstOptimizer = new NewtonMethod(augmentedLagrangian, further_args, 1);
 				
 				unconstOptimizer.set_version("ModNewton");
-				unconstOptimizer.do_Newton_Optimization(args_1, augmentedLagrangian, further_args);
+				unconstOptimizer.do_Newton_Optimization(args_1);
 				
 			}
 			
 			if(unconstrained_optimizer == "ConjugateGradient"){
 				
-				ConjugateGradient unconstOptimizer = new ConjugateGradient(1);
+				ConjugateGradient unconstOptimizer = new ConjugateGradient(augmentedLagrangian, further_args, 1);
 				
-				unconstOptimizer.do_Conjugate_Gradient_Optimization(args_1, augmentedLagrangian, further_args);
+				unconstOptimizer.do_Conjugate_Gradient_Optimization(args_1);
 				
 				
 			}
 			
 			if(unconstrained_optimizer == "L_BFGS"){
 				
-				L_BFGS  unconstOptimizer = new L_BFGS(1);
+				L_BFGS  unconstOptimizer = new L_BFGS(augmentedLagrangian, further_args, 1);
 				
-			    unconstOptimizer.do_LBFGS_Optimization(args_1, augmentedLagrangian, further_args);
+			    unconstOptimizer.do_LBFGS_Optimization(args_1);
 				
 			}
 			
@@ -539,7 +539,7 @@ public class AugmentedLagrangeMethod {
 	// test client
 	public static void main(String[] args){
 				
-		//test_1();
+		test_1();
 			
 		//unconstrained_optimizer = "ConjugateGradient";
 		//test_2();
