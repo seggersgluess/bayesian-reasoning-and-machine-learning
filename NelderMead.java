@@ -4,11 +4,19 @@ public class NelderMead extends UnconstrainedOptimizer{
 
 	
 	// constructor
-	public NelderMead(int max_iterations) {
+	public NelderMead(BiFunction<double [], double [], Double> g, int max_iterations) {
 		
-		super(max_iterations);
+		super(g, max_iterations);
 	
 	}
+	
+	
+	public NelderMead(BiFunction<double [], double [], Double> g, double [] further_args, int max_iterations) {
+		
+		super(g, further_args, max_iterations);
+	
+	}
+	
 	
 	//Meta parameters of Nelder-Mead optimization routine:
 	static double alpha = 1.0;
@@ -19,8 +27,6 @@ public class NelderMead extends UnconstrainedOptimizer{
 	
 	// returns potential candidates indices of sorted target function values
 	public static int [] get_sorted_candidates_idxs(double [][] candidates, BiFunction<double [], double [], Double> g, double [] further_args){
-		
-		f = g;
 		
 		int n_candidates = candidates[0].length;
 		double [] values =  new double [n_candidates];
@@ -130,14 +136,14 @@ public class NelderMead extends UnconstrainedOptimizer{
 	
 	
 	//main optimization routine of the Nelder-Mead optimization routine
-	public void do_Nelder_Mead_Optimization(double [][] start_candidates, BiFunction<double [], double [], Double> f, double [] further_args){
+	public void do_Nelder_Mead_Optimization(double [][] start_candidates){
 		
 		System.out.println("Start Nelder Mead Optimization");
 		
 		int n_candidates = start_candidates[0].length;
 		double [][] candidates = start_candidates;
 		
-		int [] sorted_candidates_idxs = get_sorted_candidates_idxs(candidates, f, further_args);
+		int [] sorted_candidates_idxs = get_sorted_candidates_idxs(candidates, f, further_args_f);
 		
 		int worst_candidate_idx     = sorted_candidates_idxs[(n_candidates-1)];
 		int sec_worst_candidate_idx = sorted_candidates_idxs[(n_candidates-2)];
@@ -149,7 +155,7 @@ public class NelderMead extends UnconstrainedOptimizer{
 		
 		for(int i=0; i<max_number_of_iterations; i++){
 						
-			sorted_candidates_idxs = get_sorted_candidates_idxs(candidates, f, further_args);
+			sorted_candidates_idxs = get_sorted_candidates_idxs(candidates, f, further_args_f);
 	
 			double [][] sorted_candidates = MatrixOperations.resort_matrix_columns(candidates, sorted_candidates_idxs);
 			double [][] best_candidates = MatrixOperations.get_sub_matrix_between_column_idxs(sorted_candidates, 0, (n_candidates-2));
@@ -164,14 +170,14 @@ public class NelderMead extends UnconstrainedOptimizer{
 			sec_worst_candidate = MatrixOperations.get_column_from_matrix(candidates, sec_worst_candidate_idx);
 			best_candidate      = MatrixOperations.get_column_from_matrix(candidates, best_candidate_idx);
 			
-			double worst_value     = targetFunction(worst_candidate, further_args);
-			double sec_worst_value = targetFunction(sec_worst_candidate, further_args);
-			double best_value      = targetFunction(best_candidate, further_args);
+			double worst_value     = targetFunction(worst_candidate, further_args_f);
+			double sec_worst_value = targetFunction(sec_worst_candidate, further_args_f);
+			double best_value      = targetFunction(best_candidate, further_args_f);
 			
 			//reflection step
 			double [] reflection = get_reflection_candidate(centroid, worst_candidate, alpha);
 			
-			double reflection_value = targetFunction(reflection, further_args);
+			double reflection_value = targetFunction(reflection, further_args_f);
 			
 			if(reflection_value >= best_value && reflection_value < sec_worst_value){
 				
@@ -184,7 +190,7 @@ public class NelderMead extends UnconstrainedOptimizer{
 										
 					double [] expansion = get_expansion_candidate(centroid, reflection, gamma);
 					
-					double expansion_value = targetFunction(expansion, further_args);
+					double expansion_value = targetFunction(expansion, further_args_f);
 					
 					if(expansion_value < reflection_value){
 						
@@ -203,7 +209,7 @@ public class NelderMead extends UnconstrainedOptimizer{
 								
 					double [] contraction = get_contraction_candidate(centroid, worst_candidate, rho);
 					
-					double contraction_value = targetFunction(contraction, further_args);
+					double contraction_value = targetFunction(contraction, further_args_f);
 					
 					if(contraction_value < worst_value){
 						
@@ -240,20 +246,21 @@ public class NelderMead extends UnconstrainedOptimizer{
 		}
 		
 		optimal_candidate = best_candidate;
-		optimal_value     = targetFunction(optimal_candidate, further_args);
+		optimal_value     = targetFunction(optimal_candidate, further_args_f);
 			
 	}
 	
 	
 	// test client
     public static void main(String[] args){
-    		
-    	NelderMead optim = new NelderMead(100000);
+    	
+    	//double [] further_args = null; //{1.0, 100.0};
+    	
+    	NelderMead optim = new NelderMead(TargetFunction::target_function, 100000);
     	
         double [][] start_candidates = {{10, 21.0, 81.0, 10.8, 4.8, -2.0}, {100.2, 21.05, 7.0, 10.8, 202.0, -11.5}};
-        double [] further_args = null; //{1.0, 100.0};	
-        
-    	optim.do_Nelder_Mead_Optimization(start_candidates, TargetFunction::rastrigin_function, further_args);
+        	      
+    	optim.do_Nelder_Mead_Optimization(start_candidates);
         
     	MatrixOperations.print_vector(optimal_candidate);
                

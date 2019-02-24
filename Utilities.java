@@ -119,6 +119,32 @@ public class Utilities {
 	}
 	
 	
+	// returns maximum of a supplied vector
+	public static double getMax(double[][] x){ 
+		    
+		double maxValue = x[0][0]; 
+		int nRows = x.length; 
+		int nCols = x[0].length;
+		
+		for(int i=0;i < nRows;i++){ 
+		    
+			for(int j=0; j<nCols; j++){
+				
+				if(x[i][j] > maxValue){ 
+			    	  
+					maxValue = x[i][j]; 
+				         
+				}
+				
+			}
+			  		      
+		} 
+		    
+		return maxValue; 
+		    
+	}
+	
+	
 	// returns minimum of a supplied vector
 	public static double getMin(double[] x){ 
 	    

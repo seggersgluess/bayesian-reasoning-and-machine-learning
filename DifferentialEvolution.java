@@ -4,9 +4,16 @@ public class DifferentialEvolution extends UnconstrainedOptimizer{
 
 	
 	// constructor
-	public DifferentialEvolution(int max_iterations) {
+	public DifferentialEvolution(BiFunction<double [], double [], Double> g, int max_iterations) {
 		
-		super(max_iterations);
+		super(g, max_iterations);
+	
+	}
+	
+	
+	public DifferentialEvolution(BiFunction<double [], double [], Double> g, double [] further_args, int max_iterations) {
+		
+		super(g, further_args, max_iterations);
 	
 	}
 	
@@ -22,7 +29,7 @@ public class DifferentialEvolution extends UnconstrainedOptimizer{
 		
 	
 	// main optimization routine of the differential evolution optimization routine
-	public void do_Differential_Evolution_Optimization(double [] upper_values, double [] lower_values, BiFunction<double [], double [], Double> g, double [] further_args){
+	public void do_Differential_Evolution_Optimization(double [] upper_values, double [] lower_values){
 	
 		if(upper_values.length != lower_values.length){
 			
@@ -34,8 +41,6 @@ public class DifferentialEvolution extends UnconstrainedOptimizer{
 		
 		upper_bounds = upper_values;
 		lower_bounds = lower_values;
-		
-		f = g;
 		
 		int n_args = upper_bounds.length;
 		
@@ -58,8 +63,8 @@ public class DifferentialEvolution extends UnconstrainedOptimizer{
 			
 			for(int j = 0; j < NP; j++){
 				
-				f_1 = targetFunction(MatrixOperations.get_column_from_matrix(prev_generation, j),further_args);			
-				f_2 = targetFunction(MatrixOperations.get_column_from_matrix(new_generation, j),further_args);
+				f_1 = targetFunction(MatrixOperations.get_column_from_matrix(prev_generation, j),further_args_f);			
+				f_2 = targetFunction(MatrixOperations.get_column_from_matrix(new_generation, j),further_args_f);
 				
 				if(f_2 < f_1){
 					
@@ -236,13 +241,12 @@ public class DifferentialEvolution extends UnconstrainedOptimizer{
 	// test client
     public static void main(String[] args) {
     	
-    	DifferentialEvolution optim = new DifferentialEvolution(10000000);
+    	DifferentialEvolution optim = new DifferentialEvolution(TargetFunction::rastrigin_function, 1000000);
     	
         double [] upper_values = {5.12, 5.12};
     	double [] lower_values = {-5.12, -5.12};
-    	double [] further_args = null;
         
-    	optim.do_Differential_Evolution_Optimization(upper_values, lower_values, TargetFunction::rastrigin_function, further_args);
+    	optim.do_Differential_Evolution_Optimization(upper_values, lower_values);
   
     	MatrixOperations.print_vector(optimal_candidate);
         System.out.println(number_of_iterations);

@@ -45,7 +45,7 @@ public class InteriorPointMethod {
 	}
 	
 				
-	// main optimization routine of augmented Lagrangian optimization routine
+	// main optimization routine of interior point optimization routine
 	public static void do_Interior_Point_Optimization(double [] start_value, BiFunction<double [], double [], Double> objective_function, double [] further_args, double [][] c_vec, double [][] A_matrix, double [][] b_vec, int n_iterations){
 		
 		f = objective_function;

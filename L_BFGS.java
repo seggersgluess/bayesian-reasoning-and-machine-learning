@@ -3,17 +3,43 @@ import java.util.function.BiFunction;
 public class L_BFGS extends UnconstrainedOptimizer{
 
 	// constructor
-	public L_BFGS(int max_iterations) {
+	public L_BFGS(BiFunction<double [], double [], Double> g, int max_iterations) {
 		
-		super(max_iterations);
+		super(g, max_iterations);
 	
 	}
 	
-
-	// main (Quasi-Newton) optimization routine of the Broyden, Fletcher, Goldfarb and Shanno (BFGS) optimization routine
-	public void do_LBFGS_Optimization(double [] start_value, BiFunction<double [], double [], Double> g, double [] further_args){
 	
-		f = g;
+	public L_BFGS(BiFunction<double [], double [], Double> g, double [] further_args, int max_iterations) {
+		
+		super(g, further_args, max_iterations);
+	
+	}
+	
+	
+	public L_BFGS(BiFunction<double [], double [], Double> g, BiFunction <double [], double [], double []> grad, int max_iterations) {
+		
+		super(g, grad, max_iterations);
+	
+	}
+	
+	
+	public L_BFGS(BiFunction<double [], double [], Double> g, double [] further_args, BiFunction <double [], double [], double []> grad, int max_iterations) {
+		
+		super(g, further_args, grad, max_iterations);
+	
+	}
+
+	
+	public L_BFGS(BiFunction<double [], double [], Double> g, double [] further_args, BiFunction <double [], double [], double []> grad, double [] further_args_grad, int max_iterations) {
+		
+		super(g, further_args, grad, further_args_grad, max_iterations);
+	
+	}
+	
+	
+	// main (Quasi-Newton) optimization routine of the Broyden, Fletcher, Goldfarb and Shanno (BFGS) optimization routine
+	public void do_LBFGS_Optimization(double [] start_value){
 		
 		int n_args = start_value.length;
 		
@@ -32,18 +58,38 @@ public class L_BFGS extends UnconstrainedOptimizer{
 		double [] args_2 = new double [n_args];
 		double [] delta_args = new double [n_args];
 		
+		double objective1;
+		double objective2;
+		
 		double [] further_args_4_gs;
 		
 		args_1 = start_value;
-		grad_1 = NumDeriv.gradient(f, args_1, further_args);
 		
+		if(grad == null){
+			
+			grad_1 = NumDeriv.gradient(f, args_1, further_args_f);
+			
+		}else{
+			
+			grad_1 = gradient(args_1);
+			
+		}
+			
 		inv_quasi_hessian = MatrixOperations.identity(n_args);
 		
 		for(int i = 0; i < max_number_of_iterations; i++){
 						
 			if(i > 0){
 				
-				grad_2      = NumDeriv.gradient(f, args_2, further_args);
+				if(grad == null){
+					
+					grad_2 = NumDeriv.gradient(f, args_2, further_args_f);
+					
+				}else{
+					
+					grad_2 = gradient(args_2);
+					
+				}
 				
 				delta_grads = MatrixOperations.add_vectors(grad_2, MatrixOperations.scalar_vector_multiplication(-1.0, grad_1));
 				delta_args  = MatrixOperations.add_vectors(args_2, MatrixOperations.scalar_vector_multiplication(-1.0, args_1));
@@ -55,6 +101,8 @@ public class L_BFGS extends UnconstrainedOptimizer{
 				
 			}
 		
+			//MatrixOperations.print_vector(grad_1);
+			
 			direction = MatrixOperations.scalar_vector_multiplication(-1.0, MatrixOperations.multiplyMatrixWithVec(inv_quasi_hessian, grad_1));
 							
 			GoldenSection.lower_bound = 0.0;
@@ -62,17 +110,22 @@ public class L_BFGS extends UnconstrainedOptimizer{
 				
 			further_args_4_gs = MatrixOperations.combine_vectors(args_1, direction);
 			
-		    if(further_args != null){
+		    if(further_args_f != null){
 		    	
-		    	further_args_4_gs = MatrixOperations.combine_vectors(further_args_4_gs, further_args);
+		    	further_args_4_gs = MatrixOperations.combine_vectors(further_args_4_gs, further_args_f);
 		    	
 		    }
 			
 			alpha = GoldenSection.do_Golden_Section_Optimization(alpha, L_BFGS::get_golden_section_opt_res, further_args_4_gs);
 						
 			args_2    = MatrixOperations.add_vectors(args_1, MatrixOperations.scalar_vector_multiplication(alpha, direction));
-																					
-			if(Math.abs(targetFunction(args_1, further_args) - targetFunction(args_2, further_args)) < convergence_criterion){
+					
+			objective1 = targetFunction(args_1, further_args_f);
+			objective2 = targetFunction(args_2, further_args_f);
+				
+			System.out.println(objective2);
+			
+			if(Math.abs(objective1 - objective2) < convergence_criterion){
 				
 				System.out.println("L-BFGS Optimization converged after " + i + " iterations");
 				
@@ -88,7 +141,7 @@ public class L_BFGS extends UnconstrainedOptimizer{
 		}
 		
 		optimal_candidate = args_2;
-		optimal_value     = targetFunction(args_2, further_args);
+		optimal_value     = targetFunction(args_2, further_args_f);
 			
 	}
 	
@@ -135,13 +188,14 @@ public class L_BFGS extends UnconstrainedOptimizer{
 	
 	// test client
     public static void main(String[] args) {
-    		
-    	L_BFGS optim = new L_BFGS(100000);
     	
     	double [] start_value = {3.05, -20.1};
-    	double [] further_args = {0.0, 1.0};
+    	double [] further_args = {1.0, 100.0};
     	
-    	optim.do_LBFGS_Optimization(start_value, TargetFunction::constrained_target_function_1, further_args);
+    	L_BFGS optim = new L_BFGS(TargetFunction::target_function_with_further_args, further_args, 100000);
+    	//L_BFGS optim = new L_BFGS(TargetFunction::target_function, 100000);
+    	
+    	optim.do_LBFGS_Optimization(start_value);
         
         MatrixOperations.print_vector(optimal_candidate);
         	

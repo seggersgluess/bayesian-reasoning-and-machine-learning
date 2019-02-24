@@ -3,18 +3,44 @@ import java.util.function.BiFunction;
 public class BFGS extends UnconstrainedOptimizer{
 
 	// constructor
-	public BFGS(int max_iterations) {
+	public BFGS(BiFunction<double [], double [], Double> g, int max_iterations) {
 		
-		super(max_iterations);
+		super(g, max_iterations);
 	
 	}
+	
+	
+	public BFGS(BiFunction<double [], double [], Double> g, double [] further_args, int max_iterations) {
 		
+		super(g, further_args, max_iterations);
+	
+	}
+	
+	
+	public BFGS(BiFunction<double [], double [], Double> g, BiFunction <double [], double [], double []> grad, int max_iterations) {
+		
+		super(g, grad, max_iterations);
+	
+	}
+	
+
+	public BFGS(BiFunction<double [], double [], Double> g, double [] further_args, BiFunction <double [], double [], double []> grad, int max_iterations) {
+		
+		super(g, further_args, grad, further_args_grad, max_iterations);
+	
+	}
+	
+	
+	public BFGS(BiFunction<double [], double [], Double> g, double [] further_args, BiFunction <double [], double [], double []> grad, double [] further_args_grad, int max_iterations) {
+		
+		super(g, further_args, grad, further_args_grad, max_iterations);
+	
+	}
+	
 	
 	// main (Quasi-Newton) optimization routine of the Broyden, Fletcher, Goldfarb and Shanno (BFGS) optimization routine
-	public void do_BFGS_Optimization(double [] start_value, BiFunction<double [], double [], Double> g, double [] further_args){
+	public void do_BFGS_Optimization(double [] start_value){
 	
-		f = g;
-		
 		int n_args = start_value.length;
 		
 		optimal_candidate = new double [n_args];
@@ -37,8 +63,17 @@ public class BFGS extends UnconstrainedOptimizer{
 		double [] further_args_4_gs;
 		
 		args_1 = start_value;
-		grad_1 = NumDeriv.gradient(f, args_1, further_args);
 		
+		if(grad == null){
+			
+			grad_1 = NumDeriv.gradient(f, args_1, further_args_f);
+			
+		}else{
+			
+			grad_1 = gradient(args_1);
+			
+		}
+				
 		quasi_hessian = MatrixOperations.identity(n_args);
 		inv_quasi_hessian = quasi_hessian;
 		
@@ -46,7 +81,15 @@ public class BFGS extends UnconstrainedOptimizer{
 						
 			if(i > 0){
 				
-				grad_2      = NumDeriv.gradient(f, args_2, further_args);
+				if(grad == null){
+					
+					grad_2      = NumDeriv.gradient(f, args_2, further_args_f);
+					
+				}else{
+					
+					grad_2 = gradient(args_2);
+					
+				}
 				
 				delta_grads = MatrixOperations.add_vectors(grad_2, MatrixOperations.scalar_vector_multiplication(-1.0, grad_1));
 				delta_args  = MatrixOperations.add_vectors(args_2, MatrixOperations.scalar_vector_multiplication(-1.0, args_1));
@@ -66,17 +109,17 @@ public class BFGS extends UnconstrainedOptimizer{
 				
 			further_args_4_gs = MatrixOperations.combine_vectors(args_1, direction);
 			
-		    if(further_args != null){
+		    if(further_args_f != null){
 		    	
-		    	further_args_4_gs = MatrixOperations.combine_vectors(further_args_4_gs, further_args);
+		    	further_args_4_gs = MatrixOperations.combine_vectors(further_args_4_gs, further_args_f);
 		    	
 		    }
 			
 			alpha = GoldenSection.do_Golden_Section_Optimization(alpha, BFGS::get_golden_section_opt_res, further_args_4_gs);
 						
 			args_2    = MatrixOperations.add_vectors(args_1, MatrixOperations.scalar_vector_multiplication(alpha, direction));
-																					
-			if(Math.abs(targetFunction(args_1, further_args) - targetFunction(args_2, further_args)) < convergence_criterion){
+					
+			if(Math.abs(targetFunction(args_1, further_args_f) - targetFunction(args_2, further_args_f)) < convergence_criterion){
 				
 				System.out.println("BFGS Optimization converged after " + i + " iterations");
 				
@@ -92,7 +135,7 @@ public class BFGS extends UnconstrainedOptimizer{
 		}
 		
 		optimal_candidate = args_2;
-		optimal_value     = targetFunction(args_2, further_args);
+		optimal_value     = targetFunction(args_2, further_args_f);
 		
 	}
 	
@@ -132,12 +175,12 @@ public class BFGS extends UnconstrainedOptimizer{
 	// test client
     public static void main(String[] args) {
     	
-    	BFGS optim = new BFGS(100000);
+    	BFGS optim = new BFGS(TargetFunction::target_function, 100000);
     	
     	double [] start_value = {1.05, 1.1};
-        double [] further_args = null;
+        //double [] further_args = null;
         
-        optim.do_BFGS_Optimization(start_value, TargetFunction::target_function, further_args);
+        optim.do_BFGS_Optimization(start_value);
           
     	//double [] further_args = {1.0, 100.0};
     	//optim.do_BFGS_Optimization(start_value, TargetFunction::target_function_with_further_args, further_args);

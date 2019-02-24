@@ -30,14 +30,14 @@ public class ReadTextFile {
 	  			fileData = MatrixOperations.cbind(MatrixOperations.transpose(convertLineIntoDoubleArray(st)),fileData);
 	  			
 	  		}
-	  		
+	  			  		
 	  		lineCount = lineCount + 1;
 	  		
 	  	} 
 	  	
 	  	fileData = MatrixOperations.transpose(fileData);
 	  	
-	  	MatrixOperations.print_matrix(fileData);
+	  	//MatrixOperations.print_matrix(fileData);
 	    
 		return fileData;
     
@@ -46,6 +46,8 @@ public class ReadTextFile {
     
     //returns double values from string line
     public static double [][] convertLineIntoDoubleArray(String strLine){
+    	
+    	String sep = "";
     	
     	int sepCount = 0;
     	  		
@@ -56,6 +58,20 @@ public class ReadTextFile {
     	
     	posIdx1 = 0;
     	posIdx2 = strLine.indexOf(",", 0);
+    	
+    	if(posIdx2 != -1){
+    		
+    		sep = ",";
+    		
+    	}
+    	
+    	posIdx2 = strLine.indexOf(";", 0);
+    	
+    	if(posIdx2 != -1){
+    	    		
+    		sep = ";";
+    	    		
+    	}
     	
     	while(posIdx2 != -1){
     		  
@@ -72,7 +88,7 @@ public class ReadTextFile {
     		}
     		
     		posIdx1 = posIdx2+1;
-    		posIdx2 = strLine.indexOf(",", posIdx1);
+    		posIdx2 = strLine.indexOf(sep, posIdx1);
     		
     		sepCount     = sepCount + 1;
     		
@@ -100,7 +116,7 @@ public class ReadTextFile {
     //test client
     public static void main(String[] args) throws Exception {
     	
-	    double [][] a = readfile("C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Test.txt");
+	    double [][] a = readfile("C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/RegTest.txt");
 
 	    System.out.println(a.length);
 	    

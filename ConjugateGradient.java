@@ -4,17 +4,43 @@ public class ConjugateGradient extends UnconstrainedOptimizer{
 
 	
 	// constructor
-	public ConjugateGradient(int max_iterations) {
+	public ConjugateGradient(BiFunction<double [], double [], Double> g, int max_iterations) {
 		
-		super(max_iterations);
+		super(g, max_iterations);
+	
+	}
+	
+	
+	public ConjugateGradient(BiFunction<double [], double [], Double> g, double [] further_args, int max_iterations) {
+		
+		super(g, further_args, max_iterations);
+	
+	}
+	
+	
+	public ConjugateGradient(BiFunction<double [], double [], Double> g, BiFunction <double [], double [], double []> grad, int max_iterations) {
+		
+		super(g, grad, max_iterations);
+	
+	}
+	
+	
+	public ConjugateGradient(BiFunction<double [], double [], Double> g, double [] further_args, BiFunction <double [], double [], double []> grad, int max_iterations) {
+		
+		super(g, further_args, grad, max_iterations);
 	
 	}
 
+	
+	public ConjugateGradient(BiFunction<double [], double [], Double> g, double [] further_args, BiFunction <double [], double [], double []> grad, double [] further_args_grad, int max_iterations) {
+		
+		super(g, further_args, grad, further_args_grad, max_iterations);
+	
+	}
+	
 
 	// main optimization routine of the Fletcher Reeves conjugate gradient optimization routine
-	public void do_Conjugate_Gradient_Optimization(double [] start_value, BiFunction<double [], double [], Double> g, double [] further_args){
-		
-		f = g;
+	public void do_Conjugate_Gradient_Optimization(double [] start_value){
 		
 		int n_args = start_value.length;
 		
@@ -36,8 +62,17 @@ public class ConjugateGradient extends UnconstrainedOptimizer{
 		args_1 = start_value;
 		
 		for(int i = 0; i < max_number_of_iterations; i++){
+			
+			if(grad == null){
 				
-			grad_1    = NumDeriv.gradient(f, args_1, further_args);
+				grad_1    = NumDeriv.gradient(f, args_1, further_args_f);
+				
+			}else{
+				
+				grad_1 = gradient(args_1);
+				
+			}
+			
 			direction = MatrixOperations.scalar_vector_multiplication(-1.0, grad_1);
 							
 			GoldenSection.lower_bound = 0.0;
@@ -45,9 +80,9 @@ public class ConjugateGradient extends UnconstrainedOptimizer{
 					    	
 		    further_args_4_gs_1 = MatrixOperations.combine_vectors(args_1, direction);
 		    	
-		    if(further_args != null){
+		    if(further_args_f != null){
 		    	
-		    	further_args_4_gs_1 = MatrixOperations.combine_vectors(further_args_4_gs_1, further_args);
+		    	further_args_4_gs_1 = MatrixOperations.combine_vectors(further_args_4_gs_1, further_args_f);
 		    	
 		    }
 		    	    
@@ -55,7 +90,16 @@ public class ConjugateGradient extends UnconstrainedOptimizer{
 			
 			args_2    = MatrixOperations.add_vectors(args_1, MatrixOperations.scalar_vector_multiplication(alpha_1, direction));
 			
-			grad_2    = NumDeriv.gradient(f,  args_2, further_args);
+			if(grad == null){
+				
+				grad_2    = NumDeriv.gradient(f, args_2, further_args_f);
+				
+			}else{
+				
+				grad_2 = gradient(args_2);
+				
+			}
+			
 			grad_2    = MatrixOperations.scalar_vector_multiplication(-1.0, grad_2);
 			lambda    = Math.pow(MatrixOperations.euclidian(grad_2), 2.0)/Math.pow(MatrixOperations.euclidian(grad_1), 2.0);
 			
@@ -63,9 +107,9 @@ public class ConjugateGradient extends UnconstrainedOptimizer{
 
 			further_args_4_gs_2 = MatrixOperations.combine_vectors(args_2, direction);
 			
-			if(further_args != null){
+			if(further_args_f != null){
 			    	
-				further_args_4_gs_2 = MatrixOperations.combine_vectors(further_args_4_gs_2, further_args);
+				further_args_4_gs_2 = MatrixOperations.combine_vectors(further_args_4_gs_2, further_args_f);
 			    	
 			}
 			
@@ -73,7 +117,7 @@ public class ConjugateGradient extends UnconstrainedOptimizer{
 	
 			args_3    = MatrixOperations.add_vectors(args_2, MatrixOperations.scalar_vector_multiplication(alpha_2, direction));
 				
-			if(Math.abs(targetFunction(args_3, further_args) - targetFunction(args_2, further_args)) < convergence_criterion){
+			if(Math.abs(targetFunction(args_3, further_args_f) - targetFunction(args_2, further_args_f)) < convergence_criterion){
 				
 				System.out.println("Conjugate gradient Optimization converged after " + i + " iterations");
 				
@@ -92,7 +136,7 @@ public class ConjugateGradient extends UnconstrainedOptimizer{
 		}
 			
 		optimal_candidate = args_3;
-		optimal_value     = targetFunction(optimal_candidate, further_args);
+		optimal_value     = targetFunction(optimal_candidate, further_args_f);
 			
 	}
 	
@@ -100,22 +144,23 @@ public class ConjugateGradient extends UnconstrainedOptimizer{
 	// test client
     public static void main(String[] args) {
     	
-    	ConjugateGradient cg1 = new ConjugateGradient(100000);
+    	double [] further_args = {1.0, 100.0};
+    	
+    	ConjugateGradient cg1 = new ConjugateGradient(TargetFunction::target_function_with_further_args, further_args, 100000);
     	
     	double [] start_value = {3.05, -2.1};
         
-    	double [] further_args = {1.0, 100.0};
-    	cg1.do_Conjugate_Gradient_Optimization(start_value, TargetFunction::target_function_with_further_args, further_args);
+    	
+    	cg1.do_Conjugate_Gradient_Optimization(start_value);
         
         MatrixOperations.print_vector(optimal_candidate);
         System.out.println(number_of_iterations);
         System.out.println(convergence);
         System.out.println(convergence_criterion); 
         
-        ConjugateGradient cg2 = new ConjugateGradient(100000);
+        ConjugateGradient cg2 = new ConjugateGradient(TargetFunction::target_function, 100000);
         
-        double [] sec_problem_further_args = null;
-        cg2.do_Conjugate_Gradient_Optimization(start_value, TargetFunction::target_function, sec_problem_further_args); 
+        cg2.do_Conjugate_Gradient_Optimization(start_value); 
         
         MatrixOperations.print_vector(optimal_candidate);
         System.out.println(number_of_iterations);

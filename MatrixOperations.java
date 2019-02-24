@@ -104,6 +104,33 @@ public class MatrixOperations {
 	}
 	
 	
+	// returns rows of a matrix between start and end indices
+	public static double [][] get_sub_matrix_between_row_idxs(double[][] A, int start_row_idx, int end_row_idx){
+		
+		int n_rows = end_row_idx - start_row_idx + 1;
+		int n_cols = A[0].length;
+		
+		double [][] sub_matrix = matrix(n_rows, n_cols);
+		
+		int row_idx = start_row_idx;
+		
+		for(int i = 0; i < n_rows; i++){
+			
+			for(int j = 0; j<n_cols; j++){
+				
+				sub_matrix[i][j] = A[row_idx][j];	
+				
+			}
+				
+			row_idx = row_idx + 1;
+			
+		}
+		
+		return sub_matrix;
+		
+	}
+	
+	
 	//sorts matrix columns
 	public static double [][] resort_matrix_columns(double[][] A, int [] col_idxs){
 		
@@ -154,7 +181,7 @@ public class MatrixOperations {
 		
 		for(int i = 0; i < n; i++){
 			
-			D[i][i] = d[i][1];
+			D[i][i] = d[i][0];
 			
 		}
 				
@@ -232,235 +259,284 @@ public class MatrixOperations {
 		
 		double [][] A = matrix(n_rows, n_cols);
 		A = fillMatrix(B);
-		
-		double [][] I = MatrixOperations.identity(n_cols);
+			
 		double [][] A_inverse = MatrixOperations.matrix(n_rows, n_cols);
 		
-		//Case of all elements in matrix unequal 0
-				
-		double [] col = MatrixOperations.get_column_from_matrix(A, 0);
-		int [] zero_idxs = Utilities.get_idx(col, 0.0);
-					
-		if(zero_idxs[0] != -1){
-				
-			int non_zero_idx = 0;
-			int n_zero_idxs = zero_idxs.length;	
+		if(is_diagonal(A) == true){
 			
-			int [] non_zero_idxs = new int [n_rows-n_zero_idxs];				
-			int [] resorted_idxs = new int [n_rows];
+			for(int i=0; i<n_rows; i++){
 				
-			for(int i = 0; i < n_rows; i++){
-					
-				int check = 0;
-					
-				for(int j = 0; j < n_zero_idxs; j++){
-																		
-					if(zero_idxs[j] == i){
-							
-						check = 1;
-						break;
-							
-					}
-															
-				}
-					
-				if(check == 0){
-						
-					non_zero_idxs[non_zero_idx] = i;
-					non_zero_idx = non_zero_idx + 1;
-						
-				}
-					
-			}
+				A_inverse[i][i] = 1.0/A[i][i];
 				
-			double [][] A_new = MatrixOperations.matrix(n_rows, n_cols);
-			double [][] I_new = MatrixOperations.matrix(n_rows, n_cols);
-				
-			for(int i = 0; i < n_rows; i++){
-					
-				int zero_idx_counter = 0;
-					
-				if(i < non_zero_idxs.length){
-						
-					resorted_idxs[i] = non_zero_idxs[i];
-						
-				}else{
-						
-					resorted_idxs[i] = zero_idxs[zero_idx_counter];
-						
-					zero_idx_counter = zero_idx_counter + 1;
-						
-				}
-					
-				for(int j = 0; j < n_rows; j++){
-						
-					double [] A_row = MatrixOperations.get_row_from_matrix(A, resorted_idxs[i]);
-						
-					A_new[i][j] = A_row[j];
-						
-					double [] I_row = MatrixOperations.get_row_from_matrix(I,resorted_idxs[i]);
-						
-					I_new[i][j] = I_row[j];
-						
-				}
-										
-			}
-							
-			A = A_new;
-			I = I_new;
-				
-		}
-							
-		//Two steps: 1. Create lower triangular, 2. Create upper triangular
-		
-		//Step 1:
-		for(int i = 0; i < n_cols-1; i++){
-			
-			int n_row_counter = n_rows - i - 1;
-			
-			for(int j = 0; j < n_row_counter; j++){
-				
-				int row_idx_1 = n_rows-j-1;
-				
-				if(A[row_idx_1][i] != 0.0){
-					
-					int row_idx_2 = row_idx_1-1;
-						
-					double element_1 = A[row_idx_1][i];
-					double element_2 = A[row_idx_2][i];
-					
-					for(int k = 0; k < n_cols; k++){
-											
-						A[row_idx_1][k] = A[row_idx_1][k]*element_2;
-						A[row_idx_2][k] = A[row_idx_2][k]*element_1;
-							
-						double a_1 = A[row_idx_1][i];
-						double a_2 = A[row_idx_2][i];
-																					
-						if((a_1 >= 0 && a_2 >= 0) || (a_1 <= 0 && a_1 <= 0)){
-							
-							A[row_idx_1][k] = A[row_idx_1][k] - A[row_idx_2][k];
-							
-						}else{
-							
-							A[row_idx_1][k] = A[row_idx_1][k] + A[row_idx_2][k];
-							
-						}
-							
-						I[row_idx_1][k] = I[row_idx_1][k]*element_2;
-						I[row_idx_2][k] = I[row_idx_2][k]*element_1;
-						
-						if((a_1 >= 0 && a_2 >= 0) || (a_1 <= 0 && a_1 <= 0)){
-							
-							I[row_idx_1][k] = I[row_idx_1][k] - I[row_idx_2][k];
-							
-						}else{
-							
-							I[row_idx_1][k] = I[row_idx_1][k] + I[row_idx_2][k];
-							
-						}
-										
-					}
-					
-				}
-												
 			}
 			
-		}
-		
-		//Step 2:
-		for(int i = 0; i < n_cols-1; i++){
+		}else{
 			
-			int n_row_counter = n_rows - i - 1;
+			double [][] I = MatrixOperations.identity(n_cols);
 			
-			int col_idx = n_cols-i-1;
-			
-			for(int j = 0; j < n_row_counter; j++){
-				
-				int row_idx_1 = j;
-				
-				if(Math.abs(A[row_idx_1][col_idx]) != 0.0){
+			//Case of all elements in matrix unequal 0
 					
-					int row_idx_2 = row_idx_1;	
+			double [] col = MatrixOperations.get_column_from_matrix(A, 0);
+			int [] zero_idxs = Utilities.get_idx(col, 0.0);
+						
+			if(zero_idxs[0] != -1){
 					
-					for(int k = 1; k < n_rows; k++){
-							
-						row_idx_2 = row_idx_2 + 1;
-												
-						if(Math.abs(A[row_idx_2][col_idx]) != 0.0){
-							
+				int non_zero_idx = 0;
+				int n_zero_idxs = zero_idxs.length;	
+				
+				int [] non_zero_idxs = new int [n_rows-n_zero_idxs];				
+				int [] resorted_idxs = new int [n_rows];
+					
+				for(int i = 0; i < n_rows; i++){
+						
+					int check = 0;
+						
+					for(int j = 0; j < n_zero_idxs; j++){
+																			
+						if(zero_idxs[j] == i){
+								
+							check = 1;
 							break;
 								
 						}
+																
+					}
+						
+					if(check == 0){
+							
+						non_zero_idxs[non_zero_idx] = i;
+						non_zero_idx = non_zero_idx + 1;
+							
+					}
+						
+				}
+					
+				double [][] A_new = MatrixOperations.matrix(n_rows, n_cols);
+				double [][] I_new = MatrixOperations.matrix(n_rows, n_cols);
+					
+				for(int i = 0; i < n_rows; i++){
+						
+					int zero_idx_counter = 0;
+						
+					if(i < non_zero_idxs.length){
+							
+						resorted_idxs[i] = non_zero_idxs[i];
+							
+					}else{
+							
+						resorted_idxs[i] = zero_idxs[zero_idx_counter];
+							
+						zero_idx_counter = zero_idx_counter + 1;
+							
+					}
+						
+					for(int j = 0; j < n_rows; j++){
+							
+						double [] A_row = MatrixOperations.get_row_from_matrix(A, resorted_idxs[i]);
+							
+						A_new[i][j] = A_row[j];
+							
+						double [] I_row = MatrixOperations.get_row_from_matrix(I,resorted_idxs[i]);
+							
+						I_new[i][j] = I_row[j];
+							
+					}
 											
+				}
+								
+				A = A_new;
+				I = I_new;
+					
+			}
+								
+			//Two steps: 1. Create lower triangular, 2. Create upper triangular
+			
+			//Step 1:
+			for(int i = 0; i < n_cols-1; i++){
+				
+				int n_row_counter = n_rows - i - 1;
+				
+				for(int j = 0; j < n_row_counter; j++){
+					
+					int row_idx_1 = n_rows-j-1;
+					
+					if(A[row_idx_1][i] != 0.0){
+						
+						int row_idx_2 = row_idx_1-1;
+											
+						double element_2 = A[row_idx_2][i]/A[row_idx_1][i];
+						
+						for(int k = 0; k < n_cols; k++){
+												
+							A[row_idx_1][k] = A[row_idx_1][k]*element_2;
+		
+							A[row_idx_1][k] = A[row_idx_1][k] - A[row_idx_2][k];
+								
+							I[row_idx_1][k] = I[row_idx_1][k]*element_2;
+
+							I[row_idx_1][k] = I[row_idx_1][k] - I[row_idx_2][k];						
+											
+						}
+						
 					}
 													
-					double element_1 = A[row_idx_1][col_idx];
-					double element_2 = A[row_idx_2][col_idx];
+				}
+				
+			}
+	
+			//Step 2:
+			for(int i = 0; i < n_cols-1; i++){
+				
+				int n_row_counter = n_rows - i - 1;
+				
+				int col_idx = n_cols-i-1;
+				
+				for(int j = 0; j < n_row_counter; j++){
+					
+					int row_idx_1 = j;
+					
+					if(Math.abs(A[row_idx_1][col_idx]) != 0.0){
+						
+						int row_idx_2 = row_idx_1;	
+						
+						for(int k = 1; k < n_rows; k++){
+								
+							row_idx_2 = row_idx_2 + 1;
+													
+							if(Math.abs(A[row_idx_2][col_idx]) != 0.0){
+								
+								break;
 									
-					for(int k = 0; k < n_cols; k++){
-											
-						A[row_idx_1][k] = A[row_idx_1][k]*element_2;
-						A[row_idx_2][k] = A[row_idx_2][k]*element_1;
-						
-						double a_1 = 0.0;
-						double a_2 = 0.0;
-						
-						if(k == 0){
-							
-							a_1 = A[row_idx_1][col_idx]*element_2;
-							a_2 = A[row_idx_2][col_idx]*element_1;
-							
+							}
+												
 						}
-											
-						if((a_1 >= 0 && a_2 >= 0) || ((a_1 <= 0 && a_2 <= 0))){
 							
+						double element_2 = A[row_idx_2][col_idx]/A[row_idx_1][col_idx];
+								
+						for(int k = 0; k < n_cols; k++){
+												
+							A[row_idx_1][k] = A[row_idx_1][k]*element_2;
+												
 							A[row_idx_1][k] = A[row_idx_1][k] - A[row_idx_2][k];
-							
-						}else{
-							
-							A[row_idx_1][k] = A[row_idx_1][k] + A[row_idx_2][k];
-							
-						}
-						
-						I[row_idx_1][k] = I[row_idx_1][k]*element_2;
-						I[row_idx_2][k] = I[row_idx_2][k]*element_1;
-						
-						if((a_1 >= 0 && a_2 >= 0) || ((a_1 <= 0 && a_2 <= 0))){
-							
+																
+							I[row_idx_1][k] = I[row_idx_1][k]*element_2;
+
 							I[row_idx_1][k] = I[row_idx_1][k] - I[row_idx_2][k];
-							
-						}else{
-							
-							I[row_idx_1][k] = I[row_idx_1][k] + I[row_idx_2][k];
-							
+										
 						}
 						
 					}
+																	
+				}
+				
+			}
+			
+			for(int i = 0; i < n_rows; i++){
+				
+				for(int j=0; j < n_cols; j++){
+					
+					I[i][j] = I[i][j]/A[i][i];
 					
 				}
-																
-			}
-			
-		}
-		
-		for(int i = 0; i < n_rows; i++){
-			
-			for(int j=0; j < n_cols; j++){
-				
-				I[i][j] = I[i][j]/A[i][i];
 				
 			}
 			
+			A_inverse = I;
+			
 		}
 		
-		A_inverse = I;
-			
 		return A_inverse;
 		
 	}
 	
 	
+	// checks if matrix A is diagonal
+	public static boolean is_diagonal(double [][] A){
+		
+		int nCols = A[0].length;
+		
+		int zeroCount = 0;
+		
+		boolean isDiagonal = true;
+		
+		for(int i=0; i<nCols; i++){
+			
+			double [] col = MatrixOperations.get_column_from_matrix(A, i);
+			
+			if(i==0){
+				
+				int[] idx = Utilities.get_idx(MatrixOperations.get_double_sub_vec(col, 1, nCols-1), 0.0);
+				
+				if(idx[0] != -1){
+					
+					zeroCount = idx.length;
+					
+				}else{
+					
+					zeroCount = 0;
+					
+				}
+					
+			}else{
+				
+				if(i != nCols-1){
+					
+					int[] idx = Utilities.get_idx(MatrixOperations.get_double_sub_vec(col, 0, i-1), 0.0);
+					
+					if(idx[0] != -1){
+						
+						zeroCount = idx.length;
+						
+					}else{
+						
+						zeroCount = 0;
+						
+					}
+					
+					idx = Utilities.get_idx(MatrixOperations.get_double_sub_vec(col, i+1, nCols-1), 0.0);
+					
+					if(idx[0] != -1){
+						
+						zeroCount = idx.length + zeroCount;
+						
+					}else{
+						
+						zeroCount = 0;
+						
+					}
+					
+				}else{
+					
+					int[] idx = Utilities.get_idx(MatrixOperations.get_double_sub_vec(col, 0, nCols-2), 0.0);
+					
+					if(idx[0] != -1){
+						
+						zeroCount = idx.length;
+						
+					}else{
+						
+						zeroCount = 0;
+						
+					}
+					
+				}
+				
+			}
+			
+			if(zeroCount != nCols-1){
+				
+				isDiagonal = false;
+				break;
+				
+			}
+				
+		}
+		
+		return isDiagonal;
+		
+	}
+	
+
 	// returns C = A + B
 	public static double [][] add(double [][] A, double [][] B){
 		
@@ -482,6 +558,37 @@ public class MatrixOperations {
 			for(int j = 0; j < n_cols_a; j++){
 				
 				C[i][j] = A[i][j] + B[i][j];
+				
+			}
+			
+		}
+				
+		return C;
+		
+	}
+	
+	
+	// returns C = A - B
+	public static double [][] substract(double [][] A, double [][] B){
+		
+		int n_rows_a = A.length;
+		int n_rows_b = B.length;
+		int n_cols_a = A[0].length;
+		int n_cols_b = B[0].length;
+		
+		if( n_rows_a != n_rows_b || n_cols_a != n_cols_b){
+			
+			throw new RuntimeException("Illegal matrix dimensions.");
+			
+		}
+		
+		double [][] C = MatrixOperations.matrix(n_rows_a, n_cols_a);
+		
+		for(int i = 0; i < n_rows_a; i++){
+			
+			for(int j = 0; j < n_cols_a; j++){
+				
+				C[i][j] = A[i][j] - B[i][j];
 				
 			}
 			
@@ -602,6 +709,23 @@ public class MatrixOperations {
 		for(int i = 0; i < n; i++){
 			
 			b[i][0] = a[i];
+			
+		}
+		
+		return b;
+		
+	}
+	
+	
+	// returns n array b
+	public static double [] convVecToArray(double [][] a){
+		
+		int n = a.length;
+		double [] b = new double [n];
+		
+		for(int i = 0; i < n; i++){
+			
+			b[i] = a[i][0];
 			
 		}
 		
@@ -1062,53 +1186,110 @@ public class MatrixOperations {
 	}
 	
 	
+	// vec-operator for vectorizing matrix A
+	public static double [] vec(double [][] A){
+		
+		int nRows = A.length;
+		int nCols = A[0].length;
+		
+		int idx   = 0;
+		
+		double [] vec = new double [(nRows*nCols)];
+		
+		for(int i=0; i<nCols; i++){
+			
+			for(int j=0; j<nRows; j++){
+				
+				vec[idx] = A[j][i];
+				
+				idx = idx+1;
+				
+			}
+			
+		}
+		
+		return vec;
+		
+	}
+	
+	
+	// returns matrix A from column vector x
+	public static double [][] get_matrix_from_vec(double [] x, int n_rows, int n_cols){
+		
+		double [][] A = new double [n_rows][n_cols];
+		
+		int idx = 0;
+		
+		for(int i=0; i<n_cols; i++){
+			
+			for(int j=0; j<n_rows; j++){
+				
+				A[j][i] = x[idx];
+				
+				idx = idx + 1;
+						
+			}
+			
+		}
+		
+		return A;
+		
+	}
+	
+	
+	// returns Kronecker product of matrices A and B
+	public static double [][] kronecker(double [][] A, double [][] B){
+		
+		int n_rows_A = A.length;
+	    int n_cols_A = A[0].length;
+		int n_rows_B = B.length;
+		int n_cols_B = B[0].length;
+	    
+		double [][] C = new double [n_rows_A*n_rows_B][n_cols_A*n_cols_B];
+		
+		for(int i=0; i<n_rows_A;i++){
+			
+			for(int j=0; j<n_cols_A; j++){
+				
+				for(int k=0; k<n_rows_B; k++){
+					
+					for(int l=0; l<n_cols_B; l++){
+						
+						C[(i*n_rows_B)+k][(j*n_cols_B)+l] = A[i][j]*B[k][l];
+						
+					}
+									
+				}
+					
+			}
+		
+			
+		}
+		
+		return C;
+		
+	}
+	
+	
+	
     // test client
     public static void main(String[] args) {
-    	
-    	//double [][] A = MatrixOperations.matrix(4, 4);
-    	//A[0][0] = 0;
-    	//A[0][1] = 0;
-    	//A[0][2] = -2;
-    	//A[0][3] = 12;
-    	//A[1][0] = 4;
-    	//A[1][1] = 0;
-    	//A[1][2] = 16;
-    	//A[1][3] = -15;
-    	//A[2][0] = 7;
-    	//A[2][1] = 8;
-    	//A[2][2] = -9;
-    	//A[2][3] = 8;
-    	//A[3][0] = 10;
-    	//A[3][1] = 81;
-    	//A[3][2] = -9;
-    	//A[3][3] = 0;
-        
-        //double [][] A = {{1,1},{1,1}};
-        
-        //double [][] A_inverse = inverse(A);
-        
-    	//print_matrix(A_inverse);
+    	    
+    	double [][] A = {{1,2},{3,4},{5,6}};
+    	//double [][] B = {{7,8},{9,0}};
+    	//double [][] a = MatrixOperations.unit_vector(2);
+    	//print_matrix(A);
 
-    	//double [] a = {18,3};
-    	//double [] b = {2,4};
+    	//double [][] a = {{0.5},{-0.5}};
+    	//double [][] b = {{1.0},{0.9376420},{0.9448767}};
     	
-    	//double [][] a_new = convArrayToVec(a);
-    	//double [][] b_new = convArrayToVec(b);
+    	//print_matrix(a);
+    	//print_matrix(b);    
     	
+    	//print_matrix(kronecker(a,b));
     	
-    	double [][] A = new double [4][4];
-    	double [][] B = {{1,2},{3,4}};
-    	
-    	print_matrix(set_sub_matrix_to_matrix(A, B, 2, 3, 2, 3));
-    	
-    	//print_vector(multiplyMatrixWithVec(A,b));
-    	
-    	//print_matrix(multiplication(a_new,transpose(b_new)));
-    	//System.out.println(Math.pow(2.0,3.0));
-    	
-    	//print_matrix(a_new);
-    	
-    	//print_vector(get_row_from_matrix(C,1));
+    	//print_matrix(A);
+    	print_matrix(get_sub_matrix_between_row_idxs(A, 1, 2));
     	
     }
 	

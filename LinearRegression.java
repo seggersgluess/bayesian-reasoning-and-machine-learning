@@ -87,7 +87,7 @@ public class LinearRegression {
 			 par_idx_2 = n_explaining_variables;
 			
 		}
-		
+				
         term                   = MatrixOperations.add(identity, MatrixOperations.scalar_multiplication(-1.0/n_observations, J));
 		ss_total               = MatrixOperations.multiplication(MatrixOperations.multiplication(MatrixOperations.transpose(explained_variable),term), explained_variable)[0][0];
 		
@@ -109,7 +109,7 @@ public class LinearRegression {
 		
 		ss_res                    = MatrixOperations.multiplication(MatrixOperations.transpose(residuals), residuals)[0][0];
 		sigma                     = ss_res/(n_observations-(n_explaining_variables+1));
-		
+			
 		covariance                = MatrixOperations.scalar_multiplication(sigma,inv_term);
 		errors                    = MatrixOperations.get_diagonal_from_matrix(covariance);
 		
@@ -128,7 +128,7 @@ public class LinearRegression {
 		F = (ss_reg/n_explaining_variables)/sigma;
 		
 		R_squared     = ss_reg/ss_total;
-		adj_R_squared = 1.0-(n_observations-1.0)/(n_observations-(n_explaining_variables+1.0))*(1-R_squared);
+		adj_R_squared = 1.0-(n_observations-1.0)/(n_observations-(n_explaining_variables+1.0))*(1.0-R_squared);
 		
 		calculate_residual_measures(hat_matrix);
 		
@@ -138,7 +138,6 @@ public class LinearRegression {
 		print_linear_model_stats();
 		print_covariance_matrix();
 		print_linear_model_diagnostics();
-		
 		
 	}
 	
@@ -434,29 +433,16 @@ public class LinearRegression {
 	// test client
     public static void main(String[] args) {
     	
-    	double [][] A = {{41.9, 29.1, 251.3},
-    			         {43.4, 29.3, 251.3},
-    			         {43.9, 29.5, 248.3},
-    			         {44.5, 29.7, 267.5},
-    			         {47.3, 29.9, 273.0},
-    			         {47.5, 30.3, 276.5},
-    			         {47.9, 30.5, 270.3},
-    			         {50.2, 30.7, 274.9},
-    			         {52.8, 30.8, 285.0},
-    			         {53.2, 30.9, 290.0},
-    			         {56.7, 31.5, 297.0},
-    			         {57.0, 31.7, 302.5},
-    			         {63.5, 31.9, 304.5},
-    			         {65.3, 32.0, 309.3},
-    			         {71.1, 32.1, 321.7},
-    			         {77.0, 32.5, 330.7},
-    			         {77.8, 32.9, 349.0}
-    					};
+    	double[][] data = null;
     	
-    	double [][] y = MatrixOperations.get_sub_matrix_between_column_idxs(A, 2, 2);
-    	double [][] X = MatrixOperations.get_sub_matrix_between_column_idxs(A, 0, 1);
+    	try {
+    		data = ReadTextFile.readfile("C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/RegTest.txt");
+    	} catch (Exception e) {
+    		e.printStackTrace();
+    	}
     	
-    	//MatrixOperations.print_matrix(explaining_variables);
+    	double [][] y = MatrixOperations.get_sub_matrix_between_column_idxs(data, 4, 4);
+    	double [][] X = MatrixOperations.get_sub_matrix_between_column_idxs(data, 0, 3);    	
     	
     	LinearRegression obj_lm = new LinearRegression(y, X, true);
     	

@@ -3,11 +3,19 @@ import java.util.function.BiFunction;
 public class SimulatedAnnealing extends UnconstrainedOptimizer{
 
 	// constructor
-	public SimulatedAnnealing(int max_iterations) {
+	public SimulatedAnnealing(BiFunction<double [], double [], Double> g, int max_iterations) {
 		
-		super(max_iterations);
+		super(g, max_iterations);
 	
 	}
+	
+	
+	public SimulatedAnnealing(BiFunction<double [], double [], Double> g, double [] further_args, int max_iterations) {
+		
+		super(g, further_args, max_iterations);
+	
+	}
+	
 	
 	static double evaluations = 100000;
 	static double epsilon = 20.0;
@@ -16,7 +24,7 @@ public class SimulatedAnnealing extends UnconstrainedOptimizer{
 	
 
 	// main optimization routine of the simulated annealing optimization routine
-	public void do_Simulated_Annealing_Optimization(double [] upper_values, double [] lower_values, BiFunction<double [], double [], Double> g, double [] further_args){
+	public void do_Simulated_Annealing_Optimization(double [] upper_values, double [] lower_values){
 
 		if(upper_values.length != lower_values.length){
 			
@@ -28,8 +36,6 @@ public class SimulatedAnnealing extends UnconstrainedOptimizer{
 		
 		upper_bounds = upper_values;
 		lower_bounds = lower_values;
-		
-		f = g;
 		
 		int n_args = upper_bounds.length;
 		
@@ -48,7 +54,7 @@ public class SimulatedAnnealing extends UnconstrainedOptimizer{
 		
 		args_1 = get_random_values_between_bounds();
 		
-		energy_old = targetFunction(args_1, further_args);
+		energy_old = targetFunction(args_1, further_args_f);
 		
 		best_candidate = args_1;
 		best_value     = energy_old;
@@ -61,7 +67,7 @@ public class SimulatedAnnealing extends UnconstrainedOptimizer{
 			
 			args_2 = correct_boundary_violation(args_2);
 			
-			energy_new = targetFunction(args_2, further_args);
+			energy_new = targetFunction(args_2, further_args_f);
 			
 			if(energy_new < energy_old){
 				
@@ -108,8 +114,7 @@ public class SimulatedAnnealing extends UnconstrainedOptimizer{
 			number_of_iterations = i;
 			
 		}
-				
-		
+						
 		optimal_candidate    = best_candidate;
 		optimal_value        = best_value;
 				
@@ -193,13 +198,12 @@ public class SimulatedAnnealing extends UnconstrainedOptimizer{
 	// test client
     public static void main(String[] args) {
     		
-    	SimulatedAnnealing optim = new SimulatedAnnealing(10000000);
+    	SimulatedAnnealing optim = new SimulatedAnnealing(TargetFunction::rastrigin_function, 10000000);
     	
         double [] upper_values = {5.12, 5.12};
         double [] lower_values = {-5.12, -5.12};
-        double [] further_args = null;
         
-        optim.do_Simulated_Annealing_Optimization(upper_values, lower_values, TargetFunction::rastrigin_function, further_args);
+        optim.do_Simulated_Annealing_Optimization(upper_values, lower_values);
         //double [] solution = do_Simulated_Annealing_Optimization(upper_values, lower_values, TargetFunction::target_function, further_args, 10000000); 
         
         MatrixOperations.print_vector(optimal_candidate);
