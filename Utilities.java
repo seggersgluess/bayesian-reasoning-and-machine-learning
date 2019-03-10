@@ -98,6 +98,100 @@ public class Utilities {
 	}
 	
 	
+	// returns unique elements of a supplied array
+	public static String [] get_unique_elements(String [] x){
+		
+		int n_elements = x.length;
+		int idx = 0;
+		
+		String [] unique_vec = new String [n_elements];		
+				
+		unique_vec[0] = x[0];
+		
+		for(int i=1; i<n_elements; i++){
+			
+			int match = 0;
+			
+			for(int j=0; j<idx; j++){
+				
+				if(unique_vec[j].contentEquals(x[i]) == true){
+					
+					match = 1;
+					break;
+					
+				}
+				
+			}
+			
+			if(match == 0){
+				
+				unique_vec[idx] = x[i];
+				idx++;
+					
+			}
+			
+		}
+	
+		String [] unique_vec_2 = new String[idx];
+		
+		for(int i=0; i<idx; i++){
+			
+			unique_vec_2[i] = unique_vec[i];
+			
+		}
+		
+		return unique_vec_2;		
+		
+	}
+	
+	
+	// returns unique elements of a supplied n x 1 column vector
+	public static String [] get_unique_elements(String [][] x){
+		
+		int n_elements = x.length;
+		int idx = 0;
+		
+		String [] unique_vec = new String [n_elements];		
+				
+		unique_vec[0] = x[0][0];
+		
+		for(int i=1; i<n_elements; i++){
+			
+			int match = 0;
+			
+			for(int j=0; j<idx; j++){
+				
+				if(unique_vec[j].contentEquals(x[i][0]) == true){
+					
+					match = 1;
+					break;
+					
+				}
+				
+			}
+			
+			if(match == 0){
+				
+				unique_vec[idx] = x[i][0];
+				idx++;
+					
+			}
+			
+		}
+	
+		String [] unique_vec_2 = new String[idx];
+		
+		for(int i=0; i<idx; i++){
+			
+			unique_vec_2[i] = unique_vec[i];
+			
+		}
+		
+		return unique_vec_2;		
+		
+	}
+	
+	
 	// returns maximum of a supplied vector
 	public static double getMax(double[] x){ 
 		    
@@ -208,8 +302,8 @@ public class Utilities {
 		int idx = 0;		
 				
 		for(int i=0; i<x.length; i++){
-			
-			if(x[i] == search_element){
+						
+			if(x[i].contentEquals(search_element) == true){
 				
 				search_idxs[idx] = i;
 				idx = idx+1;
@@ -300,7 +394,40 @@ public class Utilities {
 	}
 	
 	
-	// draws random int numbers over supplied interval
+	//returns array x in reverse order
+	public static double [] reverse_array(double [] x){
+		
+		int n = x.length;
+		double [] rev_x = new double [n];
+		
+		for(int i=0; i<n; i++){
+			
+			rev_x[i] = x[n-i-1];
+			
+		}
+		
+		return rev_x;
+		
+	}
+	
+	
+	//returns n integer number between 0 and n-1
+	public static int [] intGenerator(int n){
+		
+		int[] a = new int[n];
+		
+	    for (int i = 0; i < n; ++i) {
+	    	
+	        a[i] = i;
+	        
+	    }
+	    
+	    return a;
+		
+	}
+	
+	
+	//draws random int numbers over supplied interval
 	public static int [] getRandomIntNumbers(int lb, int ub, int n){
 		
 		int n_ints = ub - lb + 1;
@@ -333,11 +460,97 @@ public class Utilities {
 	}
  	
 	
+	public static String trim(String str){
+		    	  		
+    	String trim_str = "";
+    	
+       	int posIdx1;
+    	int posIdx2;
+    	int sepCount = 0;
+    	
+    	posIdx1 = 0;
+    	posIdx2 = str.indexOf(" ", 0);
+    
+    	while(posIdx2 != -1){
+    		
+    		if(posIdx1 != posIdx2 && str.substring(posIdx1, posIdx2) != " "){
+    			
+    			if(sepCount == 0){
+    				
+    				trim_str = str.substring(posIdx1, posIdx2);
+    				
+    			}else{
+    				
+    				trim_str = trim_str + " " + str.substring(posIdx1, posIdx2);
+    			 				
+    			}
+    			
+    			sepCount++;
+    			
+    		}
+    		    		
+    		posIdx1 = posIdx2+1;
+    		posIdx2 = str.indexOf(" ", posIdx1);
+    			
+    	}
+		
+    	if(sepCount != 0){
+    		
+    		if(posIdx1 != str.length() && str.substring(posIdx1, str.length()) != " "){
+    			
+    			trim_str = trim_str + " " + str.substring(posIdx1, str.length());
+    			
+    		}
+		
+    	}
+    	
+    	if(sepCount == 0){
+    		
+    		trim_str = str;
+    		
+    	}
+    	
+    	trim_str = trim_str.trim();
+    	
+    	return trim_str;
+    	
+	}
+	
+	
+	// prints supplied string array A
+	public static void print_string_array(String [][] A){
+		
+		for (int i = 0; i < A.length; i++) {
+			
+		    for (int j = 0; j < A[0].length; j++) {
+		    	
+		        System.out.print(A[i][j] + " ");
+		        
+		    }
+		    
+		    System.out.println();
+		}
+		
+	}
+	
+	
+	// prints supplied string array A
+	public static void print_string_array(String [] A){
+		
+		for (int i = 0; i < A.length; i++) {
+			  	
+			System.out.print(A[i] + " "); 
+		    
+		}
+		
+	}
+	
+	
     // test client
     public static void main(String[] args) {
     	
     	
-    	//double [] a = {-1.0, -1.0, 8.0, -7.0};
+    	//double [] a = {-2.0, -1.0, 8.0, -7.0};
     	//double [] sorted_vec = get_sorted_vec(a);
     	//double [] sorted_vec = get_unique_elements(a);
     	//int [] idxs =  get_idxs_for_sorted_vec(a);
@@ -353,8 +566,14 @@ public class Utilities {
     	
     	//int [] a = getRandomIntNumbers(1,5,10);
     	
-       	//MatrixOperations.print_vector(convert_int_to_double_array(idxs));
+       	//MatrixOperations.print_vector(reverse_array(a));
     	//System.out.print(sorted_vec[1]);
+    	
+    	//String str = " No     id female    ses  schtyp     prog read write math science socst       honors awards cid ";
+    	
+    	String [] a = {"a", "a", "b", "a", "c", "d", "c"};
+    	
+    	String [] b = get_unique_elements(a);
     	
     }
 	
