@@ -1,4 +1,3 @@
-import java.util.Arrays;
 
 public class LogisticRegression {
 
@@ -53,86 +52,18 @@ public class LogisticRegression {
 	static double count;
 	static double adj_count;
 	
-	@SuppressWarnings("static-access")
-	LogisticRegression(double [][] explained_variable, double [][] explaining_variables, boolean constant_usage){
-		
-		if(explained_variable.length != explaining_variables.length){			
-			throw new RuntimeException("Inconsistent number of observations between for supplied data.");			
-		}
-				
-		n_observations = explained_variable.length;
-		
-		this.explained_variable   = explained_variable;
-		
-		classes   = Arrays.stream(MatrixOperations.get_column_from_matrix(explained_variable,0)).distinct().sorted().toArray();
-		classes   = Utilities.reverse_array(classes);
-		
-		n_classes = classes.length;
-		
-		Y = get_indicator_matrix(explained_variable);
-		
-		calc_log_lik_intercept_only();
-		
+	
+	LogisticRegression(boolean constant_usage){
+			
 		use_constant = constant_usage;
-		
-		n_explaining_variables = explaining_variables[0].length;
-		
-		if(use_constant == true){
 			
-			explaining_variables = MatrixOperations.cbind(explaining_variables, MatrixOperations.unit_vector(n_observations));
-			
-			n_explaining_variables = n_explaining_variables+1;
-			
-		}
-		
-		this.explaining_variables = MatrixOperations.transpose(explaining_variables);
-		
 	}
 	
 	
-	@SuppressWarnings("static-access")
-	LogisticRegression(double [][] explained_variable, double [][] explaining_variables, boolean constant_usage, boolean use_L2_regularization){
-		
-		if(explained_variable.length != explaining_variables.length){			
-			throw new RuntimeException("Inconsistent number of observations between for supplied data.");			
-		}
-		
-		n_observations = explained_variable.length;
-		
-		this.explained_variable   = explained_variable;
-		
-		classes   = Arrays.stream(MatrixOperations.get_column_from_matrix(explained_variable,0)).distinct().sorted().toArray();
-		classes   = Utilities.reverse_array(classes);
-		
-		n_classes = classes.length;
-		
-		Y = get_indicator_matrix(explained_variable);
-			
-		calc_log_lik_intercept_only();
+	LogisticRegression(boolean constant_usage, boolean l2_regularization_usage){
 		
 		use_constant = constant_usage;
-		
-		n_explaining_variables = explaining_variables[0].length;
-		
-		if(use_constant == true){
-			
-			explaining_variables = MatrixOperations.cbind(explaining_variables, MatrixOperations.unit_vector(n_observations));
-			
-			n_explaining_variables = n_explaining_variables+1;
-			
-		}
-		
-		this.explaining_variables = MatrixOperations.transpose(explaining_variables);
-	
-		this.use_L2_regularization = use_L2_regularization;
-		
-		if(use_L2_regularization == true){
-			
-			// V means inverse of the L2 reg. matrix.
-			V = MatrixOperations.identity(n_explaining_variables);
-			lambda = 1.0;
-			
-		}
+		use_L2_regularization =l2_regularization_usage;
 		
 	}
 	
@@ -148,7 +79,7 @@ public class LogisticRegression {
 	
 	
 	@SuppressWarnings("static-access")
-	public static void select_logistic_regression_explained_variable(String [] rownames, String [] colnames){
+	public static void select_logistic_regression_explained_variable(String [] rownames, String [] colnames, String ref_class){
 		
 		inputData.selectLoadedData(rownames, colnames);
 		
@@ -157,7 +88,22 @@ public class LogisticRegression {
 		
 		n_observations = inputData.selectedStrFileData.length;
 		
+		//Info: If no reference class is set, the last class will serve as reference class!
+		if(ref_class != null){
+			
+			set_reference_class(ref_class);
+			
+		}
+		
 		convert_classes_into_numbers();
+		
+		for(int i=0; i<n_classes; i++){			
+			classes[i] = (double) i;
+		}
+		
+		Y = get_indicator_matrix(explained_variable);
+
+		calc_log_lik_intercept_only();
 		
 		inputData.selectedStrFileData = null;
 		
@@ -179,32 +125,26 @@ public class LogisticRegression {
 		reference_class = ref_class;
 		
 		//Rearrange classes with reference class at first position
-		if(reference_class != null){
+		String [] new_str_classes = new String [n_classes];
+		int counter = 0;
 			
-			String [] new_str_classes = new String [n_classes];
-			int counter = 0;
+		idx = Utilities.get_idx(str_classes, reference_class)[0];
 			
-			idx = Utilities.get_idx(str_classes, reference_class)[0];
+		new_str_classes[n_classes-1] = str_classes[idx];
 			
-			new_str_classes[0] = str_classes[idx];
-			
-			for(int i=0; i<n_classes; i++){
+		for(int i=0; i<n_classes; i++){
 				
-				if(i!=idx){
+			if(i!=idx){
 					
-					new_str_classes[counter+1] = str_classes[i];
-					counter++;
+				new_str_classes[n_classes-counter-2] = str_classes[i];
+				counter++;
 					
-				}
-				
 			}
-			
-			str_classes = new_str_classes;
-			
+				
 		}
-		
-		convert_classes_into_numbers();
-		
+			
+		str_classes = new_str_classes;
+				
 	}
 	
 	
@@ -229,8 +169,8 @@ public class LogisticRegression {
 		
 		inputData.selectLoadedData(rownames, colnames);
 		
-		int n_variables = inputData.selectedStrFileData.length;
-		int n_obs       = inputData.selectedStrFileData[0].length;
+		int n_variables = inputData.selectedStrFileData[0].length;
+		int n_obs       = inputData.selectedStrFileData.length;
 		
 		int n_category_variables = 0;
 		int n_categories = 0;
@@ -297,42 +237,73 @@ public class LogisticRegression {
 		
 		int n = n_variables-n_category_variables+n_categories;
 		int idx = 0;
+		int const_idx = 0;
+		boolean const_filled = false;
 		
-		explaining_variables = new double [n_obs][n];
-		names_of_explaining_variables = new String [n];
+		if(use_constant == true){
 			
+			const_idx = 1;
+			
+		}
+		
+		//explaining_variables in transposed n_variables x n_obs form
+		explaining_variables = new double [(n+const_idx)][n_obs];
+		names_of_explaining_variables = new String [(n+const_idx)];
+		
+		if(use_constant == true){
+			
+			names_of_explaining_variables[0] = "Const";
+			
+		}
+		
 		for(int i=0; i<n_variables; i++){
 			
-			if(categories.get(i) == null){
+			if(categories.get_string_array(i) == null){
 				
-				names_of_explaining_variables[idx] = inputData.colnames[i];
+				names_of_explaining_variables[(idx+const_idx)] = inputData.selected_colnames[i];
 				
 				for(int j=0; j<n_obs; j++){
 					
-					explaining_variables[j][idx] = Double.valueOf(inputData.selectedStrFileData[j][i]);
+					if(use_constant == true && const_filled == false){
+						
+						explaining_variables[0][j] = 1.0;
+						
+					}
+					
+					explaining_variables[(idx+const_idx)][j] = Double.valueOf(inputData.selectedStrFileData[j][i]);
 					
 				}
+				
+				const_filled = true;					
 				
 				idx++;
 				
 			}else{
 				
-				String [] variable_categories = categories.get(i);
+				String [] variable_categories = categories.get_string_array(i);
 				int n_variable_categories = variable_categories.length;
 				
 				for(int j=0; j<n_variable_categories; j++){
 					
-					names_of_explaining_variables[idx] = variable_categories[j];
+					names_of_explaining_variables[(idx+const_idx)] = variable_categories[j];
 					
 					for(int k=0; k<n_obs; k++){
 						
+						if(use_constant == true && const_filled == false){
+							
+							explaining_variables[0][k] = 1.0;
+							
+						}
+						
 						if(variable_categories[j].contentEquals(inputData.selectedStrFileData[k][i]) == true){
 							
-							explaining_variables[k][idx] = 1.0;
+							explaining_variables[(idx+const_idx)][k] = 1.0;
 							
 						}	 
 						
 					}
+					
+					const_filled = true;
 					
 					idx++;
 					
@@ -341,8 +312,16 @@ public class LogisticRegression {
 			}
 				
 		}
+			
+		n_explaining_variables = explaining_variables.length;
 		
-		n_explaining_variables = explaining_variables[0].length;
+		if(use_L2_regularization == true){
+			
+			// V means inverse of the L2 reg. matrix.
+			V = MatrixOperations.identity(n_explaining_variables);
+			lambda = 1.0;
+			
+		}
 		
 		inputData.selectedStrFileData = null;
 		
@@ -367,22 +346,44 @@ public class LogisticRegression {
 			
 		}
 		
+		int const_idx = 0;
+		
+		if(use_constant == true){
+			
+			const_idx = 1;
+			
+		}
+		
 		int n_selected_vars = variable_idxs.length;
 		
-		double [][] selected_explaining_vars = new double [n_observations][n_selected_vars];
+		double [][] selected_explaining_vars = new double [n_selected_vars+const_idx][n_observations];
 		
 		for(int i=0; i<n_observations; i++){
 			
+			if(use_constant == true){
+				
+				selected_explaining_vars[0][i] = 1.0;
+				
+			}
+			
 			for(int j=0; j<n_selected_vars; j++){
 				
-				selected_explaining_vars[i][j] = explaining_variables[i][variable_idxs[j]];
+				selected_explaining_vars[j+const_idx][i] = explaining_variables[variable_idxs[j]][i];
 				
 			}
 			
 		}
 		
 		explaining_variables   = selected_explaining_vars;
-		n_explaining_variables = explaining_variables[0].length;
+		n_explaining_variables = explaining_variables.length;
+		
+		if(use_L2_regularization == true){
+			
+			// V means inverse of the L2 reg. matrix.
+			V = MatrixOperations.identity(n_explaining_variables);
+			lambda = 1.0;
+			
+		}
 		
 	}
 	
@@ -395,6 +396,19 @@ public class LogisticRegression {
 	
 	
 	public void do_logistic_regression(){
+		
+		//Check data consistency
+		if(explained_variable == null){
+			throw new RuntimeException("No explained variable selected for logistic regression.");
+		}
+		
+		if(explaining_variables == null){
+			throw new RuntimeException("No explaining variables selected for logistic regression.");
+		}
+		
+		if(explained_variable.length != explaining_variables[0].length){
+			throw new RuntimeException("Unequal number of observations for explained and explaining data for logistic regression supplied. Check your selected data.");		
+		}
 			
 		int n_start_values = (n_classes-1)*n_explaining_variables;
 		
@@ -851,7 +865,7 @@ public class LogisticRegression {
 		}else{
 			hessian = NumDeriv.hessian(LogisticRegression::logistic_reg_objective, weights, null);		
 		}
-						
+		
 		double [][] inv_hessian = MatrixOperations.inverse(hessian);
 		
 		int n_args = inv_hessian.length;
@@ -1063,9 +1077,23 @@ public class LogisticRegression {
 	
 	public static void calc_log_lik_intercept_only(){
 		
+		boolean constant = false;
+		
+		if(use_constant == true){			
+			constant = true;			
+		}
+		
 		use_constant           = false;
 		explaining_variables   = MatrixOperations.transpose(MatrixOperations.unit_vector(n_observations));
 		n_explaining_variables = explaining_variables.length;
+		
+		if(use_L2_regularization == true){
+			
+			// V means inverse of the L2 reg. matrix.
+			V = MatrixOperations.identity(n_explaining_variables);
+			lambda = 1.0;
+			
+		}
 		
 		double [] start_values = new double [(n_classes-1)];
 	    
@@ -1073,7 +1101,9 @@ public class LogisticRegression {
 		double [] opt_weights  = do_MLE(start_values);
 		
 		intercept_only_log_likelihood = log_likelihood;
-			
+		
+		use_constant = constant;
+		
 	}
 	
 	
@@ -1163,33 +1193,87 @@ public class LogisticRegression {
 	}
 	
 	
-	// test client
-	public static void main(String[] args){
+	@SuppressWarnings("static-access")
+	public static void unit_test_1() throws Exception{
 		
-    	double[][] data = null;
+		//Test with constant (true) and without l2 regularization (false)
+		//See also: https://stats.idre.ucla.edu/stata/dae/multinomiallogistic-regression/
+		
+		//weights:
+		double [][] w = {{5.218200299048554, 0.2913929856027784, -0.9826702373754551, -0.11360264235085257}, 
+		                {2.8521862154952227, -0.5332909870086205, -1.1628320541752124, -0.057928409203357054}}; 
+		//standard errors:
+		double [][] se = {{1.163548973614939, 0.4763737074077733, 0.5955669294431913, 0.02221989917194932}, 
+						  {1.1664391362907864, 0.443732131769415, 0.5142194604529419, 0.02141094600620421}};
+		//z-values:
+		double [][] z = {{4.484727688630533, 0.6116899003272395, -1.649974484470075, -5.112653368574506}, 
+						 {2.445207921062235, -1.201830899380856, -2.261353650736887, -2.7055511319570487}}; 
+
+		double intercept_log_lik = -204.09667423199426;
+		
+		String fileName = "C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Tests/LogisticRegression/Data.txt";
+		
+    	LogisticRegression obj_logistic = new LogisticRegression(true, false);
     	
-    	try {
-    		data = ReadTextFile.readfile("C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Tests/LogisticRegression/StataExample2.txt");
-    	} catch (Exception e) {
-    		e.printStackTrace();
-    	}
+    	obj_logistic.read_logistic_regression_input_data(fileName, true, true);
     	
-    	double [][] y = MatrixOperations.get_sub_matrix_between_column_idxs(data, 0, 0);
-    	double [][] X = MatrixOperations.get_sub_matrix_between_column_idxs(data, 1, 3); 
-	
-    	LogisticRegression obj_logistic = new LogisticRegression(y, X, true, false);
-	
-    	obj_logistic.do_logistic_regression();
-    	  
-    	double [][] mean = MatrixOperations.transpose(GeneralMath.mean_vec(explaining_variables));
-    	double [][] x = new double [n_explaining_variables][1];
-    	x[0][0] = 1.0;
-    	x[1][0] = mean[0][0];
-    	x[2][0] = mean[1][0];
-    	x[3][0] = mean[2][0];
+    	String [] selected_y = {"prog"};
+    	String    ref_class  = "academic";
+     	
+    	obj_logistic.select_logistic_regression_explained_variable(null, selected_y, ref_class);
+    	
+    	String [] selected_X = {"ses", "write"};
+    	
+    	obj_logistic.select_and_convert_logistic_regression_explaining_variables(null, selected_X);
+    	
+    	String [] selected_conv_X = {"middle", "high", "write"};
+    	
+    	obj_logistic.select_converted_logistic_regression_explaining_variables(selected_conv_X);
     	    	
+    	obj_logistic.do_logistic_regression();
+			
+    	System.out.println("Delta est. weights:");
+    	MatrixOperations.print_matrix(MatrixOperations.substract(Weights, w));
+    	System.out.println("Delta standard errors:");
+        MatrixOperations.print_matrix(MatrixOperations.substract(standard_errors, se));
+    	System.out.println("Delta z-values:");
+        MatrixOperations.print_matrix(MatrixOperations.substract(z_values, z));
+    	System.out.println("Delta intercept log likelihood:");
+    	System.out.println(intercept_log_lik-intercept_only_log_likelihood);
+    	
+	}
+	
+	
+	// test client
+	@SuppressWarnings("static-access")
+	public static void main(String[] args) throws Exception{
+				
+		String fileName = "C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Tests/LogisticRegression/Data.txt";
+		
+    	LogisticRegression obj_logistic = new LogisticRegression(true, false);
+    	
+    	obj_logistic.read_logistic_regression_input_data(fileName, true, true);
+    	
+    	String [] selected_y = {"prog"};
+    	String    ref_class  = "academic";
+     	
+    	obj_logistic.select_logistic_regression_explained_variable(null, selected_y, ref_class);
+    	
+    	String [] selected_X = {"ses", "write"};
+    	
+    	obj_logistic.select_and_convert_logistic_regression_explaining_variables(null, selected_X);
+    	
+    	String [] selected_conv_X = {"middle", "high", "write"};
+    	
+    	obj_logistic.select_converted_logistic_regression_explaining_variables(selected_conv_X);
+    	    	
+    	obj_logistic.do_logistic_regression();
+    	
+    	System.out.println(str_classes[0]);
     	MatrixOperations.print_vector(get_marginal_change_rate_of_log_odds_4_class_at_mean(0));
+    	System.out.println(str_classes[1]);
     	MatrixOperations.print_vector(get_marginal_change_rate_of_log_odds_4_class_at_mean(1));
+    	System.out.println(str_classes[2]);
     	MatrixOperations.print_vector(get_marginal_change_rate_of_log_odds_4_class_at_mean(2));
     	
 	}

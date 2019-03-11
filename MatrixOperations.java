@@ -245,11 +245,10 @@ public class MatrixOperations {
 	}
 	
 	
-	// creates and returns inverse B^-1 of quadratic matrix B by applying Gaussian-elimination (Gauss-Jordan-algorithm)
-	public static double [][] inverse(double [][] B){
-				
-		int n_rows = B.length;
-		int n_cols = B[0].length;
+	public static double [][] inverse(double [][] X){
+		
+		int n_rows = X.length;
+		int n_cols = X[0].length;
 		
 		if( n_rows != n_cols){
 			
@@ -258,194 +257,68 @@ public class MatrixOperations {
 		}
 		
 		double [][] A = matrix(n_rows, n_cols);
-		A = fillMatrix(B);
-			
-		double [][] A_inverse = MatrixOperations.matrix(n_rows, n_cols);
+		A = fillMatrix(X);
 		
 		if(is_diagonal(A) == true){
 			
 			for(int i=0; i<n_rows; i++){
 				
-				A_inverse[i][i] = 1.0/A[i][i];
+				A[i][i] = 1.0/A[i][i];
 				
 			}
-			
-		}else{
-			
-			double [][] I = MatrixOperations.identity(n_cols);
-			
-			//Case of all elements in matrix unequal 0
-					
-			double [] col = MatrixOperations.get_column_from_matrix(A, 0);
-			int [] zero_idxs = Utilities.get_idx(col, 0.0);
-						
-			if(zero_idxs[0] != -1){
-					
-				int non_zero_idx = 0;
-				int n_zero_idxs = zero_idxs.length;	
-				
-				int [] non_zero_idxs = new int [n_rows-n_zero_idxs];				
-				int [] resorted_idxs = new int [n_rows];
-					
-				for(int i = 0; i < n_rows; i++){
-						
-					int check = 0;
-						
-					for(int j = 0; j < n_zero_idxs; j++){
-																			
-						if(zero_idxs[j] == i){
-								
-							check = 1;
-							break;
-								
-						}
-																
-					}
-						
-					if(check == 0){
-							
-						non_zero_idxs[non_zero_idx] = i;
-						non_zero_idx = non_zero_idx + 1;
-							
-					}
-						
-				}
-					
-				double [][] A_new = MatrixOperations.matrix(n_rows, n_cols);
-				double [][] I_new = MatrixOperations.matrix(n_rows, n_cols);
-					
-				for(int i = 0; i < n_rows; i++){
-						
-					int zero_idx_counter = 0;
-						
-					if(i < non_zero_idxs.length){
-							
-						resorted_idxs[i] = non_zero_idxs[i];
-							
-					}else{
-							
-						resorted_idxs[i] = zero_idxs[zero_idx_counter];
-							
-						zero_idx_counter = zero_idx_counter + 1;
-							
-					}
-						
-					for(int j = 0; j < n_rows; j++){
-							
-						double [] A_row = MatrixOperations.get_row_from_matrix(A, resorted_idxs[i]);
-							
-						A_new[i][j] = A_row[j];
-							
-						double [] I_row = MatrixOperations.get_row_from_matrix(I,resorted_idxs[i]);
-							
-						I_new[i][j] = I_row[j];
-							
-					}
-											
-				}
-								
-				A = A_new;
-				I = I_new;
-					
-			}
-								
-			//Two steps: 1. Create lower triangular, 2. Create upper triangular
-			
-			//Step 1:
-			for(int i = 0; i < n_cols-1; i++){
-				
-				int n_row_counter = n_rows - i - 1;
-				
-				for(int j = 0; j < n_row_counter; j++){
-					
-					int row_idx_1 = n_rows-j-1;
-					
-					if(A[row_idx_1][i] != 0.0){
-						
-						int row_idx_2 = row_idx_1-1;
-											
-						double element_2 = A[row_idx_2][i]/A[row_idx_1][i];
-						
-						for(int k = 0; k < n_cols; k++){
-												
-							A[row_idx_1][k] = A[row_idx_1][k]*element_2;
 		
-							A[row_idx_1][k] = A[row_idx_1][k] - A[row_idx_2][k];
-								
-							I[row_idx_1][k] = I[row_idx_1][k]*element_2;
-
-							I[row_idx_1][k] = I[row_idx_1][k] - I[row_idx_2][k];						
-											
-						}
-						
-					}
-													
-				}
-				
+			return A;
+			
+		}	
+			
+		double d = 1.0;
+		
+		for(int p=0; p<n_rows; p++){
+			
+			double pivot = A[p][p];
+			
+			if(pivot == 0.0){				
+				throw new RuntimeException("Inverse matrix cannot calculated.");				
 			}
-	
-			//Step 2:
-			for(int i = 0; i < n_cols-1; i++){
+			
+			d = d*pivot;
+			
+			for(int i=0; i<n_rows; i++){
 				
-				int n_row_counter = n_rows - i - 1;
-				
-				int col_idx = n_cols-i-1;
-				
-				for(int j = 0; j < n_row_counter; j++){
+				A[i][p] =  -A[i][p]/pivot;
 					
-					int row_idx_1 = j;
 					
-					if(Math.abs(A[row_idx_1][col_idx]) != 0.0){
+			}
+			
+			for(int i=0; i<n_rows; i++){
+		
+				if(i != p){
+					
+					for(int j=0; j<n_cols; j++){
 						
-						int row_idx_2 = row_idx_1;	
-						
-						for(int k = 1; k < n_rows; k++){
-								
-							row_idx_2 = row_idx_2 + 1;
-													
-							if(Math.abs(A[row_idx_2][col_idx]) != 0.0){
-								
-								break;
-									
-							}
-												
-						}
+						if(j != p){
 							
-						double element_2 = A[row_idx_2][col_idx]/A[row_idx_1][col_idx];
-								
-						for(int k = 0; k < n_cols; k++){
-												
-							A[row_idx_1][k] = A[row_idx_1][k]*element_2;
-												
-							A[row_idx_1][k] = A[row_idx_1][k] - A[row_idx_2][k];
-																
-							I[row_idx_1][k] = I[row_idx_1][k]*element_2;
-
-							I[row_idx_1][k] = I[row_idx_1][k] - I[row_idx_2][k];
-										
+							A[i][j] =  A[i][j] + A[p][j]*A[i][p]; 
+							
 						}
-						
+								
 					}
-																	
+						
 				}
 				
 			}
 			
-			for(int i = 0; i < n_rows; i++){
-				
-				for(int j=0; j < n_cols; j++){
-					
-					I[i][j] = I[i][j]/A[i][i];
-					
-				}
-				
+			for(int j=0; j<n_cols; j++){
+						
+				A[p][j] = A[p][j]/pivot;
+												
 			}
 			
-			A_inverse = I;
+			A[p][p] = 1.0/pivot;
 			
 		}
 		
-		return A_inverse;
+		return A;
 		
 	}
 	
@@ -545,10 +418,8 @@ public class MatrixOperations {
 		int n_cols_a = A[0].length;
 		int n_cols_b = B[0].length;
 		
-		if( n_rows_a != n_rows_b || n_cols_a != n_cols_b){
-			
-			throw new RuntimeException("Illegal matrix dimensions.");
-			
+		if( n_rows_a != n_rows_b || n_cols_a != n_cols_b){			
+			throw new RuntimeException("Illegal matrix dimensions.");			
 		}
 		
 		double [][] C = MatrixOperations.matrix(n_rows_a, n_cols_a);
@@ -673,10 +544,8 @@ public class MatrixOperations {
 		int n_cols_a = A[0].length;
 		int n_cols_b = B[0].length;
 		
-		if( n_cols_a != n_rows_b){
-			
-			throw new RuntimeException("Illegal matrix dimensions.");
-			
+		if( n_cols_a != n_rows_b){			
+			throw new RuntimeException("Illegal matrix dimensions.");			
 		}
 		
 		double [][] C = MatrixOperations.matrix(n_rows_a, n_cols_b);
@@ -741,10 +610,8 @@ public class MatrixOperations {
 		int n_cols_A = A[0].length;
 		int n_rows_b = b.length;
 		
-		if( n_cols_A != n_rows_b){
-			
-			throw new RuntimeException("No valid dimensions.");
-			
+		if( n_cols_A != n_rows_b){			
+			throw new RuntimeException("No valid dimensions.");			
 		}
 		
 		double [] c = new double [n_rows_A];
@@ -832,10 +699,8 @@ public class MatrixOperations {
 		int n_cols = A[0].length;
 		int n_rows = A.length;
 			
-		if(n_rows != n_cols){
-			
-			throw new RuntimeException("No quadratic matrix supplied.");
-			
+		if(n_rows != n_cols){			
+			throw new RuntimeException("No quadratic matrix supplied.");			
 		}
 		
 		double [][] diagonal = new double [n_rows][1];
@@ -858,10 +723,8 @@ public class MatrixOperations {
 		int n_rows = A.length;
 		double [] column_vec = new double [n_rows];
 		
-		if( col_number > n_cols){
-			
-			throw new RuntimeException("Mismatch between column number and number of matrix columns.");
-			
+		if( col_number > n_cols){			
+			throw new RuntimeException("Mismatch between column number and number of matrix columns.");			
 		}
 		
 		for(int i=0; i<n_rows; i++){
@@ -882,10 +745,8 @@ public class MatrixOperations {
 		int n_rows = A.length;
 		double [] row_vec = new double [n_cols];
 		
-		if( row_number > n_rows){
-			
-			throw new RuntimeException("Mismatch between row number and number of matrix rows.");
-			
+		if( row_number > n_rows){			
+			throw new RuntimeException("Mismatch between row number and number of matrix rows.");			
 		}
 		
 		for(int i=0; i<n_cols; i++){
@@ -902,16 +763,12 @@ public class MatrixOperations {
 	// returns a sub vector between start and end index of a supplied vector
 	public static double [] get_double_sub_vec(double [] x, int start_idx, int end_idx){
 		
-		if(x.length < start_idx){
-			
-			throw new RuntimeException("Start index larger than vector length.");
-			
+		if(x.length < start_idx){			
+			throw new RuntimeException("Start index larger than vector length.");			
 		}
 		
-		if(x.length < end_idx){
-			
-			throw new RuntimeException("End index larger than vector length.");
-			
+		if(x.length < end_idx){			
+			throw new RuntimeException("End index larger than vector length.");			
 		}
 		
 		int n_sub_elements = end_idx - start_idx + 1;
@@ -936,16 +793,12 @@ public class MatrixOperations {
 	// returns a sub vector between start and end index of a supplied vector
 	public static double [][] get_double_sub_vec(double [][] x, int start_idx, int end_idx){
 		
-		if(x.length < start_idx){
-			
-			throw new RuntimeException("Start index larger than vector length.");
-			
+		if(x.length < start_idx){			
+			throw new RuntimeException("Start index larger than vector length.");			
 		}
 		
-		if(x.length < end_idx){
-			
-			throw new RuntimeException("End index larger than vector length.");
-			
+		if(x.length < end_idx){			
+			throw new RuntimeException("End index larger than vector length.");			
 		}
 		
 		int n_sub_elements = end_idx - start_idx + 1;
@@ -1014,16 +867,12 @@ public class MatrixOperations {
 	// returns a integer sub vector between start and end index of a supplied vector
 	public static int [] get_int_sub_vec(int [] x, int start_idx, int end_idx){
 		
-		if(x.length < start_idx){
-			
-			throw new RuntimeException("Start index larger than vector length.");
-			
+		if(x.length < start_idx){			
+			throw new RuntimeException("Start index larger than vector length.");			
 		}
 		
-		if(x.length < end_idx){
-			
-			throw new RuntimeException("End index larger than vector length.");
-			
+		if(x.length < end_idx){			
+			throw new RuntimeException("End index larger than vector length.");			
 		}
 		
 		int n_sub_elements = end_idx - start_idx + 1;
@@ -1165,10 +1014,8 @@ public class MatrixOperations {
 		
 		int n = a.length;
 		
-		if(a[0].length != 1){
-			
-			throw new RuntimeException("No column vector supplied for Euclidian norm.");
-			
+		if(a[0].length != 1){			
+			throw new RuntimeException("No column vector supplied for Euclidian norm.");			
 		}
 		
 		double sum = 0.0;
@@ -1261,8 +1108,7 @@ public class MatrixOperations {
 									
 				}
 					
-			}
-		
+			}	
 			
 		}
 		
@@ -1274,8 +1120,8 @@ public class MatrixOperations {
 	
     // test client
     public static void main(String[] args) {
-    	    
-    	double [][] A = {{1,2},{3,4},{5,6}};
+    	    	
+    	//double [][] A = {{1,2},{3,4},{5,6}};
     	//double [][] B = {{7,8},{9,0}};
     	//double [][] a = MatrixOperations.unit_vector(2);
     	//print_matrix(A);
@@ -1289,9 +1135,11 @@ public class MatrixOperations {
     	//print_matrix(kronecker(a,b));
     	
     	//print_matrix(A);
-    	print_matrix(get_sub_matrix_between_row_idxs(A, 1, 2));
+    	//print_matrix(get_sub_matrix_between_row_idxs(A, 1, 2));
+    	
+    	//print_matrix(inverse(B));
+
     	
     }
-	
 	
 }
