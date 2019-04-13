@@ -25,7 +25,7 @@ public class HistGraphics extends GraphicDevice{
 
     public static int nBins;
     public static ArrayList<List<Double>> breakpoints = new ArrayList<List<Double>>();
-    public static ArrayList<List<Integer>> counts  = new ArrayList<List<Integer>>();
+    public static ArrayList<List<Double>> counts     = new ArrayList<List<Double>>();
     public static List<Double> maxValue = new ArrayList<Double>();
     public static List<Double> minValue = new ArrayList<Double>();
 	public static boolean freq = true;
@@ -35,6 +35,7 @@ public class HistGraphics extends GraphicDevice{
 
 	public static boolean plotNormalPDF = false;
 	public static List<Integer> plotIdxs4NormalPDF = new ArrayList<Integer>();
+	public static ArrayList<ArrayList<List<Double>>> normalPDFs = new ArrayList<ArrayList<List<Double>>>();
 	
 	
 	@Override
@@ -62,7 +63,7 @@ public class HistGraphics extends GraphicDevice{
 	    if(plotNormalPDF == true){
 	    	
 	    	if(freq == false){
-	    		create_normalPDF();   		
+	    		createNormalPDF();   		
 	    	}else{
 	    		System.out.println("Cannot plot normal density for frequencies.");
 	    	}
@@ -102,9 +103,21 @@ public class HistGraphics extends GraphicDevice{
     	    for(int c=0; c<numberOfPlotColumns; c++){
   				
     	    	double stepSize = (double) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns)/nBins;
-    	    	int maxFreq     = Utilities.getMaxFromIntList(counts.get(idx));
-    	    			    		
-    	    	double scale = (double)rectangularHeight/(double)maxFreq;
+    	    	double maxFreq  = 0.0;
+    	    	
+    	    	int [] normalPlotIdx = Utilities.get_idx(plotIdxs4NormalPDF, idx);
+    	    	if(normalPlotIdx[0] != -1){
+    	    		ArrayList<List<Double>> normalPDF = calcNormalPDF(idx);
+    	    		normalPDFs.add(normalPDF);
+    	    		ArrayList<List<Double>> countsAndPDf = new ArrayList<List<Double>>(2);
+    	    		countsAndPDf.add(counts.get(idx));
+    	    		countsAndPDf.add(normalPDF.get(1));
+    	    		maxFreq = Utilities.getMaxFromDblList(countsAndPDf);
+    	    	}else{
+    	    		maxFreq     = Utilities.getMaxFromDblList(counts.get(idx));
+    	    	}
+    	    	   		
+    	    	double scale = (double)rectangularHeight/maxFreq;
     	    			    		
     	    	int x0 = 0;
     	    	int y0 = 0;
@@ -219,11 +232,11 @@ public class HistGraphics extends GraphicDevice{
         	List<Double> sample = y.get(i);
         	int sampleLength    = sample.size();
         	
-        	List<Integer> newCounts = new ArrayList<Integer>(nBins);
+        	List<Double> newCounts = new ArrayList<Double>(nBins);
  
         	for(int j=0; j<nBins; j++){
         		
-        		int counter = 0;
+        		double counter = 0;
         		
         		for(int k=0; k<sampleLength; k++){
         			
@@ -561,8 +574,21 @@ public class HistGraphics extends GraphicDevice{
     		
     		for(int c=0; c<numberOfPlotColumns; c++){
     	    	
-    		    int sampleLength = GeneralMath.sum(counts.get(idx));
-    		    double maxFreq   = Utilities.getMaxFromIntList(counts.get(idx));	    		    
+    		    int sampleLength = (int)GeneralMath.sumDblList(counts.get(idx));
+    		    double maxFreq = 0.0;
+    		    
+    		    int [] normalPlotIdx = Utilities.get_idx(plotIdxs4NormalPDF, idx);
+    	    	if(normalPlotIdx[0] != -1){
+    	    		ArrayList<List<Double>> normalPDF = calcNormalPDF(idx);
+    	    		normalPDFs.add(normalPDF);
+    	    		ArrayList<List<Double>> countsAndPDf = new ArrayList<List<Double>>(2);
+    	    		countsAndPDf.add(counts.get(idx));
+    	    		countsAndPDf.add(normalPDF.get(1));
+    	    		maxFreq = Utilities.getMaxFromDblList(countsAndPDf);
+    	    	}else{
+    	    		maxFreq     = Utilities.getMaxFromDblList(counts.get(idx));
+    	    	}
+    		        	    		    
     			double scale     = (double) ((rectangularHeight)/maxFreq);
     		    int yMaxPos      = (int) ((double)(border_gap*(r+1)+rectangularHeight*(r+1))-scale*maxFreq);
     		    int yMinPos      = (int) ((double)yMaxPos-scale*maxFreq);
@@ -702,7 +728,7 @@ public class HistGraphics extends GraphicDevice{
    	
    	
    	@SuppressWarnings("static-access")
-	public void create_normalPDF(){
+	public void createNormalPDF(){
    		
    		if(freq == false){
    			
@@ -711,11 +737,8 @@ public class HistGraphics extends GraphicDevice{
    			ArrayList<List<Double>> xOrg = x;
    			ArrayList<List<Double>> yOrg = y;
    			
-   		    int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+   		    int rectangularHeight = (int)((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
    			
-   	   		double [][] my    = new double [1][1];
-   	   		double [][] sigma = new double [1][1];
-   	   		
    	   		GenGraphics linePlot = new GenGraphics();
 
 	   		int graphWidth  = getGraphWidth();
@@ -727,13 +750,18 @@ public class HistGraphics extends GraphicDevice{
    	   		int nSamples = x.size();
    	   		int nPlotsWithNormalPDF = plotIdxs4NormalPDF.size();
    	   		int counter = 0;
-   	   		 
+   	   		int nPlots = numberOfPlotRows*numberOfPlotColumns; 
+   	   		
    	   		List<Integer> rowIdxs = new ArrayList<Integer>();
    	   		List<Integer> colIdxs = new ArrayList<Integer>();
    	   		
    	   		int idx = 0;
    	   		
    	   	    for(int i=0; i<numberOfPlotRows; i++){
+   	   	    	
+   	   	    	if(idx>=nPlotsWithNormalPDF){
+   	   	    		break;
+   	   	    	}
    	   	    	
    	   	    	for(int j=0; j<numberOfPlotColumns; j++){
    	   	    		
@@ -749,10 +777,6 @@ public class HistGraphics extends GraphicDevice{
    	   	    			
    	   	    		}
    	   	    		
-   	   	    		if(idx>=nPlotsWithNormalPDF){
-  	    				break;
-  	    			}
-   	   	    		
    	   	    		counter++;
    	   	    		
    	   	    	}
@@ -761,38 +785,43 @@ public class HistGraphics extends GraphicDevice{
    	   				  	   		
    	   		for(int i=0; i<nPlotsWithNormalPDF; i++){
 	   	   			
-   	    	   	my[0][0]    = GeneralMath.mean(y.get(plotIdxs4NormalPDF.get(i)));
-   	    	   	sigma[0][0] = Math.sqrt(GeneralMath.variance(y.get(plotIdxs4NormalPDF.get(i))));
-   	    	   		
-   	    	   	NormalDistribution normalDist = new NormalDistribution(my, sigma);
-   	    	   		
-   	    	   	int n_breakpoints           = breakpoints.get(i).size();
+   	   			int normalPDFidx = plotIdxs4NormalPDF.get(i);
+   	   			
+   	   			if(normalPDFidx>nPlots-1){
+   	   				break;
+   	   			}
+   	   			
+   	   			ArrayList<List<Double>> pdf = normalPDFs.get(i);
+   	   				
+   	    	   	int n_breakpoints           = breakpoints.get(normalPDFidx).size();
    	    	   	double [][] normalDensities = new double [n_breakpoints][1];
    	    	   	double [][] x               = new double [n_breakpoints][1];
-   	    	   	
-   	    	   	int sampleLength = y.get(i).size();
-   	    	   			
-   	    	   	for(int j=0; j<n_breakpoints; j++){
-   	    	   			
-   	    	   		double breakpoint = breakpoints.get(plotIdxs4NormalPDF.get(i)).get(j);
-   	    	   			
-   	    	   		normalDensities[j][0] = normalDist.get_univariateNormalPDF(breakpoint)*sampleLength;
-   	    	   		x[j][0]               = breakpoint;
-   	    	   			
+ 	    	   		
+   	    	   	for(int j=0; j<n_breakpoints; j++){  	    	   				    	   			 	    	   		
+   	    	   		x[j][0]               = pdf.get(0).get(j);
+   	    	   		normalDensities[j][0] = pdf.get(1).get(j);	   	    	   		
    	    	   	}   	    	   		
    	    	   		
    	    	   	//prepare scaling of line plot for PDF.
-   	    		int maxFreq = Utilities.getMaxFromIntList(counts.get(plotIdxs4NormalPDF.get(i)));				
-   	    			
-   	    		double scale   = (double)rectangularHeight/(double)maxFreq;          
-   	    		double yMaxPos = (double)((border_gap+rectangularHeight)*(rowIdxs.get(i)+1))-scale*maxFreq;  
-	  	       		  	
-   	    	   	linePlot.plotLines(x,normalDensities, true, Color.RED);
-   	    	   	
+   	    		double maxFreq    = Utilities.getMaxFromDblList(counts.get(plotIdxs4NormalPDF.get(i)));				
+   	    		double maxDensity = Utilities.getMax(normalDensities);
+   	    		
+   	    		linePlot.plotLines(x, normalDensities, true, Color.RED);
+  	    	   	
    	    	   	List<Point> graphPoints = new ArrayList<Point>();
-   	      
-			    graphPoints = linePlot.calc_scaled_points_4_plot_cell(rowIdxs.get(i), colIdxs.get(i), (nSamples+i), (nSamples+i), (double) maxFreq, yMaxPos);
-		    
+   	    		
+   	    		if(maxFreq > maxDensity){
+   	    			double scale   = (double)rectangularHeight/maxFreq;          
+   	   	    		double yMaxPos = (double)((border_gap+rectangularHeight)*(rowIdxs.get(i)+1))-scale*maxFreq;
+   	   	    		
+   	   	    		graphPoints = linePlot.calc_scaled_points_4_plot_cell(rowIdxs.get(i), colIdxs.get(i), (nSamples+i), (nSamples+i), maxFreq, yMaxPos);
+   	    		
+   	    		}else{
+   	    			
+   	    			graphPoints = linePlot.calc_scaled_points_4_plot_cell(rowIdxs.get(i), colIdxs.get(i), (nSamples+i), (nSamples+i));
+   				    
+   	    		}
+   	    		
 			    linePlot.graphPoints4Samples.add(graphPoints);
    	    	   	   	    	   	
    	   		}		
@@ -815,6 +844,51 @@ public class HistGraphics extends GraphicDevice{
    	}
    	
    	
+   	@SuppressWarnings("static-access")
+	public static ArrayList<List<Double>> calcNormalPDF(int sampleIdx){
+   		
+	   	double [][] my    = new double [1][1];
+	   	double [][] sigma = new double [1][1];
+   		
+   	   	my[0][0]    = GeneralMath.mean(y.get(sampleIdx));
+   	   	sigma[0][0] = Math.sqrt(GeneralMath.variance(y.get(sampleIdx)));
+   	   		
+   	   	NormalDistribution normalDist = new NormalDistribution(my, sigma);
+   	   		
+   	   	int n_breakpoints             = breakpoints.get(sampleIdx).size();
+   	    
+   	    ArrayList<List<Double>> res   = new ArrayList<List<Double>>(2);
+   	   	List<Double> normalDensities  = new ArrayList<Double>(n_breakpoints);
+   	   	List<Double> scaledDensities  = new ArrayList<Double>(n_breakpoints);
+   	    List<Double> x                = new ArrayList<Double>(n_breakpoints);
+   	   	
+   	   	int sampleLength = y.get(sampleIdx).size();
+   	   		
+   	   	for(int j=0; j<n_breakpoints; j++){
+   	   			
+   	   		double breakpoint = breakpoints.get(sampleIdx).get(j);
+   	   			
+   	   		x.add(breakpoint);
+   	   		normalDensities.add(normalDist.get_univariateNormalPDF(breakpoint));
+   	   		   			
+   	   	} 
+   		
+   	   	//Scale the normal pdfs such that sum of pdfs equals 1.0
+   	   	double pdfSum = GeneralMath.sumDblList(normalDensities);
+   	   	 	
+   	   	for(int j=0; j<n_breakpoints; j++){	   	
+   	   		double scaledDensity = (normalDensities.get(j)/pdfSum)*sampleLength;
+   	   		scaledDensities.add(scaledDensity);	   		   			
+   	   	} 
+   	   	
+   	   	res.add(x);
+   	   	res.add(scaledDensities);
+   	   	
+   	   	return res;
+   	   	
+   	}
+   	
+   	
    	public static void plotNormalPDF(boolean doNormalPDF){
    		
    		plotNormalPDF = doNormalPDF;
@@ -833,7 +907,7 @@ public class HistGraphics extends GraphicDevice{
 	 	   
 	 	for(int i = 0; i < maxDataPoints ; i++) {
 	 		x[i][0] = i;
-	 		y[i][0] = 10.0*r.nextGaussian();
+	 		y[i][0] = 20.0+1.0*r.nextGaussian();
 	 	}
 		
 	 	double [][] x1 = new double [maxDataPoints][1];
@@ -841,12 +915,12 @@ public class HistGraphics extends GraphicDevice{
 	 	
 	 	for(int i = 0; i < maxDataPoints ; i++) {
 	 		x1[i][0] = i;
-	 		y1[i][0] = 100.0+8.0*r.nextGaussian();
+	 		y1[i][0] = Math.exp(0.8*r.nextGaussian());
 	 	}
 	 	
 	 	
-	 	//double [] min = {70.0, -50.0, -15.0, -50.0, -50.0, -50.0};
-	 	//double [] max = {130.0, 50.0, 25.0, 50.0, 50.0, 50.0};
+	 	//double [] min = {-3.0, -5.0, -15.0, -5.0, -5.0, -10.0};
+	 	//double [] max = {5.0, 5.0, 25.0, 1.0, 5.0, 10.0};
 	 	
 	 	String [] titles = {"Hist1", "Hist2", "Hist3", "Hist4"};
 	 	String [] subTitles = {"Sub1", "Sub2", "Sub3", "Sub4"};
@@ -861,7 +935,7 @@ public class HistGraphics extends GraphicDevice{
 	 	plotHistogram(y,true, true);
 	 	setNumberOfPlotColums(3);
 	 	setNumberOfPlotRows(2);
-	 	set_numberOfBins(70);
+	 	set_numberOfBins(60);
 	 	setTitle(titles, null, null);
 	 	setSubTitle1(subTitles, null, null);
 	 	setYLabel(yLabels, null, null);
