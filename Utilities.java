@@ -1,3 +1,8 @@
+package Utilities;
+import java.util.ArrayList;
+import java.util.List;
+
+import Mathematics.MatrixOperations;
 
 public class Utilities {
 
@@ -56,6 +61,29 @@ public class Utilities {
 		}
 		
 		return idxs;
+		
+	}
+	
+	
+	// returns unique elements of a supplied integer list
+	public static List<Integer> get_unique_elements(List<Integer> x){
+		
+		int n = x.size();
+		
+		List<Integer> unique_elements = new ArrayList<Integer>();
+		unique_elements.add(x.get(0));
+		
+		for(int i=1; i<n; i++){
+			
+			int [] idx = get_idx(unique_elements,x.get(i));
+			
+			if(idx[0] == -1){
+				unique_elements.add(x.get(i));
+			}
+			
+		}
+		
+		return unique_elements;
 		
 	}
 	
@@ -214,13 +242,34 @@ public class Utilities {
 	
 	
 	// returns maximum of a supplied vector
+	public static int getMax(int[] x){ 
+		    
+		int maxValue = x[0]; 
+		int n_elements = x.length;   
+		
+		for(int i=1;i < n_elements;i++){ 
+		    	
+		  if(x[i] > maxValue){ 
+		    	  
+		     maxValue = x[i]; 
+		         
+		  } 
+		      
+		} 
+		    
+		return maxValue; 
+		    
+	}
+	
+	
+	// returns maximum of a supplied vector
 	public static double getMax(double[][] x){ 
 		    
 		double maxValue = x[0][0]; 
 		int nRows = x.length; 
 		int nCols = x[0].length;
 		
-		for(int i=0;i < nRows;i++){ 
+		for(int i=0; i<nRows;i++){ 
 		    
 			for(int j=0; j<nCols; j++){
 				
@@ -232,6 +281,150 @@ public class Utilities {
 				
 			}
 			  		      
+		} 
+		    
+		return maxValue; 
+		    
+	}
+	
+	
+	// returns maximum of a column in supplied matrix X
+	public static double getMax(double[][] X, int colIdx){ 
+		    
+		if(colIdx > X[0].length){
+			throw new RuntimeException("Invalid column index supplied.");
+		}
+		
+		double maxValue = X[0][colIdx]; 
+		int n_elements = X.length;   
+		
+		for(int i=1 ;i < n_elements;i++){ 
+		    	
+		  if(X[i][colIdx] > maxValue){ 
+		    	  
+		     maxValue = X[i][colIdx]; 
+		         
+		  } 
+		      
+		} 
+		    
+		return maxValue; 
+		    
+	}
+	
+	
+	// returns maximum of a column in supplied list x
+	public static double getMax(List<Double> x){ 
+		    
+		int n_elements = x.size();
+		
+		double maxValue = x.get(0); 
+		   
+		for(int i=1 ;i < n_elements;i++){ 
+		  
+		  double curVal = x.get(i);
+		  if(curVal > maxValue){ 
+		    	  
+		     maxValue = curVal; 
+		         
+		  } 
+		      
+		} 
+		    
+		return maxValue; 
+		    
+	}
+	
+	
+	// returns maximum of a column in supplied list x
+	public static int getMaxFromIntList(List<Integer> x){ 
+		    
+		int n_elements = x.size();
+		
+		int maxValue = x.get(0); 
+		   
+		for(int i=1 ;i < n_elements;i++){ 
+		  
+		  int curVal = x.get(i);
+		  if(curVal > maxValue){ 
+		    	  
+		     maxValue = curVal; 
+		         
+		  } 
+		      
+		} 
+		    
+		return maxValue; 
+		    
+	}
+	
+	
+	// returns maximum of integer array of arrays
+	public static int getMaxFromIntList(ArrayList<List<Integer>> x){ 
+		    
+		int n_elements = x.size();		
+		int maxValue   = x.get(0).get(0); 
+		   
+		for(int i=0; i<n_elements; i++){ 
+		  
+			for(int j=0; j<x.get(i).size(); j++){
+				
+				int curVal = x.get(i).get(j);
+				
+				  if(curVal > maxValue){ 				    	  
+				     maxValue = curVal; 			         
+				  }
+				
+			}
+			   
+		} 
+		    
+		return maxValue; 
+		    
+	}
+	
+	
+	// returns maximum of a column in supplied list x
+	public static double getMaxFromDblList(List<Double> x){ 
+		    
+		int n_elements = x.size();
+		
+		double maxValue = x.get(0); 
+		   
+		for(int i=1; i<n_elements; i++){ 
+		  
+		  double curVal = x.get(i);
+		  if(curVal > maxValue){ 
+		    	  
+		     maxValue = curVal; 
+		         
+		  } 
+		      
+		} 
+		    
+		return maxValue; 
+		    
+	}
+	
+	
+	// returns maximum of integer array of arrays
+	public static double getMaxFromDblList(ArrayList<List<Double>> x){ 
+		    
+		int n_elements = x.size();		
+		double maxValue   = x.get(0).get(0); 
+		   
+		for(int i=0; i<n_elements; i++){ 
+		  
+			for(int j=0; j<x.get(i).size(); j++){
+				
+				double curVal = x.get(i).get(j);
+				
+				  if(curVal > maxValue){ 				    	  
+				     maxValue = curVal; 			         
+				  }
+				
+			}
+			   
 		} 
 		    
 		return maxValue; 
@@ -253,6 +446,126 @@ public class Utilities {
 		         
 		  } 
 		      
+		} 
+		    
+		return minValue; 
+		    
+	}
+	
+	
+	// returns minimum of a supplied vector
+	public static double getMin(int[] x){ 
+	    
+		double minValue = x[0]; 
+		int n_elements = x.length;   
+		
+		for(int i=1;i < n_elements;i++){ 
+		    	
+		  if(x[i] < minValue){ 
+		    	  
+		     minValue = x[i]; 
+		         
+		  } 
+		      
+		} 
+		    
+		return minValue; 
+		    
+	}
+	
+	
+	// returns minimum of a supplied vector/ matrix
+	public static double getMin(double[][] X){ 
+		    
+		double minValue = X[0][0]; 
+		int nRows = X.length; 
+		int nCols = X[0].length;
+		
+		for(int i=0; i<nRows;i++){ 
+		    
+			for(int j=0; j<nCols; j++){
+				
+				if(X[i][j] < minValue){ 
+			    	  
+					minValue = X[i][j]; 
+				         
+				}
+				
+			}
+			  		      
+		} 
+		    
+		return minValue; 
+		    
+	}
+	
+	
+	// returns minimum of a column in supplied matrix X
+	public static double getMin(double[][] X, int colIdx){ 
+		    
+		if(colIdx > X[0].length){
+			throw new RuntimeException("Invalid column index supplied.");
+		}
+		
+		double minValue = X[0][colIdx]; 
+		int n_elements = X.length;   
+		
+		for(int i=1 ;i < n_elements;i++){ 
+		    	
+		  if(X[i][colIdx] < minValue){ 
+		    	  
+		     minValue = X[i][colIdx]; 
+		         
+		  } 
+		      
+		} 
+		    
+		return minValue; 
+		    
+	}
+	
+	
+	// returns minimum of a column in supplied list x
+	public static double getMin(List<Double> x){ 
+		    
+		int n_elements = x.size();
+		
+		double minValue = x.get(0); 
+		   
+		for(int i=1 ;i < n_elements;i++){ 
+		  
+		  double curVal = x.get(i);
+		  if(curVal < minValue){ 
+		    	  
+		     minValue = curVal; 
+		         
+		  } 
+		      
+		} 
+		    
+		return minValue; 
+		    
+	}
+	
+	
+	// returns maximum of integer array of arrays
+	public static double getMinFromDblList(ArrayList<List<Double>> x){ 
+		    
+		int n_elements  = x.size();		
+		double minValue = x.get(0).get(0); 
+		   
+		for(int i=0; i<n_elements; i++){ 
+		  
+			for(int j=0; j<x.get(i).size(); j++){
+				
+				double curVal = x.get(i).get(j);
+				
+				  if(curVal < minValue){ 				    	  
+				     minValue = curVal; 			         
+				  }
+				
+			}
+			   
 		} 
 		    
 		return minValue; 
@@ -304,6 +617,74 @@ public class Utilities {
 		for(int i=0; i<x.length; i++){
 						
 			if(x[i].contentEquals(search_element) == true){
+				
+				search_idxs[idx] = i;
+				idx = idx+1;
+				
+			}
+			
+		}
+		
+		if(idx == 0){
+			
+			int [] idxs = new int [1];
+			idxs[0] = -1;
+			return idxs;
+			
+		}else{
+			
+			int [] idxs = MatrixOperations.get_int_sub_vec(search_idxs, 0, (idx-1));
+			return idxs;
+			
+		}
+	   	
+	}
+	
+	
+	// returns position index of an element in supplied vector
+	public static int [] get_idx(List<String> x, String search_element){
+		
+		int [] search_idxs = new int [x.size()];
+		
+		int idx = 0;		
+				
+		for(int i=0; i<x.size(); i++){
+						
+			if(x.get(i).contentEquals(search_element) == true){
+				
+				search_idxs[idx] = i;
+				idx = idx+1;
+				
+			}
+			
+		}
+		
+		if(idx == 0){
+			
+			int [] idxs = new int [1];
+			idxs[0] = -1;
+			return idxs;
+			
+		}else{
+			
+			int [] idxs = MatrixOperations.get_int_sub_vec(search_idxs, 0, (idx-1));
+			return idxs;
+			
+		}
+	   	
+	}
+	
+	
+	// returns position index of an element in supplied vector
+	public static int [] get_idx(List<Integer> x, int search_element){
+		
+		int [] search_idxs = new int [x.size()];
+		
+		int idx = 0;		
+				
+		for(int i=0; i<x.size(); i++){
+						
+			if(x.get(i) == search_element){
 				
 				search_idxs[idx] = i;
 				idx = idx+1;
@@ -460,6 +841,33 @@ public class Utilities {
 	}
  	
 	
+	public static List<Integer> get_idx_of_char_in_str(String str, String searchSymbol){
+        		
+		List<Integer> pos = new ArrayList<Integer>();
+		
+		if(str.length() == 1){
+			if(str == searchSymbol){
+				pos.add(0);
+			}
+		}else{
+			for (int i=1; i<str.length()+1; i++){
+		    	
+		    	System.out.println(str.substring(i-1,i));
+		    	
+		    	if (str.substring(i-1,i).contentEquals(searchSymbol)){
+		    		pos.add(i-1);
+		        }
+		    	
+		    }
+		}
+		
+	    
+	    	
+	    return pos;
+	    
+	}
+	
+	
 	public static String trim(String str){
 		    	  		
     	String trim_str = "";
@@ -549,7 +957,6 @@ public class Utilities {
     // test client
     public static void main(String[] args) {
     	
-    	
     	//double [] a = {-2.0, -1.0, 8.0, -7.0};
     	//double [] sorted_vec = get_sorted_vec(a);
     	//double [] sorted_vec = get_unique_elements(a);
@@ -571,9 +978,13 @@ public class Utilities {
     	
     	//String str = " No     id female    ses  schtyp     prog read write math science socst       honors awards cid ";
     	
-    	String [] a = {"a", "a", "b", "a", "c", "d", "c"};
+    	//String [] a = {"a", "a", "b", "a", "c", "d", "c"};
     	
-    	String [] b = get_unique_elements(a);
+    	//String [] b = get_unique_elements(a);
+    	  	
+    	@SuppressWarnings("unused")
+		List<Integer> a = get_idx_of_char_in_str("2,3,", ",");
+    	
     	
     }
 	

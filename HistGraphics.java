@@ -36,6 +36,7 @@ public class HistGraphics extends GraphicDevice{
 	public static boolean plotNormalPDF = false;
 	public static List<Integer> plotIdxs4NormalPDF = new ArrayList<Integer>();
 	public static ArrayList<ArrayList<List<Double>>> normalPDFs = new ArrayList<ArrayList<List<Double>>>();
+	public static int pdfLineWidth = 2;
 	
 	
 	@Override
@@ -90,7 +91,12 @@ public class HistGraphics extends GraphicDevice{
     	set_x_axis();
     	set_y_axis();
 	    
-    	int idx = 0;
+    	int idx       = 0;
+    	int plotIdx   = -1;
+    	int nPlotIdxs = 0;
+    	
+    	ArrayList<List<Double>> listOfCounts = new ArrayList<List<Double>>();
+    	List<Integer> pdfIdxs = null;
     	
     	for(int r=0; r<numberOfPlotRows; r++){
     		
@@ -102,19 +108,56 @@ public class HistGraphics extends GraphicDevice{
     		
     	    for(int c=0; c<numberOfPlotColumns; c++){
   				
+    	    	if(idx>=nSamples){    	    		
+    	    		break;    	    		
+    	    	}
+    	    	
+    	    	int curPlotIdx = plotInfo.get(idx);
+    	    	
+    	    	if(plotIdx != curPlotIdx){
+    	    		plotIdx = curPlotIdx; 
+    	    		
+    	    		int [] plotIdxs = Utilities.get_idx(plotInfo, plotIdx);
+    	    		nPlotIdxs  = plotIdxs.length;
+    	    		listOfCounts = new ArrayList<List<Double>>(nPlotIdxs); 
+    	    		
+    	    		for(int p=0; p<nPlotIdxs; p++){
+    	    			listOfCounts.add(counts.get(idx+p));
+    	    		}
+    	    		
+    	    		//Calculate pdf for plot selection
+    	    		//int [] normalPlotIdx = Utilities.get_idx(plotIdxs4NormalPDF, idx);
+        	    	if(plotNormalPDF==true){
+        	    		int nPDFPlots = plotIdxs4NormalPDF.size();
+        	    		pdfIdxs = new ArrayList<Integer>();
+        	    		for(int i=0; i<nPDFPlots; i++){
+        	    			int pdfPlotIdx = plotInfo.get(plotIdxs4NormalPDF.get(i));
+        	    			if(pdfPlotIdx==plotIdx){    
+        	    				pdfIdxs.add(i);
+        	    				ArrayList<List<Double>> normalPDF = calcNormalPDF(plotIdxs4NormalPDF.get(i));
+                	    		normalPDFs.add(normalPDF);
+        	    			}    	    			
+        	    		}
+        	    	}
+    	    		    	    		
+    	    	}
+    	    	   	    	
     	    	double stepSize = (double) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns)/nBins;
     	    	double maxFreq  = 0.0;
     	    	
+    	    	//Determine maximum regarding pdfs
     	    	int [] normalPlotIdx = Utilities.get_idx(plotIdxs4NormalPDF, idx);
     	    	if(normalPlotIdx[0] != -1){
-    	    		ArrayList<List<Double>> normalPDF = calcNormalPDF(idx);
-    	    		normalPDFs.add(normalPDF);
-    	    		ArrayList<List<Double>> countsAndPDf = new ArrayList<List<Double>>(2);
-    	    		countsAndPDf.add(counts.get(idx));
-    	    		countsAndPDf.add(normalPDF.get(1));
+    	    		ArrayList<List<Double>> countsAndPDf = listOfCounts;
+    	    		int startIdx = normalPDFs.size()-pdfIdxs.size();
+    	    		for(int i=0; i<pdfIdxs.size(); i++){
+    	    			countsAndPDf.add(normalPDFs.get(startIdx+i).get(1));
+    	    		}
+    	    		
     	    		maxFreq = Utilities.getMaxFromDblList(countsAndPDf);
+    	    		
     	    	}else{
-    	    		maxFreq     = Utilities.getMaxFromDblList(counts.get(idx));
+    	    		maxFreq = Utilities.getMaxFromDblList(listOfCounts);
     	    	}
     	    	   		
     	    	double scale = (double)rectangularHeight/maxFreq;
@@ -123,46 +166,50 @@ public class HistGraphics extends GraphicDevice{
     	    	int y0 = 0;
     	    	int x1 = 0;
     	    	int y1 = 0;
+    	    	
+    	    	for(int p=0; p<nPlotIdxs; p++){
     	    		
-    	    	for(int i=0; i<nBins; i++){
-
-    	    		x0 = (int) (border_gap*(c+1)+rectangularWidth*c + i*stepSize);
-    	    		x1 = (int) stepSize;
-    	    			
-    	    		y0 = (int)((border_gap*(r+1)+rectangularHeight*(r+1))-scale*(counts.get(idx)).get(i));						
-    	    		y1 = (int)(scale*(counts.get(idx)).get(i));
-    							
     				if(useDifferentColors == true){
     					
     					int red   = getDefaultColors()[idx][0];
     					int green = getDefaultColors()[idx][1];
     					int blue  = getDefaultColors()[idx][2];
     					
-    					barColor = new Color(red,green,blue);
+    					barColor = new Color(red,green,blue,210);
     					
     				}
-    				
-    				g2.setColor(barColor);
-    				g2.fillRect(x0, y0, x1, y1);
-    					
-    				g2.setColor(lineColor);
-    				g2.drawRect(x0, y0, x1, y1);
-    				
-    				int xLeft   = border_gap*(c+1)+rectangularWidth*c;
-        	    	int xRight  = (border_gap+rectangularWidth)*(c+1);
-     			
-        	    	g2.setColor(grid_color);
-        	    	g2.drawLine(xLeft, yBottom, xRight, yBottom);
-        	    	g2.setColor(Color.BLACK);
+    	    		
+        	    	for(int i=0; i<nBins; i++){
+
+        	    		x0 = (int) (border_gap*(c+1)+rectangularWidth*c + i*stepSize);
+        	    		x1 = (int) stepSize;
+        	    			
+        	    		y0 = (int)((border_gap*(r+1)+rectangularHeight*(r+1))-scale*(listOfCounts.get(p)).get(i));						
+        	    		y1 = (int)(scale*(listOfCounts.get(p)).get(i));
+        								
+        				g2.setColor(barColor);
+        				g2.fillRect(x0, y0, x1, y1);
+        					
+        				g2.setColor(lineColor);
+        				g2.drawRect(x0, y0, x1, y1);
+        				
+        				int xLeft   = border_gap*(c+1)+rectangularWidth*c;
+            	    	int xRight  = (border_gap+rectangularWidth)*(c+1);
+         			
+            	    	g2.setColor(grid_color);
+            	    	g2.drawLine(xLeft, yBottom, xRight, yBottom);
+            	    	g2.setColor(Color.BLACK);
+            	    	
+        	    	}
+        	    	   
+        	    	idx++;
         	    	
+        	    	if(idx>=nSamples){    	    		
+        	    		break;    	    		
+        	    	}
+    	    		
     	    	}
-    	    	   
-    	    	idx++;
-    	    	
-    	    	if(idx>=nSamples){    	    		
-    	    		break;    	    		
-    	    	}
-    	    	
+	
     	    }
     		
     	}
@@ -187,6 +234,11 @@ public class HistGraphics extends GraphicDevice{
     }
     
     
+    public static void setPDFLineWidth(int width){
+    	pdfLineWidth = width;
+    }
+    
+    
     public static void freqHist(boolean freqFlag){
     	
     	//if true then frequencies else relative counts (which sum to one).
@@ -201,18 +253,63 @@ public class HistGraphics extends GraphicDevice{
     		throw new RuntimeException("Number of bins not set.");
     	}
     	
-    	int nSamples = y.size();
+    	int nSamples  = y.size();
+    	
+    	int plotIdx   = -1;
+    	int nPlotIdxs = 0;
+    	ArrayList<List<Double>> listOfObs = new ArrayList<List<Double>>();
+    	
+    	boolean boundsSetted = false;
+    	
+    	if(maxValue.size()!=0){
+    		boundsSetted = true;
+    	}
+    	
+		double max = 0.0;
+		double min = 0.0;
     	
     	for(int i=0; i<nSamples; i++){
+    		       		
+    		if(boundsSetted == false){
+    			
+    	    	int curPlotIdx = plotInfo.get(i);
+    	    	
+    	    	if(plotIdx != curPlotIdx){
+    	    		plotIdx = curPlotIdx; 
+    	    		
+    	    		int [] plotIdxs = Utilities.get_idx(plotInfo, plotIdx);
+    	    		nPlotIdxs  = plotIdxs.length;
+    	    		listOfObs = new ArrayList<List<Double>>(nPlotIdxs); 
+    	    		
+    	    		for(int p=0; p<nPlotIdxs; p++){    	    			
+    	    			listOfObs.add(y.get(i+p));
+    	    		}
+    	    			
+        	    	max = Utilities.getMaxFromDblList(listOfObs);
+        	    	min = Utilities.getMinFromDblList(listOfObs);
+        	    	
+        	    	for(int p=0; p<nPlotIdxs; p++){
+        	    		maxValue.add(max);
+            	    	minValue.add(min);
+    	    		}
+    	    		
+    	    	}
+    			   		
+    		}else{
+    			
+    			max = maxValue.get(i);
+    			min = minValue.get(i);
+    			
+    		}
     		
-        	double length = maxValue.get(i)-minValue.get(i);
+        	double length = max-min;
         	double stepSize = length/nBins;
         	
         	List<Double> newBreaks = new ArrayList<Double>();
         		
         	for(int j=0; j<nBins+1; j++){
         		
-        		newBreaks.add(minValue.get(i)+j*stepSize);
+        		newBreaks.add(min+j*stepSize);
         		
         	}
     		
@@ -271,7 +368,7 @@ public class HistGraphics extends GraphicDevice{
     	
     }
     
-
+    
     public static void plotHistogram(double [][] values, boolean newPlot){
   	   
     	setDefaultDesign();
@@ -280,8 +377,8 @@ public class HistGraphics extends GraphicDevice{
     	
     	convert_input_data(x_values, values, "H");
 	    
-    	maxValue.add(Utilities.getMax(y.get(y.size()-1)));
-    	minValue.add(Utilities.getMin(y.get(y.size()-1)));
+    	//maxValue.add(Utilities.getMax(y.get(y.size()-1)));
+    	//minValue.add(Utilities.getMin(y.get(y.size()-1)));
     	
     	int nPlotInfos = plotInfo.size();
     	
@@ -306,8 +403,8 @@ public class HistGraphics extends GraphicDevice{
     	
     	convert_input_data(x_values, values, "H");
 	    
-    	maxValue.add(Utilities.getMax(y.get(y.size()-1)));
-    	minValue.add(Utilities.getMin(y.get(y.size()-1)));
+    	//maxValue.add(Utilities.getMax(y.get(y.size()-1)));
+    	//minValue.add(Utilities.getMin(y.get(y.size()-1)));
     	
     	int nPlotInfos = plotInfo.size();
     	
@@ -323,74 +420,14 @@ public class HistGraphics extends GraphicDevice{
     	
     	if(plotNormalPDF == true){
     		
-    		plotIdxs4NormalPDF.add(plotInfo.get(plotInfo.size()-1));
+    		plotIdxs4NormalPDF.add(plotInfo.size()-1);
     		
     		plotNormalPDF(true);
     		
     	}
     	
     }
-    
-    
-    public static void plotHistogram(double [][] values, double max_value, double min_value, boolean newPlot){
-   	   
-    	setDefaultDesign();
-    	
-    	double [][] x_values = new double [values.length][1];
-    	
-    	convert_input_data(x_values, values, "H");
-	   
-    	maxValue.add(max_value);
-    	minValue.add(min_value);
-    	
-    	int nPlotInfos = plotInfo.size();
-    	
-    	if(nPlotInfos == 0){
-			plotInfo.add(0);
-		}else{
-			if(newPlot == true){				
-				plotInfo.add(plotInfo.get(nPlotInfos-1)+1);				
-			}else{			
-				plotInfo.add(plotInfo.get(nPlotInfos-1));			
-			}
-		}
-    	  	
-    }
-    
-    
-    public static void plotHistogram(double [][] values, double max_value, double min_value, boolean newPlot, boolean plotNormalPDF){
-    	   
-    	setDefaultDesign();
-    	
-    	double [][] x_values = new double [values.length][1];
-    	
-    	convert_input_data(x_values, values, "H");
-	   
-    	maxValue.add(max_value);
-    	minValue.add(min_value);
-    	
-    	int nPlotInfos = plotInfo.size();
-    	
-    	if(nPlotInfos == 0){
-			plotInfo.add(0);
-		}else{
-			if(newPlot == true){				
-				plotInfo.add(plotInfo.get(nPlotInfos-1)+1);				
-			}else{			
-				plotInfo.add(plotInfo.get(nPlotInfos-1));			
-			}
-		}
-    	
-    	if(plotNormalPDF == true){
-    		
-    		plotIdxs4NormalPDF.add(plotInfo.get(plotInfo.size()-1));
-    		
-    		plotNormalPDF(true);
-    		
-    	}
-    	
-    }
-    
+     
     
     private static void createAndShowGui() {
 
@@ -480,15 +517,27 @@ public class HistGraphics extends GraphicDevice{
 	    int rectangularWidth  = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
 	    int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
 	    
-	    int idx = 0;
+	    int idx       = 0;
+	    int plotIdx   = -1;
+	    int nPlotIdxs = 0;
 	    
     	for(int r=0; r<numberOfPlotRows; r++){
     		
     		if(idx>=nSamples){	    		
 	    		break;	    		
 	    	}
-	    
+	    	
     	    for(int c=0; c<numberOfPlotColumns; c++){
+    	    		
+    		    int curPlotIdx = plotInfo.get(idx);
+    	    	
+    	    	if(plotIdx != curPlotIdx){
+    	    		plotIdx = curPlotIdx; 
+    	    		
+    	    		int [] plotIdxs = Utilities.get_idx(plotInfo, plotIdx);
+    	    		nPlotIdxs = nPlotIdxs+plotIdxs.length;	
+    	    		
+    	    	}
     	    	
     		    double width      = 0.0;//0.01*(getHeight()-2*border_gap);
     			double xLength    = (maxValue.get(idx)-minValue.get(idx))/numberXDivisions; 
@@ -534,15 +583,14 @@ public class HistGraphics extends GraphicDevice{
     		    	
     		    }
     	    	
-    		    idx++;
+    		    idx = nPlotIdxs;
     		    
     		    if(idx>=nSamples){    	    		
     	    		break;    	    		
     	    	}
-    		    
+    		     		    
     	    }
-    		
-    		
+    		   		
     	}	
     		
 	    g2.setFont(orgFont);
@@ -564,16 +612,28 @@ public class HistGraphics extends GraphicDevice{
 	    int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
 	    int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
 	    
-	    int idx = 0;
+	    int idx       = 0;
+	    int plotIdx   = -1;
+	    int nPlotIdxs = 0;
 	    
     	for(int r=0; r<numberOfPlotRows; r++){
     		
     		if(idx>=nSamples){	    		
 	    		break;	    		
 	    	}
-    		
+    	    		
     		for(int c=0; c<numberOfPlotColumns; c++){
     	    	
+    		    int curPlotIdx = plotInfo.get(idx);
+    	    	
+    	    	if(plotIdx != curPlotIdx){
+    	    		plotIdx = curPlotIdx; 
+    	    		
+    	    		int [] plotIdxs = Utilities.get_idx(plotInfo, plotIdx);
+    	    		nPlotIdxs = nPlotIdxs+plotIdxs.length;	
+    	    		
+    	    	}
+    			
     		    int sampleLength = (int)GeneralMath.sumDblList(counts.get(idx));
     		    double maxFreq = 0.0;
     		    
@@ -585,6 +645,7 @@ public class HistGraphics extends GraphicDevice{
     	    		countsAndPDf.add(counts.get(idx));
     	    		countsAndPDf.add(normalPDF.get(1));
     	    		maxFreq = Utilities.getMaxFromDblList(countsAndPDf);
+    	    		normalPDFs = new ArrayList<ArrayList<List<Double>>>();
     	    	}else{
     	    		maxFreq     = Utilities.getMaxFromDblList(counts.get(idx));
     	    	}
@@ -704,14 +765,12 @@ public class HistGraphics extends GraphicDevice{
     		 	    	FontMetrics metrics = g2.getFontMetrics();
     		 	        int labelWidth = metrics.stringWidth(ylabel);
     		 	        g2.drawString(ylabel, x0 - labelWidth - 5, y0 + (metrics.getHeight() / 2) - 3);
-    		 	    	
-    		 	        i++;
-    		 	        
+ 	        
     		 	    }
     		    	
     		    }
     	    	
-        		idx++;
+    		    idx = nPlotIdxs;
         		
     		    if(idx>=nSamples){    	    		
     	    		break;    	    		
@@ -749,45 +808,14 @@ public class HistGraphics extends GraphicDevice{
 	   		
    	   		int nSamples = x.size();
    	   		int nPlotsWithNormalPDF = plotIdxs4NormalPDF.size();
-   	   		int counter = 0;
    	   		int nPlots = numberOfPlotRows*numberOfPlotColumns; 
+   	   		int maxPlotInfo = Utilities.getMaxFromIntList(plotInfo)+1; 
    	   		
-   	   		List<Integer> rowIdxs = new ArrayList<Integer>();
-   	   		List<Integer> colIdxs = new ArrayList<Integer>();
-   	   		
-   	   		int idx = 0;
-   	   		
-   	   	    for(int i=0; i<numberOfPlotRows; i++){
-   	   	    	
-   	   	    	if(idx>=nPlotsWithNormalPDF){
-   	   	    		break;
-   	   	    	}
-   	   	    	
-   	   	    	for(int j=0; j<numberOfPlotColumns; j++){
-   	   	    		
-   	   	    		if(counter == plotIdxs4NormalPDF.get(idx)){
-   	   	    			
-   	   	    			rowIdxs.add(i);
-   	   	    			colIdxs.add(j);
-   	   	    			idx++;
-   	   	    			
-   	   	    			if(idx>=nPlotsWithNormalPDF){
-   	   	    				break;
-   	   	    			}
-   	   	    			
-   	   	    		}
-   	   	    		
-   	   	    		counter++;
-   	   	    		
-   	   	    	}
-   	   	    	
-   	   	    }
-   	   				  	   		
-   	   		for(int i=0; i<nPlotsWithNormalPDF; i++){
-	   	   			
+   			for(int i=0; i<nPlotsWithNormalPDF; i++){
+	   	   					
    	   			int normalPDFidx = plotIdxs4NormalPDF.get(i);
    	   			
-   	   			if(normalPDFidx>nPlots-1){
+   	   			if(plotInfo.get(normalPDFidx)>nPlots-1){
    	   				break;
    	   			}
    	   			
@@ -801,24 +829,42 @@ public class HistGraphics extends GraphicDevice{
    	    	   		x[j][0]               = pdf.get(0).get(j);
    	    	   		normalDensities[j][0] = pdf.get(1).get(j);	   	    	   		
    	    	   	}   	    	   		
-   	    	   		
-   	    	   	//prepare scaling of line plot for PDF.
-   	    		double maxFreq    = Utilities.getMaxFromDblList(counts.get(plotIdxs4NormalPDF.get(i)));				
-   	    		double maxDensity = Utilities.getMax(normalDensities);
-   	    		
+
    	    		linePlot.plotLines(x, normalDensities, true, Color.RED);
   	    	   	
-   	    	   	List<Point> graphPoints = new ArrayList<Point>();
+   	    		//Determine position of PDF
+   	    		int pdfPlotIdx = plotInfo.get(plotIdxs4NormalPDF.get(i));
+   	   			List<Integer> plotPos = getMultiPlotPositions(pdfPlotIdx);
+   	    		int rowIdx = plotPos.get(0);
+   	    		int colIdx = plotPos.get(1);
+   	   			
+   	    		int [] graphIdxs = Utilities.get_idx(plotInfo, pdfPlotIdx);
+   	    		ArrayList<List<Double>> countsAndPDFs = new ArrayList<List<Double>>();
+   	    		for(int j=0; j<graphIdxs.length; j++){
+   	    			countsAndPDFs.add(counts.get(graphIdxs[j]));
+   	    		}
    	    		
-   	    		if(maxFreq > maxDensity){
+   	    		for(int j=0; j<nPlotsWithNormalPDF; j++){
+   	    			if(plotInfo.get(plotIdxs4NormalPDF.get(i))==pdfPlotIdx){
+   	    				countsAndPDFs.add(normalPDFs.get(i).get(1));
+   	    			}
+   	    		}
+   	    		
+   	    		//prepare scaling of line plot for PDF.
+   	    		double maxFreq    = Utilities.getMaxFromDblList(countsAndPDFs);
+   	    		double maxDensity = Utilities.getMax(normalDensities);
+   	    		
+   	    	   	List<Point> graphPoints = new ArrayList<Point>();
+   	    		   	    	   	
+   	    		if(maxFreq>maxDensity){
    	    			double scale   = (double)rectangularHeight/maxFreq;          
-   	   	    		double yMaxPos = (double)((border_gap+rectangularHeight)*(rowIdxs.get(i)+1))-scale*maxFreq;
+   	   	    		double yMaxPos = (double)((border_gap+rectangularHeight)*(rowIdx+1))-scale*maxFreq;
    	   	    		
-   	   	    		graphPoints = linePlot.calc_scaled_points_4_plot_cell(rowIdxs.get(i), colIdxs.get(i), (nSamples+i), (nSamples+i), maxFreq, yMaxPos);
+   	   	    		graphPoints = linePlot.calc_scaled_points_4_plot_cell(rowIdx, colIdx, maxPlotInfo+i, nSamples+i, maxFreq, yMaxPos);
    	    		
    	    		}else{
    	    			
-   	    			graphPoints = linePlot.calc_scaled_points_4_plot_cell(rowIdxs.get(i), colIdxs.get(i), (nSamples+i), (nSamples+i));
+   	    			graphPoints = linePlot.calc_scaled_points_4_plot_cell(rowIdx, colIdx, maxPlotInfo+i, nSamples+i);
    				    
    	    		}
    	    		
@@ -829,7 +875,11 @@ public class HistGraphics extends GraphicDevice{
    	   		int [] idx2remove = get_idxs_4_plot_type("H");	
    	   		remove_input_data(idx2remove);
    	   		
+   	   		Stroke orgStroke = linePlot.g2.getStroke();
+   	   		
+   	   		linePlot.graph_stroke = new BasicStroke(pdfLineWidth);
    	   		linePlot.createLinePlot();
+   	   		linePlot.graph_stroke = orgStroke;
    	   		
    	   		plotInfo = plotInfoOrg;
    	   		plotType = plotTypeOrg;
@@ -841,6 +891,38 @@ public class HistGraphics extends GraphicDevice{
    	   		
    		}
 
+   	}
+   	
+   	
+   	public static List<Integer> getMultiPlotPositions(int plotIdx){
+   		
+   		int r=0;
+   		int c=0;
+   		int counter = 0;
+   	    List<Integer> multiPlotPos = new ArrayList<Integer>(2);
+   		
+   		while(r<numberOfPlotRows){
+	   	    		
+   			c=0;
+   			
+	   	    while(c<numberOfPlotColumns){
+	   	    	
+	   	    	if(plotIdx==counter){
+	   	    		multiPlotPos.add(r);
+	   	    		multiPlotPos.add(c);
+	   	    	}
+	   	    	
+	   	    	counter++;
+	   	    	c++;
+	   	    		
+	   	    }
+   		
+	   	    r++;
+	   	    	
+   		}
+	   	 
+   		return multiPlotPos;
+   		
    	}
    	
    	
@@ -907,7 +989,7 @@ public class HistGraphics extends GraphicDevice{
 	 	   
 	 	for(int i = 0; i < maxDataPoints ; i++) {
 	 		x[i][0] = i;
-	 		y[i][0] = 20.0+1.0*r.nextGaussian();
+	 		y[i][0] = 15.0+1.0*r.nextGaussian();
 	 	}
 		
 	 	double [][] x1 = new double [maxDataPoints][1];
@@ -915,10 +997,18 @@ public class HistGraphics extends GraphicDevice{
 	 	
 	 	for(int i = 0; i < maxDataPoints ; i++) {
 	 		x1[i][0] = i;
-	 		y1[i][0] = Math.exp(0.8*r.nextGaussian());
+	 		y1[i][0] = 10.0+2.0*r.nextGaussian(); //Math.exp(0.9*r.nextGaussian());
 	 	}
 	 	
+	 	double [][] x2 = new double [maxDataPoints][1];
+	 	double [][] y2 = new double [maxDataPoints][1];
 	 	
+	 	for(int i = 0; i < maxDataPoints ; i++) {
+	 		x2[i][0] = i;
+	 		y2[i][0] = Math.exp(0.5*r.nextGaussian());
+	 	}
+	 	
+	 		 	
 	 	//double [] min = {-3.0, -5.0, -15.0, -5.0, -5.0, -10.0};
 	 	//double [] max = {5.0, 5.0, 25.0, 1.0, 5.0, 10.0};
 	 	
@@ -927,15 +1017,17 @@ public class HistGraphics extends GraphicDevice{
 	 	String [] yLabels = {"yLabel1", "yLabel2", "yLabel3", "yLabel4"};
 	 	String [] xLabels = {"xLabel1", "xLabel2", "xLabel3", "xLabel4"};
 	 	
-	 	plotHistogram(y1,true,true);
-	 	plotHistogram(y,true);
 	 	plotHistogram(y,true,true);
-	 	plotHistogram(y,true, true);
-	 	plotHistogram(y1,true);
-	 	plotHistogram(y,true, true);
+	 	plotHistogram(y1,false,true);
+	 	plotHistogram(y2,true,true);
+	 	plotHistogram(y,true,false);
+	 	plotHistogram(y1,false,true);
+	 	plotHistogram(y2,true,true);
+	 	plotHistogram(y,true,true);
+	 	//plotHistogram(y1,false,true);
 	 	setNumberOfPlotColums(3);
-	 	setNumberOfPlotRows(2);
-	 	set_numberOfBins(60);
+	 	setNumberOfPlotRows(1);
+	 	set_numberOfBins(50);
 	 	setTitle(titles, null, null);
 	 	setSubTitle1(subTitles, null, null);
 	 	setYLabel(yLabels, null, null);
@@ -948,7 +1040,8 @@ public class HistGraphics extends GraphicDevice{
 	 	setFontOfYAxisUnits("bold",11);
 	 	//set_max_x_value(max);
 	 	//set_min_x_value(min);
-	 	freqHist(false);	 	
+	 	freqHist(false);	
+	 	setPDFLineWidth(2);
 	 	//noLinesAroundBars();
 	 	plot();
 	 	

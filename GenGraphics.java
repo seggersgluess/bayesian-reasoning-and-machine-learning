@@ -24,7 +24,7 @@ public class GenGraphics extends GraphicDevice{
 
     public static List<Color> graph_line_color = new ArrayList<Color>();
     public static List<Color> graph_point_color = new ArrayList<Color>();
-    public static final Stroke graph_stroke = new BasicStroke(3f);
+    public static Stroke graph_stroke = new BasicStroke(3f);
     public static final int graph_point_width = 6;
    	
     public static List<List<Point>> graphPoints4Samples = new ArrayList<List<Point>>();
@@ -130,7 +130,7 @@ public class GenGraphics extends GraphicDevice{
 		
 		drawShadedAreas = true;
 		
-		if(yValues[0][0] < yValues[0][1]){
+		if(yValues[0][0]<yValues[0][1]){
 			
 			for(int i=0; i<nValues; i++){
 				
@@ -514,6 +514,10 @@ public class GenGraphics extends GraphicDevice{
 		int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
 	    int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
 		
+	    int plotInfoNumber = -1;	    	    
+	    double x_min = 0.0;
+	    double x_max = 0.0;
+	    int nPlotInfoIdxs = 0;
 	    int r = 0;
 	    
 		while(r<numberOfPlotRows){
@@ -521,15 +525,30 @@ public class GenGraphics extends GraphicDevice{
 			if(counter>=nSamples){    	    		
 	    		break;    	    		
 	    	}
-			
-			int plotInfoNumber = plotInfo.get(counter);			
-			
+					
 			int yUp     = border_gap*(r+1)+rectangularHeight*r;
 			int yBottom = (border_gap+rectangularHeight)*(r+1);
 			
 			int c = 0;
 			
 			while(c<numberOfPlotColumns){
+				
+				int curPlotInfoNumber = plotInfo.get(counter);
+				if(curPlotInfoNumber != plotInfoNumber){
+					plotInfoNumber = curPlotInfoNumber;
+					
+					int [] plotInfoIdxs = Utilities.get_idx(plotInfo, plotInfoNumber);
+					nPlotInfoIdxs = plotInfoIdxs.length;
+					ArrayList<List<Double>> xCollection = new ArrayList<List<Double>>(nPlotInfoIdxs);
+					
+					for(int i=0; i<nPlotInfoIdxs; i++){
+						xCollection.add(x.get(plotInfoIdxs[i]));
+					}
+					
+					x_min = Utilities.getMinFromDblList(xCollection);
+					x_max = Utilities.getMaxFromDblList(xCollection);
+					
+				}
 				
 				int xLeft   = border_gap*(c+1)+rectangularWidth*(c);
 				int xRight  = (border_gap+rectangularWidth)*(c+1);
@@ -540,9 +559,6 @@ public class GenGraphics extends GraphicDevice{
 			    int step_size  = (rectangularWidth)/(numberXDivisions);
 			    double width   = 0.05*border_gap;
 				   
-			    double x_min = Utilities.getMin(x.get(counter));
-				double x_max = Utilities.getMax(x.get(counter));
-
 			    double l = (x_max-x_min)/(numberXDivisions);
 				    
 			    for(int i = 0; i<numberXDivisions+1; i++) {
@@ -562,41 +578,38 @@ public class GenGraphics extends GraphicDevice{
 			    	g2.setColor(textColor);
 			    	g2.drawString(xlabel, x0-labelWidth/2, y0+metrics.getHeight() + 3);
 				       
-			    	if(grid == true){
-				                 
+			    	if(grid == true){				                 
 			    		g2.setColor(grid_color);
-			    		g2.drawLine(x0, y1, x0, yUp); 
-				    		   	       	       	   
+			    		g2.drawLine(x0, y1, x0, yUp); 				    		   	       	       	   
 			    	}
-				    
+			    	
 			    	g2.setColor(Color.BLACK);
 			    	
 			    }
 				
-				counter++;
+				counter=counter+nPlotInfoIdxs;
 				
 				if(counter>=nSamples){    	    		
 		    		break;    	    		
 		    	}
 				
-				plotInfoNumber = plotInfo.get(counter);
-				
-				if(counter != 0){
-					
-					if(plotInfoNumber != plotInfo.get(counter-1)){
+				if(counter != 0){					
+					if(plotInfo.get(counter)!=plotInfo.get(counter-1)){
 						c++;
-					}
-					
+					}					
 				}
 				
 			}
 			
-			if(counter != 0){
+			if(counter != 0){	
 				
-				if(plotInfoNumber != plotInfo.get(counter-1)){
+				if(counter>=nSamples){    	    		
+		    		break;    	    		
+		    	}
+				
+				if(plotInfo.get(counter)!=plotInfo.get(counter-1)){
 					r++;
-				}
-				
+				}				
 			}
 			
 		}
@@ -619,6 +632,10 @@ public class GenGraphics extends GraphicDevice{
 		int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
 	    int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
 		
+	    int plotInfoNumber = -1;	    
+	    double y_min = 0.0;
+	    double y_max = 0.0;
+	    int nPlotInfoIdxs = 0;
 	    int r = 0;
 	    
 		while(r<numberOfPlotRows){
@@ -626,9 +643,7 @@ public class GenGraphics extends GraphicDevice{
 			if(counter>=nSamples){	    		
 	    		break;	    		
 	    	}
-			
-			int plotInfoNumber = plotInfo.get(counter);
-			
+					
 			int yUp     = border_gap*(r+1)+rectangularHeight*r;
 			int yBottom = (border_gap+rectangularHeight)*(r+1);
 			
@@ -644,10 +659,19 @@ public class GenGraphics extends GraphicDevice{
 				
 			    int step_size     = rectangularHeight/(numberYDivisions); 
 			    double width      = 0.05*border_gap;
-				   
-			    double y_min = get_y_min(plotInfoNumber);
-				double y_max = get_y_max(plotInfoNumber);			    
-				   
+				
+				int curPlotInfoNumber = plotInfo.get(counter);
+				
+				if(curPlotInfoNumber != plotInfoNumber){
+					plotInfoNumber = curPlotInfoNumber;
+					int [] plotInfoIdxs = Utilities.get_idx(plotInfo, plotInfoNumber);
+					nPlotInfoIdxs = plotInfoIdxs.length;
+					
+					y_min = get_y_min(plotInfoNumber);
+					y_max = get_y_max(plotInfoNumber);
+					
+				}
+			    			    				   
 			    double l = (y_max-y_min)/(numberYDivisions);
 				   
 			    for(int i = 0; i<numberYDivisions+1; i++) {
@@ -667,40 +691,36 @@ public class GenGraphics extends GraphicDevice{
 			        g2.setColor(textColor);
 			        g2.drawString(ylabel, x0 - labelWidth - 5, y0 + (metrics.getHeight() / 2) - 3);
 				       
-			        if(grid == true){
-				    	   
-			           	if(i != numberYDivisions){
-				    		   
+			        if(grid == true){				    	   
+			           	if(i != numberYDivisions){				    		   
 			           		g2.setColor(grid_color);
-			           		g2.drawLine(xLeft, y1, xRight, y1); 
-				    		   
-			           	}
-				    	      
+			           		g2.drawLine(xLeft, y1, xRight, y1); 				    		   
+			           	}				    	      
 			        }
 				          
 			    }
 				
-				counter++;
+				counter = counter+nPlotInfoIdxs;
 				
 				if(counter>=nSamples){    	    		
 		    		break;    	    		
 		    	}
-			    
-				plotInfoNumber = plotInfo.get(counter);
-				
-				if(counter != 0){
-					
-					if(plotInfoNumber != plotInfo.get(counter-1)){
+			    				
+				if(counter != 0){					
+					if(plotInfo.get(counter)!=plotInfo.get(counter-1)){
 						c++;
-					}
-					
+					}					
 				}
 				
 			}
 			
 			if(counter != 0){
 				
-				if(plotInfoNumber != plotInfo.get(counter-1)){
+				if(counter>=nSamples){    	    		
+		    		break;    	    		
+		    	}
+				
+				if(plotInfo.get(counter)!=plotInfo.get(counter-1)){
 					r++;
 				}
 				
@@ -998,13 +1018,10 @@ public class GenGraphics extends GraphicDevice{
 	 	for(int i = 0; i < maxDataPoints ; i++) {
 	 	   x_values[i][0] = i;
 	 	   y_values[i][0] = i;
-	 	}
-	 	   
-	 	for(int i = 0; i < maxDataPoints ; i++) {
 	 	   x_values[i][1] = i;
 	 	   y_values[i][1] = i-60;
-	 	} 
-   		
+	 	}
+	 	      		
 	 	String [] title    = {"Title1", "Title2"};
 	 	String [] subTitle = {"SubTitle1", "SubTitle2"};
 	 	String [] yLabel   = {"y", "y2"};
@@ -1037,11 +1054,219 @@ public class GenGraphics extends GraphicDevice{
 	 	
    	}
    	
-    	
+   	
+   	public static void parametrizationExample3(){
+   		
+		int maxDataPoints1 = 60;
+	      
+	 	double [][] x1_values = new double [maxDataPoints1][1];
+	 	double [][] y1_values = new double [maxDataPoints1][1];
+	 	      
+	 	for(int i=0; i<maxDataPoints1; i++) {
+	 		x1_values[i][0] = i+10;
+	 	    y1_values[i][0] = i;
+	 	}
+	 	  
+	 	int maxDataPoints2 = 60;
+	 	
+	 	double [][] x2_values = new double [maxDataPoints2][1];
+	 	double [][] y2_values = new double [maxDataPoints2][1];
+	 	
+	 	for(int i=0; i<maxDataPoints2; i++){
+	 		x2_values[i][0] = i+1;
+	 	    y2_values[i][0] = i-20;
+	 	}
+	 	
+	 	
+	 	int maxDataPoints3 = 160;
+	 	
+	 	double [][] x3_values = new double [maxDataPoints3][1];
+	 	double [][] y3_values = new double [maxDataPoints3][1];
+	 	double [][] x3_band   = new double [maxDataPoints3][2];
+	 	double [][] y3_band   = new double [maxDataPoints3][2];
+	 	
+	 	for(int i=0; i<maxDataPoints3; i++){
+	 		x3_values[i][0] = -(i+10);
+	 		x3_band[i][0]   = -(i+10);
+	 		x3_band[i][1]   = -(i+10);
+	 	    y3_values[i][0] = Math.sqrt(i);
+	 	    y3_band[i][0]   = y3_values[i][0]-5.0;
+	 	    y3_band[i][1]   = y3_values[i][0]+5.0;	 		
+	 	}
+	 	
+	 	String [] title    = {"Title1", "Title2"};
+	 	String [] subTitle = {"SubTitle1", "SubTitle2"};
+	 	String [] yLabel   = {"y", "y2"};
+	 	String [] xLabel   = {"x1", "x2"};
+	 	
+	 	List<Color> lineColor = new ArrayList<Color>();
+	 	lineColor.add(Color.RED);
+	 	lineColor.add(Color.BLACK);
+	 	
+	 	setNumberOfPlotColums(2);
+	 	setNumberOfPlotRows(2);
+	 	
+	 	setGraphWidth(900);
+	 	setGraphHeight(500);
+	 	
+	 	plotLines(x1_values,y1_values, true);
+	 	plotLines(x2_values,y2_values,false);
+	 	plotLines(x3_values,y3_values,false);
+	 	plotShadedArea(x3_band, y3_band, Color.GRAY);
+	 	plotLines(x1_values,y1_values,true);
+	 	plotLines(x2_values,y2_values,false);
+	 	plotPoints(x1_values,y1_values,true);
+	 	plotLines(x2_values,y2_values,true);
+	 	plotPoints(x2_values,y2_values,false);
+	 	plotLines(x2_values,y2_values,false,Color.BLACK);
+	 	
+	 	setLineColor(lineColor);	 	
+ 	 	setTitle(title, null, "12");
+	 	setSubTitle1(subTitle, null, "10");
+	 	//setSubTitle2("SubTitle2", "bold", "10");
+	 	setYLabel(yLabel, null, "10");
+	 	setXLabel(xLabel, null, "10");
+	 	setNumberOfDigits4XAxis(0);   
+	 	setNumberOfDigits4YAxis(2);
+	 	setFontOfXAxisUnits("plain", 10);
+	 	setFontOfYAxisUnits("plain", 10);
+	 	
+	 	plot();
+	 	
+   	}
+   	
+   	
+   	public static void parametrizationExample4(){
+   		
+   		Random r = new Random();
+	
+		int maxDataPoints1 = 60;
+	      
+	 	double [][] x1_values = new double [maxDataPoints1][1];
+	 	double [][] y1_values = new double [maxDataPoints1][1];
+	 	      
+	 	for(int i=0; i<maxDataPoints1; i++) {
+	 		x1_values[i][0] = i+1;	 		
+	 	    y1_values[i][0] = i+5.0*r.nextGaussian();
+	 	}
+	 	 
+	 	double [][] x2_values = new double [maxDataPoints1][1];
+	 	double [][] y2_values = new double [maxDataPoints1][1];
+	 	      
+	 	for(int i=0; i<maxDataPoints1; i++) {
+	 		x2_values[i][0] = i+1;	 		
+	 	    y2_values[i][0] = i+15.0*r.nextGaussian();
+	 	}
+	 	
+	 	double [] y_max = new double [2];
+	 	double [] y_min = new double [2];
+	 	y_max[0] = Utilities.getMax(y1_values);
+	 	y_max[1] = Utilities.getMax(y2_values);
+	 	y_min[0] = Utilities.getMin(y1_values);
+	 	y_min[1] = Utilities.getMin(y2_values);
+	 	
+	 	
+	 	double [][] xrecession1 = new double [4][2];
+	 	double [][] yrecession1 = new double [4][2];
+	 	
+	 	double [][] xrecession2 = new double [2][2];
+	 	double [][] yrecession2 = new double [2][2];
+	 	
+	 	double [][] xrecession3 = new double [8][2];
+	 	double [][] yrecession3 = new double [8][2];
+	 	
+	 	double [][] xrecession4 = new double [3][2];
+	 	double [][] yrecession4 = new double [3][2];
+	 	
+	 	double [][] xrecession5 = new double [5][2];
+	 	double [][] yrecession5 = new double [5][2];
+	 	
+	 	//-----------------------
+	 	//Number of Plots and width/height has to be defined before plotLines/plotPoints is used! 
+	 	setNumberOfPlotColums(2);
+	 	setNumberOfPlotRows(1);	 	
+	 	setGraphWidth(700);
+	 	setGraphHeight(500);
+	 	//-----------------------
+	 	
+	 	for(int p=0; p<2; p++){
+	 			 	
+		 	for(int i=0; i<4; i++){	 		
+		 		xrecession1[i][0] = i+4;
+		 		xrecession1[i][1] = i+4;
+		 		yrecession1[i][0] = y_min[p];
+		 		yrecession1[i][1] = y_max[p];	 		
+		 	}
+		 		
+		 	for(int i=0; i<2; i++){	 		
+		 		xrecession2[i][0] = i+11;
+		 		xrecession2[i][1] = i+11;
+		 		yrecession2[i][0] = y_min[p];
+		 		yrecession2[i][1] = y_max[p];	 		
+		 	}
+		 	
+		 	for(int i=0; i<8; i++){	 		
+		 		xrecession3[i][0] = i+21;
+		 		xrecession3[i][1] = i+21;
+		 		yrecession3[i][0] = y_min[p];
+		 		yrecession3[i][1] = y_max[p];	 		
+		 	}
+		 	
+		 	for(int i=0; i<3; i++){	 		
+		 		xrecession4[i][0] = i+41;
+		 		xrecession4[i][1] = i+41;
+		 		yrecession4[i][0] = y_min[p];
+		 		yrecession4[i][1] = y_max[p];	 		
+		 	}
+		 		
+		 	for(int i=0; i<5; i++){	 		
+		 		xrecession5[i][0] = i+56;
+		 		xrecession5[i][1] = i+56;
+		 		yrecession5[i][0] = y_min[p];
+		 		yrecession5[i][1] = y_max[p];	 		
+		 	}
+	 		
+		 	if(p==0){
+		 		plotLines(x1_values,y1_values, true, Color.BLACK);
+		 	}
+		 	if(p==1){
+		 		plotLines(x2_values,y2_values, true, Color.RED);
+		 	}
+		 	
+		 	plotShadedArea(xrecession1, yrecession1, Color.GRAY);
+		 	plotShadedArea(xrecession2, yrecession2, Color.GRAY);
+		 	plotShadedArea(xrecession3, yrecession3, Color.GRAY);
+		 	plotShadedArea(xrecession4, yrecession4, Color.GRAY);
+		 	plotShadedArea(xrecession5, yrecession5, Color.GRAY);
+		 	
+	 	}
+	 	
+	 	String [] title    = {"Real GDP", "Inflation"};
+	 	String [] subTitle = {"(with Recessions)", "SubTitle2"};
+	 	String [] yLabel   = {"Real GDP (in %)", "Inflation"};
+	 	String [] xLabel   = {"Dates", "Dates"};
+	 		 	
+ 	 	setTitle(title, null, "14");
+	 	setSubTitle1(subTitle, null, "12");
+	 	//setSubTitle2("SubTitle2", "bold", "10");
+	 	setYLabel(yLabel, "bold", "12");
+	 	setXLabel(xLabel, "bold", "12");
+	 	setNumberOfDigits4XAxis(0);   
+	 	setNumberOfDigits4YAxis(1);
+	 	setFontOfXAxisUnits("bold", 12);
+	 	setFontOfYAxisUnits("bold", 12);
+	 	
+	 	plot();
+	 	
+   	}
+   	
+   		
 	public static void main(String[] args) {
 		
-		parametrizationExample1();
+		//parametrizationExample1();
 		//parametrizationExample2();
+		//parametrizationExample3();
+		parametrizationExample4();
 		
 	}
 		
