@@ -143,7 +143,7 @@ public class k_means {
 	}
 	
 	
-	public static void do_k_means_initizalization(){
+	public static void do_k_means_initialization(){
 		
 		//Forgy method
 		int [] randomIdxs = Utilities.getRandomIntNumbers(0, n_observations-1, n_clusters);
