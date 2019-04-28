@@ -39,7 +39,7 @@ public class k_means {
 		clusterIdxs4Observations = new double [n_observations][1];
 		
 		//Initialize cluster centers my
-		do_k_means_initizalization();
+		do_k_means_initialization();
 		
 		double prevEuclidian      = Double.MAX_VALUE;
 		double [][] prevClusterIdxs = new double [n_observations][1];
