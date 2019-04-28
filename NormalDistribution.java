@@ -1,5 +1,10 @@
+package Distributions;
 
 import java.util.*;
+
+import Mathematics.Cholesky;
+import Mathematics.GeneralMath;
+import Mathematics.MatrixOperations;
 
 public class NormalDistribution {
 
@@ -8,8 +13,8 @@ public class NormalDistribution {
 	
 	static double [][] L = null;
 	
-	@SuppressWarnings("static-access")
-	NormalDistribution(double [][] my, double [][] sigma){
+	@SuppressWarnings("static-access")	
+	public NormalDistribution(double [][] my, double [][] sigma){
 		
 		this.my   = my;
 		this.sigma = sigma;
@@ -40,6 +45,37 @@ public class NormalDistribution {
 		x = MatrixOperations.add(my, MatrixOperations.multiplication(L, x));
 		
 		return x;
+		
+	}
+	
+	
+	public static double get_univariateNormalPDF(double x){
+		
+		return 1.0/(Math.sqrt(2.0*Math.PI*Math.pow(sigma[0][0],2.0)))*Math.exp(-Math.pow(x-my[0][0], 2.0)/(2.0*Math.pow(sigma[0][0], 2.0)));
+			
+	}
+	
+	
+	public double get_multivariateNormalPDF(double [][] x){
+		
+		//ToDo´s: Determine determinant of Sigma!
+		int n = x.length;
+		
+		double det = 1.0;
+		double [][] sigma_inv = MatrixOperations.inverse(sigma);
+		
+		double [][] term = new double [n][1];
+		double [][] termTrans = new double [1][n];
+		
+		for(int i=0; i<n; i++){			
+			term[i][0] = x[i][0]-my[i][0];
+			termTrans[0][i] = term[i][0];			
+		}
+		
+		double density = MatrixOperations.multiplication(MatrixOperations.multiplication(termTrans, sigma_inv),term)[0][0];		
+		density = Math.pow(2.0*Math.PI, my.length/2.0)*det*Math.exp(-1.0/2.0*density);
+		
+		return density;
 		
 	}
 	

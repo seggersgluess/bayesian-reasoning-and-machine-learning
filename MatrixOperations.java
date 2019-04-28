@@ -1,3 +1,6 @@
+package Mathematics;
+
+import Utilities.Utilities;
 
 public class MatrixOperations {
 
@@ -723,13 +726,35 @@ public class MatrixOperations {
 		int n_rows = A.length;
 		double [] column_vec = new double [n_rows];
 		
-		if( col_number > n_cols){			
+		if( col_number>n_cols){			
 			throw new RuntimeException("Mismatch between column number and number of matrix columns.");			
 		}
 		
 		for(int i=0; i<n_rows; i++){
 			
 			column_vec[i] = A[i][col_number];
+			
+		}
+		
+		return column_vec;
+		
+	}
+	
+	
+	// returns specific column of a matrix
+	public static double [][] get_column_vec_from_matrix(double [][] A, int col_number){
+		
+		int n_cols = A[0].length;
+		int n_rows = A.length;
+		double [][] column_vec = new double [n_rows][1];
+		
+		if( col_number>n_cols){			
+			throw new RuntimeException("Mismatch between column number and number of matrix columns.");			
+		}
+		
+		for(int i=0; i<n_rows; i++){
+			
+			column_vec[i][0] = A[i][col_number];
 			
 		}
 		
@@ -752,6 +777,28 @@ public class MatrixOperations {
 		for(int i=0; i<n_cols; i++){
 			
 			row_vec[i] = A[row_number][i];
+			
+		}
+		
+		return row_vec;
+		
+	}
+	
+	
+	// returns specific row of a matrix
+	public static double [][] get_row_vec_from_matrix(double [][] A, int row_number){
+		
+		int n_cols = A[0].length;
+		int n_rows = A.length;
+		double [][] row_vec = new double [n_cols][1];
+		
+		if( row_number > n_rows){			
+			throw new RuntimeException("Mismatch between row number and number of matrix rows.");			
+		}
+		
+		for(int i=0; i<n_cols; i++){
+			
+			row_vec[i][0] = A[row_number][i];
 			
 		}
 		
@@ -990,6 +1037,36 @@ public class MatrixOperations {
 	}
 	
 	
+	// combines two vectors a and b in vector c
+	public static int [] combine_vectors(int [] a, int [] b){
+		
+		int n_a = a.length;
+		int n_b = b.length;
+		
+		int n_elements = n_a + n_b;
+		int b_idx = 0;
+		
+		int [] c = new int [n_elements];
+		
+		for(int i = 0; i < n_a; i++){
+			
+			c[i] = a[i];
+			
+		}
+				
+		for(int i = n_a; i < n_elements; i++){
+			
+			c[i] = b[b_idx];
+			
+			b_idx = b_idx + 1;
+			
+		}
+		
+		return c;
+		
+	}
+	
+	
 	// returns the Euclidian norm of vector a
 	public static double euclidian(double [] a){
 		
@@ -1049,7 +1126,7 @@ public class MatrixOperations {
 				
 				vec[idx] = A[j][i];
 				
-				idx = idx+1;
+				idx++;
 				
 			}
 			
@@ -1059,7 +1136,7 @@ public class MatrixOperations {
 		
 	}
 	
-	
+		
 	// returns matrix A from column vector x
 	public static double [][] get_matrix_from_vec(double [] x, int n_rows, int n_cols){
 		
@@ -1073,7 +1150,7 @@ public class MatrixOperations {
 				
 				A[j][i] = x[idx];
 				
-				idx = idx + 1;
+				idx++;
 						
 			}
 			
@@ -1139,7 +1216,6 @@ public class MatrixOperations {
     	
     	//print_matrix(inverse(B));
 
-    	
     }
 	
 }
