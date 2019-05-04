@@ -7,10 +7,8 @@ import Distributions.NormalDistribution;
 import Mathematics.MatrixOperations;
 
 public class ForwardBackwardAlgorithm extends HMM{
-
-	static double [][] obs_model_probs = new double [n_states][n_observations];
 	
-	public static void runForwardAlgorithm(){
+	public void runForwardAlgorithm(){
 		
 		filteredProbs = new ArrayList<List<Double>>(n_observations);
 	
@@ -28,7 +26,8 @@ public class ForwardBackwardAlgorithm extends HMM{
 			double [][] sigma_matrix = get_sigma_matrix(s);
 					
 			NormalDistribution normal = new NormalDistribution(my_vec, sigma_matrix);
-			probs.add(s,normal.get_multivariateNormalPDF(x_t));
+			obs_model_probs[s][0] = normal.get_multivariateNormalPDF(x_t);
+			probs.add(s,obs_model_probs[s][0]*initProbs[s][0]);
 				
 			summedProbs = summedProbs + probs.get(s);
 			
@@ -37,7 +36,6 @@ public class ForwardBackwardAlgorithm extends HMM{
 		//Normalize probs
 		for(int s=0; s<n_states; s++){
 			probs.add(s,probs.get(s)/summedProbs);
-			obs_model_probs[s][0] = probs.get(s);
 		}
 		
 		filteredProbs.add(probs);
@@ -47,7 +45,7 @@ public class ForwardBackwardAlgorithm extends HMM{
 			
 			x_t = MatrixOperations.get_row_vec_from_matrix(observed_variables, t);
 			
-			double [][] probVec = MatrixOperations.get_column_vec_from_matrix(obs_model_probs, t-1);
+			double [][] probVec = get_filtered_probs(t-1);
 			double [][] term = MatrixOperations.multiplication(T, probVec);
 			summedProbs = 0.0;
 			
@@ -57,7 +55,8 @@ public class ForwardBackwardAlgorithm extends HMM{
 				double [][] sigma_matrix = get_sigma_matrix(s);
 				
 				NormalDistribution normal = new NormalDistribution(my_vec, sigma_matrix);
-				probs.add(s,normal.get_multivariateNormalPDF(x_t)*term[s][0]);
+				obs_model_probs[s][t] = normal.get_multivariateNormalPDF(x_t);
+				probs.add(s,obs_model_probs[s][t]*term[s][0]);
 					
 				summedProbs = summedProbs + probs.get(s);
 				
@@ -66,7 +65,6 @@ public class ForwardBackwardAlgorithm extends HMM{
 			//Normalize probs
 			for(int s=0; s<n_states; s++){
 				probs.add(s,probs.get(s)/summedProbs);
-				obs_model_probs[s][t] = probs.get(s);
 			}
 			
 			filteredProbs.add(probs);
@@ -76,7 +74,7 @@ public class ForwardBackwardAlgorithm extends HMM{
 	}
 	
 	
-	public static void runBackwardAlgorithm(){
+	public void runBackwardAlgorithm(){
 		
 		smoothedProbs = new ArrayList<List<Double>>(n_observations);
 		twoSliceMarginals = new ArrayList<List<Double>>(n_observations);
@@ -88,6 +86,7 @@ public class ForwardBackwardAlgorithm extends HMM{
 			betas[s][0] = 1.0;
 		}
 		
+		//smoothedProbs = filteredProbs*betas
 		smoothedProbs.add(n_observations-1,filteredProbs.get(n_observations-1));
 		
 		//t=T-1,T-2,...,1
@@ -106,7 +105,7 @@ public class ForwardBackwardAlgorithm extends HMM{
 				
 				//Calculate the two-slice marginal matrices
 				for(int k=0; k<n_states; k++){
-					double eps_t_t_plus_1 = filteredProbs.get(idx1).get(k)*obs_model_probs[s][idx1]*betas[s][0]*transMatrix[k][s];
+					double eps_t_t_plus_1 = filteredProbs.get(idx1).get(k)*obs_model_probs[s][idx1+1]*betas[s][0]*transMatrix[k][s];
 					twoSliceMarg.add(idx2,eps_t_t_plus_1);
 				}				
 			}
@@ -131,5 +130,13 @@ public class ForwardBackwardAlgorithm extends HMM{
 		}
 			
 	}
+	
+	
+	public double [][] get_obs_model_probs(){
+		
+		return obs_model_probs;
+		
+	}
+	
 	
 }

@@ -1122,14 +1122,32 @@ public class MatrixOperations {
 		
 		for(int i=0; i<nCols; i++){
 			
-			for(int j=0; j<nRows; j++){
-				
-				vec[idx] = A[j][i];
-				
-				idx++;
-				
-			}
-			
+			for(int j=0; j<nRows; j++){				
+				vec[idx] = A[j][i];				
+				idx++;				
+			}			
+		}
+		
+		return vec;
+		
+	}
+	
+	
+	// vec-operator for vectorizing matrix A
+	public static double [][] vecAs2dArray(double [][] A){
+		
+		int nRows = A.length;
+		int nCols = A[0].length;
+		
+		int idx   = 0;
+		
+		double [][] vec = new double [(nRows*nCols)][1];
+		
+		for(int i=0; i<nCols; i++){			
+			for(int j=0; j<nRows; j++){				
+				vec[idx][0] = A[j][i];				
+				idx++;				
+			}			
 		}
 		
 		return vec;
