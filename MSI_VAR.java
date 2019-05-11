@@ -29,7 +29,7 @@ public class MSI_VAR extends HMM{
 	//constructor!!! -> set startIdx, endIdx, lag, n_states
 	
 	
-	//ses TxK matrix Y=[y_1,...,y_T] of observed variables
+	//sets TxK matrix Y=[y_1,...,y_T] of observed variables
 	public void set_Y(){
 		
 		int T = n_usedObservations;
