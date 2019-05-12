@@ -26,7 +26,33 @@ public class MSI_VAR extends HMM{
 	double [][] SigmaMatrix;
 	
 	
-	//constructor!!! -> set startIdx, endIdx, lag, n_states
+	//constructor
+	public MSI_VAR(int startIdx, int endIdx, int lag, int stateNumber){
+		
+		this.startIdx = startIdx;
+		this.endIdx   = endIdx;
+		this.lag      = lag;
+		n_states      = stateNumber;
+		
+	}
+	
+	
+	//checks validity of supplied input parameter
+	public void checkInputParameter(){
+		
+		if(startIdx > n_observations){
+			throw new RuntimeException("Invalid start index supplied.");
+		}
+		
+		if(endIdx > n_observations){
+			throw new RuntimeException("Invalid end index supplied.");
+		}
+		
+		if((startIdx-lag) < 0){
+			throw new RuntimeException("Invalid lag number supplied.");
+		}
+			
+	}
 	
 	
 	//sets TxK matrix Y=[y_1,...,y_T] of observed variables
