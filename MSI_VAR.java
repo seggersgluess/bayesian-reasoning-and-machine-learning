@@ -268,7 +268,7 @@ public class MSI_VAR extends HMM{
 	
 	public void set_SigmaMatrix(){
 		
-		double T = GeneralMath.sum(xi_hat);
+		double T = 1.0/GeneralMath.sum(xi_hat);
 		
 		SigmaMatrix = MatrixOperations.multiplication(MatrixOperations.transpose(U), smoothed_probs);
 		SigmaMatrix = MatrixOperations.multiplication(SigmaMatrix, U);

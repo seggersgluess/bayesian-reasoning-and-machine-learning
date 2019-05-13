@@ -97,6 +97,7 @@ public class MSH_VAR extends HMM{
 	}
 	
 	
+	//returns diagonal matrix with smoothed probs of state m on its diagonal
 	public double [][] get_Xi_hat_m(int state){
 		
 		if(state > (n_states-1)){
@@ -171,7 +172,7 @@ public class MSH_VAR extends HMM{
 			
 			List<Double> sigmaVec = new ArrayList<Double>((int)Math.pow(n_variables, 2.0));
 			double [][] smoothedProbs4State = MatrixOperations.get_column_vec_from_matrix(smoothed_probs, m);					
-			double T_m = GeneralMath.sum(smoothedProbs4State);
+			double T_m = 1.0/GeneralMath.sum(smoothedProbs4State);
 			
 			double [][] xi_hat_m = get_Xi_hat_m(m);
 			
