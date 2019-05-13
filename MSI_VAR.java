@@ -276,4 +276,41 @@ public class MSI_VAR extends HMM{
 		
 	}
 	
+	
+	//returns KxK covariance matrix
+	public double [][] get_SigmaMatrix(){
+		
+		return SigmaMatrix;
+		
+	}
+	
+	
+	//returns (scalar) intercept my(s) w.r.t. selected state
+	public double get_my_4_state(int state){
+			
+		//B = [my(1),...,my(M),A_1^T,...,A_p^T]
+		double my = B[state][0];
+					
+		return my;
+			
+	}
+		
+		
+	//returns KxK matrix A(s)_p w.r.t. selected state and lag p
+	public double [][] get_ar_matrix_4_state(int state, int p){
+			
+		//B = [my(1),...,my(M),A_1^T,...,A_p^T]			
+		double [][] ar_matrix = new double [n_variables][n_variables];
+		int startIdx = n_states+n_variables*(p-1);
+			
+		for(int r=0; r<n_variables; r++){
+			for(int c=0; c<n_variables; c++){
+				ar_matrix[r][c] = B[startIdx+r][c];
+			}
+		}
+
+		return ar_matrix;
+			
+	}
+	
 }

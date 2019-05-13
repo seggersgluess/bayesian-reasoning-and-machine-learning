@@ -120,7 +120,7 @@ public class MSH_VAR extends HMM{
 	}
 	
 	
-	//sets (Kp)xK matrix B
+	//sets K(Kp)x1 parameter vector beta (vectorized KpxK matrix B)
 	public void set_B(){
 		
 		double [][] X_bar_trans = MatrixOperations.transpose(X_bar);

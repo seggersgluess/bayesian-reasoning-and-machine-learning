@@ -222,4 +222,34 @@ public class MSIAH_VAR extends HMM{
 			
 	}
 	
+	
+	//returns (scalar) intercept my(s) w.r.t. selected state
+	public double get_my_4_state(int state){
+		
+		double my = get_B(state)[0][0];
+				
+		return my;
+		
+	}
+	
+	
+	//returns KxK matrix A(s)_p w.r.t. selected state and lag p
+	public double [][] get_ar_matrix_4_state(int state, int p){
+		
+		//B = [my,A_1^T,...,A_p^T]
+		double [][] B = get_B(state);
+		
+		double [][] ar_matrix = new double [n_variables][n_variables];
+		int startIdx = 1+n_variables*(p-1);
+		
+		for(int r=0; r<n_variables; r++){
+			for(int c=0; c<n_variables; c++){
+				ar_matrix[r][c] = B[startIdx+r][c];
+			}
+		}
+
+		return ar_matrix;
+		
+	}
+	
 }
