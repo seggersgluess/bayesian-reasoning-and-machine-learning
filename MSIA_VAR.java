@@ -7,15 +7,6 @@ import Mathematics.MatrixOperations;
 
 public class MSIA_VAR extends HMM{
 
-	//T=endIdx-startIdx+1
-	int n_usedObservations; 
-	//t=1
-	int startIdx;
-	//t=T
-	int endIdx;
-	//p
-	int lag;
-	
 	double [][] smoothed_probs;
 	
 	double [][] Y;
@@ -26,20 +17,8 @@ public class MSIA_VAR extends HMM{
 	ArrayList<List<Double>> B;
 	
 	double [][] U;
-	double [][] SigmaMatrix;
 	
-	
-	//constructor
-	public MSIA_VAR(int startIdx, int endIdx, int lag, int stateNumber){
 		
-		this.startIdx = startIdx;
-		this.endIdx   = endIdx;
-		this.lag      = lag;
-		n_states      = stateNumber;
-		
-	}
-	
-	
 	//sets TxK matrix Y=[y_1,...,y_T] of observed variables
 	public void set_Y(){
 			
@@ -106,7 +85,7 @@ public class MSIA_VAR extends HMM{
 	//calculates vectorized smoothed probs and fills them into a diagonal matrix
 	public void set_Xi_hat(){
 		
-		Xi_hat = new double [n_variables*n_usedObservations][1];
+		Xi_hat = new double [n_states*n_usedObservations][1];
 		int idx = 0;
 		for(int m=0; m<n_states; m++){
 			for(int t=0; t<n_usedObservations; t++){
@@ -122,6 +101,8 @@ public class MSIA_VAR extends HMM{
 	
 	//calculates vectorized (Kp+1)xK matrices B_m and fills them into an ArrayList
 	public void set_B(){
+		
+		B = new ArrayList<List<Double>>();
 		
 		double [][] X_bar_trans = MatrixOperations.transpose(X_bar);
 		
@@ -181,9 +162,9 @@ public class MSIA_VAR extends HMM{
 		
 		int nRows = n_variables*lag+1;
 		int nCols = n_variables;
-		int idx=0;
 		
-		for(int m=0; m<n_states; m++){			
+		for(int m=0; m<n_states; m++){	
+			int idx=0;
 			int c = nRows*m;
 			for(int i=0; i<nCols; i++){				
 				for(int j=0; j<nRows; j++){				
@@ -194,7 +175,7 @@ public class MSIA_VAR extends HMM{
 			
 		}
 				
-		double [][] firstTerm = MatrixOperations.kronecker(MatrixOperations.unit_vector(n_variables), Y);
+		double [][] firstTerm = MatrixOperations.kronecker(MatrixOperations.unit_vector(n_states), Y);
 		double [][] secTerm   = MatrixOperations.kronecker(MatrixOperations.identity(n_states), X_bar);
 		secTerm = MatrixOperations.multiplication(secTerm, B_m_block_matrix);
 		
@@ -203,23 +184,132 @@ public class MSIA_VAR extends HMM{
 	}
 	
 	
+	//returns Kx1 intercept vector my(s) w.r.t. selected state from parameter matrix B
+	public double [][] get_my_of_MSIA_4_state(int state){
+		
+		double [][] B_m = get_B(state);
+		double [][] my = MatrixOperations.get_row_vec_from_matrix(B_m, 0);	
+		
+		return my;
+		
+	}
+	
+	
+	//returns KxK matrix A(s)_p w.r.t. selected state and lag p from parameter matrix B
+	public double [][] get_ar_matrix_of_MSIA_4_state(int state, int p){
+				
+		//B_m = [my^T,A_1^T,...,A_p^T]
+		double [][] B_m = get_B(state);
+		
+		double [][] ar_matrix = new double [n_variables][n_variables];
+		int startIdx = 1+p*n_variables;
+		
+		for(int r=0; r<n_variables; r++){
+			for(int c=0; c<n_variables; c++){
+				//A_p^T --> transpose here!
+				ar_matrix[c][r] = B_m[startIdx+r][c];
+			}
+		}
+	
+		return ar_matrix;
+		
+	}
+	
+	
+	public void set_my(){
+		
+		my = new ArrayList<List<Double>>();
+		
+		for(int m=0; m<n_states; m++){
+			
+			double [][] myVec = get_my_of_MSIA_4_state(m);
+			
+			//Transform to List
+			List<Double> myList = MatrixOperations.vecAsList(myVec);			
+			my.add(myList);
+		}
+			
+	}
+
+	
+	public void set_ARMatrix(){
+		
+		ARMatrices = new ArrayList<ArrayList<List<Double>>>();
+		
+		for(int m=0; m<n_states; m++){
+			ArrayList<List<Double>> listOfARMatrices = new ArrayList<List<Double>>(lag); 
+			for(int p=0; p<lag; p++){
+				double [][] ar_matrix = get_ar_matrix_of_MSIA_4_state(m,p);
+				List<Double> arList = MatrixOperations.vecAsList(ar_matrix);
+				listOfARMatrices.add(arList);
+			}
+			ARMatrices.add(listOfARMatrices);
+		}
+			
+	}
+	
+	
 	//sets KxK covariance matrix
-	public void set_SigmaMatrix(){
+	public void set_Sigma(){
+		
+		Sigma = new ArrayList<List<Double>>();
 		
 		double T = 1.0/MatrixOperations.trace(Xi_hat);
+		
+		double [][] SigmaMatrix = new double [n_variables][n_variables];
 		
 		SigmaMatrix = MatrixOperations.multiplication(MatrixOperations.multiplication(MatrixOperations.transpose(U), Xi_hat),U);
 		SigmaMatrix = MatrixOperations.scalar_multiplication(T, SigmaMatrix);
 		
-	}
-	
-	
-	//returns KxK covariance matrix
-	public double [][] get_SigmaMatrix(){
-		
-		return SigmaMatrix;
+		Sigma.add(MatrixOperations.vecAsList(SigmaMatrix));
 		
 	}
 	
+	
+	//Initialize with conventional VAR(p)-model
+	public void initialize(){
+			
+		MS_VAR obj_ms = new MS_VAR(startIdx, endIdx, lag, n_states, ms_var_type);
+			
+		ArrayList<ArrayList<List<Double>>> var_est_res = obj_ms.est_conventional_VAR();
+			
+	    //--- fill parameter list ---    		    
+	    //state dependent const vectors my(1),...,m(M) and AR matrices A(1),...,A(M)
+	    for(int m=0; m<n_states; m++){		 
+	    	my.add(var_est_res.get(0).get(0));
+	    	ARMatrices.add(var_est_res.get(1));	    	
+	    }
+	  
+	    //Sigma
+	    Sigma.add(var_est_res.get(2).get(0));
+	    
+	    initialize_trans_probs();
+			
+	}
+
+	
+	//--- do all routines for EM algorithm ---
+	
+	//pre calculation of input
+	public void pre_calulation(){
+			
+		set_Y();
+		set_X_bar();
+		
+	}
+	
+	
+	//parameter calculation and setting
+	public void calc_and_set_parameters(){
+		
+		set_smoothed_probs();
+		set_Xi_hat();
+		set_B();
+		set_U();
+		set_my();
+		set_ARMatrix();
+		set_Sigma();
+		
+	}
 	
 }

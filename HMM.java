@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import DataManagement.InputDataManager;
+import Distributions.NormalDistribution;
 import Graphics.GenGraphics;
 import Mathematics.MatrixOperations;
 import Utilities.Utilities;
@@ -13,6 +14,7 @@ public class HMM {
 
 	static InputDataManager inputData;
 	
+	//n_observations x n_variables
 	static double [][] observed_variables;
 	
 	static int n_observations;
@@ -21,8 +23,8 @@ public class HMM {
 	static int n_states;
 	
 	//Results of forward-backward algorithm
-	static ArrayList<List<Double>> filteredProbs;
-	static ArrayList<List<Double>> smoothedProbs;
+	static ArrayList<List<Double>> filteredProbs; //Xi_t|t
+	static ArrayList<List<Double>> smoothedProbs; //Xi_t|T
 	
 	static ArrayList<List<Double>> twoSliceMarginals;
 	
@@ -47,9 +49,21 @@ public class HMM {
 	static double [][] initProbs;
 	static double [][] transMatrix;
 	
-	//Gaussian observation model
-	static ArrayList<List<Double>> my;
-	static ArrayList<List<Double>> Sigma;
+	//Gaussian observation model w.r.t. states s
+	static ArrayList<List<Double>> my = new ArrayList<List<Double>>();
+	static ArrayList<List<Double>> Sigma = new ArrayList<List<Double>>();
+	
+	//AR HMM (MS-VAR)
+	//AR matrices with respect to 1.) state s and 2.) Lag p
+	static ArrayList<ArrayList<List<Double>>> ARMatrices = new ArrayList<ArrayList<List<Double>>>();
+	static String ms_var_type = "";
+	static int lag;
+	//t=1
+	static int startIdx;
+	//t=T
+	static int endIdx;
+	//T=endIdx-startIdx+1
+	static int n_usedObservations; 
 	
 	static List<String> probs4Plot;
 	
@@ -65,8 +79,7 @@ public class HMM {
 		if(probs4Plot.size() == 0){
 			plot_probs();
 		}
-		
-		
+			
 	}
 	
 	
@@ -87,9 +100,37 @@ public class HMM {
 	}
 	
 	
-	static double [][] get_sigma_matrix(int stateNumber){
+	//returns AR matrices w.r.t. state and lag (necessary for AR-HMM)
+	static double [][] get_ar_matrix(int stateNumber, int lagNumber){
+				
+		if(lagNumber>(lag-1)){
+			throw new RuntimeException("Invalid lag number. Largest allowed lag number for AR-matrices is " + (lag-1));
+		}
+		
+		double [][] ar_matrix = new double [n_variables][n_variables];
 		
 		if(stateNumber>n_states-1){
+			throw new RuntimeException(stateNumber + " is not a valid number of states.");
+		}
+		
+		int idx = 0;
+		
+		for(int i=0; i<n_variables; i++){
+			for(int j=0; j<n_variables; j++){
+				ar_matrix[j][i] = ARMatrices.get(stateNumber).get(lagNumber).get(idx);
+				idx++;
+			}
+			
+		}
+		
+		return ar_matrix;
+		
+	}
+	
+	
+	static double [][] get_sigma_matrix(int stateNumber){
+		
+		if(stateNumber>(n_states-1)){
 			throw new RuntimeException(stateNumber + " is not a valid number of states.");
 		}
 		
@@ -99,7 +140,7 @@ public class HMM {
 		
 		for(int i=0; i<n_variables; i++){
 			for(int j=0; j<n_variables; j++){
-				sigmaMatrix[j][i] = my.get(stateNumber).get(idx);
+				sigmaMatrix[j][i] = Sigma.get(stateNumber).get(idx);
 				idx++;
 			}
 			
@@ -135,7 +176,9 @@ public class HMM {
 	
 	public static double [][] get_filtered_probs(int observationNumber){
 		
-		if(observationNumber>n_observations-1){
+		int n_obs = filteredProbs.size();
+		
+		if(observationNumber>n_obs-1){
 			throw new RuntimeException(observationNumber + " is not in observed data sample.");
 		}
 	
@@ -152,11 +195,13 @@ public class HMM {
 	
 	public static double [][] get_filtered_probs(){
 
-		double [][] probs = new double [n_observations][n_states];
+		int n_obs = filteredProbs.size();
 		
-		for(int t=0; t<n_observations; t++){
+		double [][] probs = new double [n_obs][n_states];
+		
+		for(int t=0; t<n_obs; t++){
 			for(int i=0; i<n_states; i++){
-				probs[i][0] = filteredProbs.get(t).get(i);
+				probs[t][i] = filteredProbs.get(t).get(i);
 			}
 		}
 
@@ -167,11 +212,13 @@ public class HMM {
 	
 	public static double [][] get_smoothed_probs(){
 
-		double [][] probs = new double [n_observations][n_states];
+		int n_obs = smoothedProbs.size();
 		
-		for(int t=0; t<n_observations; t++){
+		double [][] probs = new double [n_obs][n_states];
+		
+		for(int t=0; t<n_obs; t++){
 			for(int i=0; i<n_states; i++){
-				probs[i][0] = smoothedProbs.get(t).get(i);
+				probs[t][i] = smoothedProbs.get(t).get(i);
 			}
 		}
 
@@ -186,10 +233,17 @@ public class HMM {
 		
 	}
 		
+	
+	public double [][] get_obs_model_probs(){
 		
+		return obs_model_probs;
+		
+	}
+	
+	
 	public static void expectation_maximization(){
 		
-		obs_model_probs = new double [n_states][n_observations];
+		//obs_model_probs = new double [n_states][n_observations];
 		
 		double newLogLik  = 0.0;
 		double prevLogLik = Double.MIN_VALUE;		
@@ -199,6 +253,8 @@ public class HMM {
 		double [][] my_exp       = new double [n_variables][1];
 		double [][] sigma_exp    = new double [n_variables][n_variables];
 		double [][] logLik_term3  = new double [n_states][1];
+		
+//Initial my and Sigma--> No empty parameter lists!!!
 		
 		my    = new ArrayList<List<Double>>(n_states);
 		Sigma = new ArrayList<List<Double>>(n_states);
@@ -297,9 +353,20 @@ public class HMM {
 				
 				my.add(s,myUpdate);
 				Sigma.add(s,sigmaUpdate);
-				
+					
 			}
 
+			//calculate obs_model_probs with updated parameters my & Sigma
+			for(int t=0; t<n_observations; t++){
+				double [][] x_t = MatrixOperations.get_row_vec_from_matrix(observed_variables, t);
+				for(int s=0; s<n_states; s++){
+					double [][] my_vec = get_my(s);
+					double [][] sigma_matrix = get_sigma_matrix(s);
+					NormalDistribution normal = new NormalDistribution(my_vec, sigma_matrix);
+					obs_model_probs[s][t] = normal.get_multivariateNormalPDF(x_t);
+				}
+			}
+			
 			if(Math.abs(prevLogLik-newLogLik)<=convergence_criterion){
 				System.out.println("EM algorithm for HMM has reached convergence after " + i + " iterations.");
 				convergence_reached = true;
@@ -324,6 +391,122 @@ public class HMM {
 		
 		Viterbi v = new Viterbi();
 		v.runViterbi();
+		
+	}
+	
+	
+	public static void set_MS_VAR_type(String ms_var){
+		
+		String [] validTypes = get_valid_MS_VAR_types();
+		
+		int [] idxs = Utilities.get_idx(validTypes, ms_var);
+		
+		if(idxs[0] == -1){
+			throw new RuntimeException(ms_var + " is not a valid MS model.");
+		}
+		
+		ms_var_type = ms_var;
+		
+	}
+	
+	
+	public static String [] get_valid_MS_VAR_types(){
+		
+		String [] validTypes = {
+								"MSA",
+								"MSAH",
+								"MSH",
+								"MSI",
+								"MSIA",
+								"MSIAH",
+								"MSIH"
+		                        };
+		
+		return validTypes;
+		
+	}
+	
+	
+	public static String [] get_my_switching_models(){
+		
+		String [] types = {
+				"MSI",
+				"MSIA",
+				"MSIAH",
+				"MSIH"
+                };
+
+		return types;
+		
+	}
+	
+	
+	public static String [] get_ar_switching_models(){
+		
+		String [] types = {
+				"MSA",
+				"MSAH",
+				"MSIA",
+				"MSIAH",
+                };
+
+		return types;
+		
+	}
+	
+	
+	public static String [] get_sigma_switching_models(){
+		
+		String [] types = {
+				"MSAH",
+				"MSH",
+				"MSIAH",
+				"MSIH"
+                };
+
+		return types;
+		
+	}
+	
+	
+	public void initialize_trans_probs(){
+		
+		initProbs   = new double [n_states][1];
+		transMatrix = new double [n_states][n_states];
+		
+		//Initial transition probs equal for all M states
+		double prob = 1.0/n_states;
+		
+		for(int i=0; i<n_states; i++){
+			initProbs[i][0] = prob;
+			for(int j=0; j<n_states; j++){				
+				transMatrix[i][j] = prob;
+			}	
+		}
+		
+	}
+	
+	
+	//sets TxKP matrix X_bar = [Y_-1,...,Y_-p]
+	public double [][] get_lagged_Y(){
+		
+		int T = n_usedObservations;
+		
+		double [][] lagged_Y = new double [T][lag*n_variables];
+		
+		for(int t=0; t<T; t++){
+			int curIdx = startIdx+t;
+			int idx     = 0;
+			for(int p=0; p<lag; p++){
+				int lagIdx = curIdx-p-1;
+				for(int k=0; k<n_variables; k++){
+					lagged_Y[t][idx] = observed_variables[lagIdx][k];
+				    idx++;
+				}
+			}
+		}
+			
+		return lagged_Y;
 		
 	}
 	
@@ -458,13 +641,13 @@ public class HMM {
 		
 		inputData = new InputDataManager();
 		
-		inputData.fileReader(fileName, false, hasRowNames, hasColNames);
+		inputData.fileReader(fileName, true, hasRowNames, hasColNames);
 			
 	}
 	
 	
 	@SuppressWarnings("static-access")
-	public static void select_input_data(String [] rownames, String [] colnames, String ref_class){
+	public static void select_input_data(String [] rownames, String [] colnames){
 		
 		inputData.selectLoadedData(rownames, colnames);
 		
@@ -480,6 +663,5 @@ public class HMM {
 		inputData = null;		
 		
 	}
-	
-	
+		
 }

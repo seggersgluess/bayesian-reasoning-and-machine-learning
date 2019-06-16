@@ -684,7 +684,7 @@ public class GenGraphics extends GraphicDevice{
 			    	g2.setColor(Color.BLACK);
 			    	g2.drawLine(x0, y0, x1, y1);
 				       			    	 
-			    	String ylabel = String.format(yAxisUnitsFormat, ((int) y_max-l*i))+ "";
+			    	String ylabel = String.format(yAxisUnitsFormat, (y_max-l*i))+ "";
 			    	FontMetrics metrics = g2.getFontMetrics();
 			        int labelWidth = metrics.stringWidth(ylabel);
 			        
@@ -1010,7 +1010,7 @@ public class GenGraphics extends GraphicDevice{
    	
    	public static void parametrizationExample2(){
    		
-		int maxDataPoints = 60;
+		int maxDataPoints = 61;
 	      
 	 	double [][] x_values = new double [maxDataPoints][2];
 	 	double [][] y_values = new double [maxDataPoints][2];
@@ -1264,9 +1264,9 @@ public class GenGraphics extends GraphicDevice{
 	public static void main(String[] args) {
 		
 		//parametrizationExample1();
-		//parametrizationExample2();
+		parametrizationExample2();
 		//parametrizationExample3();
-		parametrizationExample4();
+		//parametrizationExample4();
 		
 	}
 		

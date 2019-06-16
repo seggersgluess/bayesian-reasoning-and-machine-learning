@@ -1,22 +1,26 @@
+package DataManagement;
 
-import java.io.*; 
+import java.io.*;
+
+import Mathematics.MatrixOperations;
+import Utilities.Utilities; 
 
 public class InputDataManager { 
 	
 	static String file;
 	static String [] colnames;
 	static String [] rownames;
-	static int numberOfColumns;
-	static int numberOfRows;
+	public static int numberOfColumns;
+	public static int numberOfRows;
 	static String seperator;
 	static String [][] strFileData;
 	static double [][] dblFileData;
 	
 	//if data selection is done
-	static String [] selected_colnames;
-	static String [] selected_rownames;
-	static String [][] selectedStrFileData;
-	static double [][] selectedDblFileData;
+	public static String [] selected_colnames;
+	public static String [] selected_rownames;
+	public static String [][] selectedStrFileData;
+	public static double [][] selectedDblFileData;
 	
 	//reads input data as string array
     public static void fileReader(String fileName, boolean dblData, boolean hasRowNames, boolean hasColNames) throws Exception{
@@ -115,7 +119,17 @@ public class InputDataManager {
 	  				
 	  			if(hasRowNames == true){
   					
-  					rownames[lineCounter-rowCorrIdx] = strArray[0];
+	  				strArray = convertLineIntoStringArray(st);
+	  				
+	  				if(hasColNames == true){
+	  					if(lineCounter != 0){
+	  						rownames[lineCounter-rowCorrIdx] = strArray[0];
+	  					}
+	  					
+	  				}else{
+	  					rownames[lineCounter-rowCorrIdx] = strArray[0];
+	  				}
+  					
   					
   				}
 	  			

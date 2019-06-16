@@ -7,32 +7,11 @@ import Mathematics.GeneralMath;
 import Mathematics.MatrixOperations;
 
 public class MSIH_VAR extends HMM{
-
-	//T=endIdx-startIdx+1
-	int n_usedObservations; 
-	//t=1
-	int startIdx;
-	//t=T
-	int endIdx;
-	//p
-	int lag;
 		
 	double [][] smoothed_probs;		
 	double [][] y;
 	double [][] Y;
 	double [][] B;
-	ArrayList<List<Double>> SigmaMatrices;
-	
-	
-	//constructor
-	public MSIH_VAR(int startIdx, int endIdx, int lag, int stateNumber){
-		
-		this.startIdx = startIdx;
-		this.endIdx   = endIdx;
-		this.lag      = lag;
-		n_states      = stateNumber;
-		
-	}
 	
 	
 	//sets TxK matrix Y=[y_1,...,y_T] of observed variables
@@ -67,6 +46,14 @@ public class MSIH_VAR extends HMM{
 				idx1++;
 			}	
 		}
+			
+	}
+	
+	
+	//sets smoothed_probs (bold) Xi_hat
+	public void set_smoothed_probs(){
+		
+		smoothed_probs = get_smoothed_probs();
 			
 	}
 	
@@ -113,15 +100,16 @@ public class MSIH_VAR extends HMM{
 	//sets (M+Kp)xK matrix B
 	public void set_B(){
 				
-		double [][] sumTerm1    = new double [(n_states+n_variables*lag)][(n_states+n_variables*lag)];
-		double [][] sumTerm2    = new double [(n_states+n_variables*lag)][n_usedObservations];
+		double [][] sumTerm1    = new double [n_variables*(n_states+n_variables*lag)][n_variables*(n_states+n_variables*lag)];
+		double [][] sumTerm2    = new double [n_variables*(n_states+n_variables*lag)][n_variables*n_usedObservations];
 		
 		for(int m=0; m<n_states; m++){
 			
 			double [][] X_bar_m = get_X_bar_m(m);
 			double [][] X_bar_m_trans = MatrixOperations.transpose(X_bar_m);
 			double [][] xi_hat_m    = get_Xi_hat_m(m);
-			double [][] sigmaMatrix = MatrixOperations.inverse(get_sigma_matrix_4_state(m));
+						
+			double [][] sigmaMatrix = MatrixOperations.inverse(get_sigma_matrix(m));
 			
 			sumTerm1 = MatrixOperations.add(sumTerm1,MatrixOperations.kronecker(MatrixOperations.multiplication(MatrixOperations.multiplication(X_bar_m_trans, xi_hat_m), X_bar_m),sigmaMatrix));
 			sumTerm2 = MatrixOperations.add(sumTerm2, MatrixOperations.kronecker(MatrixOperations.multiplication(X_bar_m_trans,xi_hat_m),sigmaMatrix));
@@ -131,10 +119,10 @@ public class MSIH_VAR extends HMM{
 		sumTerm1 = MatrixOperations.inverse(sumTerm1);
 		
 		B = MatrixOperations.multiplication(sumTerm1, sumTerm2);
-		B = MatrixOperations.multiplication(B,y);
-		
-		//Transforming vector into matrix correct?
-		B = MatrixOperations.get_matrix_from_vec(B, (n_states+n_variables*lag), n_variables);
+		B = MatrixOperations.multiplication(B,y);		
+		B = MatrixOperations.get_matrix_from_vec(B, n_variables, (n_states+n_variables*lag));
+		//Set B^T for further calculations!
+		B = MatrixOperations.transpose(B);
 		
 	}
 	
@@ -143,16 +131,81 @@ public class MSIH_VAR extends HMM{
 	public double [][] get_U_m(int state){
 		
 		double [][] X_bar_m = get_X_bar_m(state);
+		//U = Y - X_bar_m * B^T
 		double [][] U_m = MatrixOperations.substract(Y,MatrixOperations.multiplication(X_bar_m, B));
 
 		return U_m;
 		
 	}
+		
+	
+	//returns Kx1 intercept vector my(s) w.r.t. selected state from parameter matrix B
+	public double [][] get_my_of_MSIH_4_state(int state){
+			
+		//B^T = [my(1)^T,...,my(M)^T,A_1^T,...,A_p^T]
+		double [][] my = MatrixOperations.get_row_vec_from_matrix(B, state);
+					
+		return my;
+			
+	}
+	
+	
+	//returns KxK matrix A(s)_p w.r.t.lag p from parameter matrix B
+	public double [][] get_ar_matrix_of_MSIH(int p){
+			
+		//B^T = [my(1)^T,...,my(M)^T,A_1^T,...,A_p^T]			
+		double [][] ar_matrix = new double [n_variables][n_variables];
+		int startIdx = n_states+n_variables*p;
+				
+		for(int r=0; r<n_variables; r++){
+			for(int c=0; c<n_variables; c++){
+				//A_p^T --> transpose here!
+				ar_matrix[c][r] = B[startIdx+r][c];
+			}
+		}
+
+		return ar_matrix;
+			
+	}
+	
+	
+	public void set_my(){
+		
+		my = new ArrayList<List<Double>>();
+		
+		for(int m=0; m<n_states; m++){
+			
+			double [][] myVec = get_my_of_MSIH_4_state(m);
+			
+			//Transform to List
+			List<Double> myList = MatrixOperations.vecAsList(myVec);			
+			my.add(myList);
+		}
+			
+	}
+	
+	
+	public void set_ARMatrix(){
+		
+		ARMatrices = new ArrayList<ArrayList<List<Double>>>();
+		
+		ArrayList<List<Double>> listOfARMatrices = new ArrayList<List<Double>>(lag); 
+		for(int p=0; p<lag; p++){
+			double [][] ar_matrix = get_ar_matrix_of_MSIH(p);
+			List<Double> arList = MatrixOperations.vecAsList(ar_matrix);
+			listOfARMatrices.add(arList);
+		}
+		
+		ARMatrices.add(listOfARMatrices);
+			
+	}
 	
 	
 	//sets KxK sigma matrices dependent of states m=1,2,...,M
-	public void set_SigmaMatrices(){
+	public void set_Sigma(){
 			
+		Sigma = new ArrayList<List<Double>>();
+		
 		for(int m=0; m<n_states; m++){
 				
 			List<Double> sigmaVec = new ArrayList<Double>((int)Math.pow(n_variables, 2.0));
@@ -172,62 +225,53 @@ public class MSIH_VAR extends HMM{
 				}			
 			}
 				
-			SigmaMatrices.add(sigmaVec);
+			Sigma.add(sigmaVec);
 				
 		}
 				 	
 	}
 		
-		
-	//returns sigma matrix for state m from list of vectorized sigma matrices
-	public double [][] get_sigma_matrix_4_state(int state){
+	
+	//Initialize with conventional VAR(p)-model
+	public void initialize(){
 			
-		if(state > (n_states-1)){
-			throw new RuntimeException("No valid state number supplied.");
-		}
+		MS_VAR obj_ms = new MS_VAR(startIdx, endIdx, lag, n_states, ms_var_type);
 			
-		double [][] sigmaMatrix = new double [n_variables][n_variables];
+		ArrayList<ArrayList<List<Double>>> var_est_res = obj_ms.est_conventional_VAR();
 			
-		int idx = 0;
-			
-		for(int i=0; i<n_variables; i++){				
-			for(int j=0; j<n_variables; j++){				
-				sigmaMatrix[j][i] = SigmaMatrices.get(state).get(idx);
-				idx++;
-			}			
-		}
-			
-		return sigmaMatrix;
+	    //--- fill parameter list ---    		    
+	    //state dependent const vectors my(1),...,m(M) and Sigma matrices Sigma(1),...,Sigma(M)
+	    for(int m=0; m<n_states; m++){		 
+	    	my.add(var_est_res.get(0).get(0));	    		   
+	    	Sigma.add(var_est_res.get(2).get(0));
+	    }
+	  
+	    ARMatrices.add(var_est_res.get(1));
+	    
+	    initialize_trans_probs();
 			
 	}
-	
-	
-	//returns (scalar) intercept my(s) w.r.t. selected state
-	public double get_my_4_state(int state){
-			
-		//B = [my(1),...,my(M),A_1^T,...,A_p^T]
-		double my = B[state][0];
-					
-		return my;
-			
-	}
-	
-	
-	//returns KxK matrix A(s)_p w.r.t. selected state and lag p
-	public double [][] get_ar_matrix_4_state(int state, int p){
-			
-		//B = [my(1),...,my(M),A_1^T,...,A_p^T]			
-		double [][] ar_matrix = new double [n_variables][n_variables];
-		int startIdx = n_states+n_variables*(p-1);
-			
-		for(int r=0; r<n_variables; r++){
-			for(int c=0; c<n_variables; c++){
-				ar_matrix[r][c] = B[startIdx+r][c];
-			}
-		}
 
-		return ar_matrix;
+	//--- do all routines for EM algorithm ---
+	
+	//pre calculation of input
+	public void pre_calulation(){
 			
+		set_Y();
+		set_y();
+		
+	}
+	
+	
+	//parameter calculation and setting
+	public void calc_and_set_parameters(){
+		
+		set_smoothed_probs();
+		set_B();
+		set_my();
+		set_ARMatrix();
+		set_Sigma();
+		
 	}
 	
 }
