@@ -84,6 +84,47 @@ public class GeneralMath {
 	}
 	
 	
+	public static double [][] cov(double [][] X){
+		
+		int n_obs = X.length;
+		int n_variables = X[0].length;
+		
+		double [][] mean = new double [n_variables][1];
+	    double [][] cov  = new double [n_variables][n_variables];
+		
+		for(int i=0; i<n_variables; i++){
+			for(int j=0; j<n_obs; j++){
+				mean[i][0] += X[j][i];
+			}
+			mean[i][0] = mean[i][0]/n_obs;
+		}
+		
+		for(int i=0; i<n_variables; i++){
+			for(int j=0; j<(i+1); j++){
+				
+				if(i==j){
+					for(int k=0; k<n_obs; k++){
+						cov[i][j] += Math.pow(X[k][i]-mean[i][0],2.0);
+					}
+					cov[i][j] = cov[i][j]/(n_obs-1);
+				}
+				
+				if(i!=j){
+					for(int k=0; k<n_obs; k++){
+						cov[i][j] += (X[k][i]-mean[i][0])*(X[k][j]-mean[j][0]);
+					}
+					cov[i][j] = cov[i][j]/(n_obs-1);
+					cov[j][i] = cov[i][j];
+				}
+				
+			}
+		}
+		
+		return cov;
+		
+	}
+	
+	
 	// calculates factorial with x: x*(x-1)*(x-2)*...
 	public static double factorial(double x){
 		
@@ -157,10 +198,9 @@ public class GeneralMath {
 				
 		double [][] mean = new double [1][n_vars];
 		
-		for(int i=0; i<n_vars; i++){
-			
+		for(int i=0; i<n_vars; i++){			
 			for(int j=0; j<n_obs; j++){				
-				mean[0][i] = mean[0][i] + X[j][i];				
+				mean[0][i] += X[j][i];				
 			}
 			
 			mean[0][i] = mean[0][i]/(double)n_obs;
@@ -305,6 +345,15 @@ public class GeneralMath {
     	MatrixOperations.print_matrix(sd_vec(MatrixOperations.transpose(x)));
     	
     	System.out.println(variance(y));
+    	
+
+    	double [][]A={{1.0,  10},
+    				  {2.0, 203},
+    				  {35.0,   3},
+    				  {20.0,  40},
+    				  {300.3,  39}};
+    	
+    	MatrixOperations.print_matrix(cov(A));
     	
     }
 	

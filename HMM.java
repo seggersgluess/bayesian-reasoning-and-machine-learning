@@ -475,12 +475,19 @@ public class HMM {
 		transMatrix = new double [n_states][n_states];
 		
 		//Initial transition probs equal for all M states
-		double prob = 1.0/n_states;
+		double intProb = 1.0/n_states;
+		double transDiagProb =   0.7;
+		double transOffDiagProb = (1.0-transDiagProb)/(n_states-1);
 		
 		for(int i=0; i<n_states; i++){
-			initProbs[i][0] = prob;
-			for(int j=0; j<n_states; j++){				
-				transMatrix[i][j] = prob;
+			initProbs[i][0] = intProb;
+			for(int j=0; j<n_states; j++){	
+				if(i==j){
+					transMatrix[i][j] = transDiagProb;
+				}else{
+					transMatrix[i][j] = transOffDiagProb;
+				}
+				
 			}	
 		}
 		

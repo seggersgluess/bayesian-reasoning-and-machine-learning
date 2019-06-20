@@ -1,14 +1,11 @@
 package HiddenMarkovModels;
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.List;
 
 import Distributions.NormalDistribution;
 import Graphics.GenGraphics;
-import Mathematics.GeneralMath;
+import Mathematics.InformationCriteria;
 import Mathematics.MatrixOperations;
-import Regression.LinearRegression;
 import Utilities.Utilities;
 
 public class MS_VAR extends HMM{
@@ -44,6 +41,32 @@ public class MS_VAR extends HMM{
 		n_usedObservations = endIdx-startIdx+1;
 		
 		check_inputs_for_constructor();
+		set_MS_VAR_type(ms_type);
+		set_default_values_MS_VAR();
+		
+	}
+	
+	
+	//constructor
+	public MS_VAR(int startIdx4Obs, int endIdx4Obs, String ms_type){
+		
+		if(startIdx4Obs < 0){
+			throw new RuntimeException("No valid start index supplied.");
+		}
+		
+		if(endIdx4Obs < 0){
+			throw new RuntimeException("No valid end index supplied.");
+		}
+		
+		if(startIdx4Obs >= endIdx4Obs){
+			throw new RuntimeException("No valid start and end indices supplied.");
+		}
+		
+		startIdx = startIdx4Obs;
+		endIdx   = endIdx4Obs;
+	
+		n_usedObservations = endIdx-startIdx+1;
+		
 		set_MS_VAR_type(ms_type);
 		set_default_values_MS_VAR();
 		
@@ -100,6 +123,10 @@ public class MS_VAR extends HMM{
 		double [][] p_update = MatrixOperations.divideVecByElement(xi_2, MatrixOperations.kronecker(e,xi_1));
 		
 		transMatrix = MatrixOperations.get_matrix_from_vec(p_update, n_states, n_states);
+		
+		for(int i=0; i<n_states; i++){
+			initProbs[i][0] = smoothProbs[0][i];
+		}
 		
 	}
 	
@@ -182,7 +209,7 @@ public class MS_VAR extends HMM{
 		boolean sigmaSwitch = sigma_switching();
 		
 		obs_model_probs = new double [n_states][n_usedObservations];
-		
+			
 		double [][] my_vec      = new double [n_variables][1];
 		double [][] arMatrix    = new double [n_variables][1];
 		double [][] SigmaMatrix = new double [n_variables][1];
@@ -249,9 +276,7 @@ public class MS_VAR extends HMM{
 		MSI_VAR ms_obj = new MSI_VAR();
 		ms_obj.pre_calulation();
 		ms_obj.initialize();
-		
-		//MatrixOperations.print_matrix(get_sigma_matrix(0));
-		
+				
 		calc_obs_model_probs_4_MS_VAR();	
 		
 		double curLogLik  = Double.MIN_VALUE;
@@ -269,9 +294,6 @@ public class MS_VAR extends HMM{
 			update_transition_matrix_4_MS_VAR();
 												
 			calc_obs_model_probs_4_MS_VAR();
-			
-			//System.out.println("");
-			//MatrixOperations.print_matrix(get_sigma_matrix(0));
 			
 			curLogLik = calc_log_likelihood_4_MS_VAR();
 			
@@ -357,7 +379,7 @@ public class MS_VAR extends HMM{
 		double prevLogLik = Double.MIN_VALUE;	
 		
 		for(int i=0; i<max_iterations; i++){
-						
+				
 			ForwardBackwardAlgorithm fb = new ForwardBackwardAlgorithm();
 			
 			fb.runForwardAlgorithm();
@@ -640,78 +662,6 @@ public class MS_VAR extends HMM{
    	}
 	
 	
-	//returns List of (i) const vector, (ii) (vectorized) p-dimensional AR matrices and (iii) (vectorized) Sigma matrix 
-	@SuppressWarnings("static-access")
-	public ArrayList<ArrayList<List<Double>>> est_conventional_VAR(){
-		
-		ArrayList<ArrayList<List<Double>>> est_res = new ArrayList<ArrayList<List<Double>>>(3);
-		ArrayList<List<Double>> listOfARMatrices   = new ArrayList<List<Double>>(lag);
-		ArrayList<List<Double>> listOfConstVec     = new ArrayList<List<Double>>(1);
-		ArrayList<List<Double>> listOfSigmaMatrix  = new ArrayList<List<Double>>(1);
-		
-    	double [][] X = get_lagged_Y();    	
-    	
-    	int nARpars = n_variables*lag;
-    	
-		double [][] constant = new double [n_variables][1];				
-    	double [][] arMatrices = new double [n_variables][nARpars];
-    	double [][] residuals  = new double [n_usedObservations][n_variables];
-    	
-    	for(int i=0; i<n_variables; i++){
-    		
-    		double [][] y = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(observed_variables, startIdx, endIdx, i, i);
-      	        	
-        	LinearRegression obj_lm = new LinearRegression(y, X, true);
-        	
-        	obj_lm.do_parameter_estimation();
-    		
-        	double [][] lmRes = obj_lm.get_residuals();
-        	
-        	for(int j=0; j<n_usedObservations; j++){
-        		residuals[j][i]=lmRes[j][0];
-        	}
-        		
-    		constant[i][0] = obj_lm.get_est_constant();
-        	double [][] pars = obj_lm.get_est_parameters();
-        	
-        	for(int j=0; j<nARpars; j++){
-        		//A_1,...,A_p
-        		arMatrices[i][j] = pars[j][0];
-        	}
-        	
-    	}
-    	
-    	double [][] SigmaMatrix = GeneralMath.cov(residuals);
-  	
-    	//Const vector
-    	listOfConstVec.add(MatrixOperations.vecAsList(constant));
-    	
-    	//AR matrices A_1,...,A_p
-    	int startColIdx = 0;
-    	int endColIdx   = n_variables-1;
-
-		for(int p=0; p<lag; p++){
-			
-			double [][] ar_matrix = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(arMatrices, 0, (n_variables-1), startColIdx, endColIdx);
-			
-			List<Double> arList = MatrixOperations.vecAsList(ar_matrix);
-			listOfARMatrices.add(arList);
-			startColIdx = endColIdx+1;
-			endColIdx   = startColIdx+n_variables-1;
-		}
-		
-		//Sigma matrix
-    	listOfSigmaMatrix.add(MatrixOperations.vecAsList(SigmaMatrix));
-    	
-    	est_res.add(0,listOfConstVec);
-    	est_res.add(1,listOfARMatrices);
-    	est_res.add(2,listOfSigmaMatrix);
-    	
-    	return est_res;
-    	
-	}
-	
-	
 	public static void set_default_values_MS_VAR(){
 		
 		max_iterations = 1000;
@@ -755,6 +705,112 @@ public class MS_VAR extends HMM{
 		}else{
 			System.out.println("No MS-VAR type supplied for calculation.");
 		}
+		
+	}
+	
+	
+	public static void calc_and_select_MS_VAR(int maxLag, int maxNumberOfStates, String ic){
+		
+		//Plausi checks bzgl. lag & n_states...
+		
+		String [] valid_info_criteria = get_valid_info_criteria_4_MS_VAR();
+		int idx = Utilities.get_idx(valid_info_criteria, ic)[0];
+		
+		if(idx == -1){
+			throw new RuntimeException("Invalid information criterion supplied for MS-VAR model selection.");
+		}
+		
+		int selectedLag = 0;
+		int selectedNumberOfStates = 0;
+		
+		double prev_icValue = Double.MIN_VALUE;
+		
+		for(int p=0; p<maxLag; p++){		
+			lag = p+1;			
+			for(int m=0; m<maxNumberOfStates; m++){
+				
+				System.out.println("Automated model selection: Start calculating lag number " + lag + " and state number " + n_states);
+				
+				n_states = m+1;				
+				calc_MS_VAR();				
+				double cur_icValue = calc_information_criterion(ic);
+				
+				if(cur_icValue > prev_icValue){
+					selectedLag = lag;
+					selectedNumberOfStates = n_states;
+				}
+			}
+			
+		}
+		
+		//Calculate selected model again
+		lag = selectedLag;
+		n_states = selectedNumberOfStates;
+		System.out.println(ms_var_type + " with lag number " + lag + " and state number " + n_states + " selected." );
+		calc_MS_VAR();
+		
+	}
+	
+	
+	public static String [] get_valid_info_criteria_4_MS_VAR(){
+		
+		String [] valid_ics = {"AIC", "BIC", "HQ"};
+		
+		return valid_ics;
+		
+	}
+	
+	
+	public static double calc_information_criterion(String ic){
+		
+		int nPars = get_number_of_est_parameters();
+		double icValue = 0.0;
+		double likelihood = Math.exp(log_likelihood);
+		
+		if(ic == "AIC"){
+			icValue = InformationCriteria.aic(likelihood, nPars);
+		}
+		
+		if(ic == "BIC"){
+			icValue = InformationCriteria.bic(likelihood, nPars, n_usedObservations);
+		}
+	
+		if(ic == "HQ"){
+			icValue = InformationCriteria.hq(likelihood, nPars, n_usedObservations);
+		}
+		
+		return icValue;
+		
+	}
+	
+	
+	public static int get_number_of_est_parameters(){
+		
+		boolean mySwitch = my_switching();
+		boolean arSwitch = ar_switching();
+		boolean sigmaSwitch = sigma_switching();
+		
+		int nPars = 0;
+		
+		if(mySwitch == true){
+			nPars += n_variables*n_states;
+		}else{
+			nPars += n_variables;
+		}
+		
+		if(arSwitch == true){
+			nPars += Math.pow(n_variables, 2.0)*n_states;
+		}else{
+			nPars += Math.pow(n_variables, 2.0);
+		}
+		
+		if(sigmaSwitch == true){
+			nPars += Math.pow(n_variables, 2.0)*n_states;
+		}else{
+			nPars += Math.pow(n_variables, 2.0);
+		}
+		
+		return nPars;
 		
 	}
 	
@@ -927,16 +983,43 @@ public class MS_VAR extends HMM{
    	}
 	
 	
+	@SuppressWarnings("static-access")
+	public static void test_automated_model_selection() throws Exception {
+		
+    	//Load & select data input:
+    	String file = "C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Test_MS_Models/InterestRates.txt";
+    	String [] colnames = {"Germany", "France", "UK", "USA"};
+    	int maxNumberOfLags   = 1;
+    	int maxNumberOfStates = 2;
+    	String msType = "MSAH";
+		
+    	read_input_data(file, true, true);
+	    
+    	int nData = inputData.numberOfRows-1;
+    	String [] rownames = new String [nData];
+    	for(int i=0; i<nData;i++){
+    		rownames[i] = Integer.toString(i+1);
+    	}
+    	
+    	select_input_data(rownames, colnames);
+    
+    	MS_VAR obj_test = new MS_VAR(maxNumberOfLags, (nData-maxNumberOfLags), msType);
+    	
+    	obj_test.calc_and_select_MS_VAR(maxNumberOfLags, maxNumberOfStates, "AIC");
+    	
+	}
+	
+	
     //test client
     @SuppressWarnings("static-access")
 	public static void main(String[] args) throws Exception {
-    	
+    	  	
     	//Load & select data input:
     	String file = "C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Test_MS_Models/InterestRates.txt";
-    	String [] colnames = {"France"};//{"France","USA","UK","Germany"};
+    	String [] colnames = {"Germany", "France", "UK", "USA"};
     	int numberOfLags   = 1;
     	int numberOfStates = 2;
-    	String msType = "MSI";
+    	String msType = "MSAH";
     	
     	read_input_data(file, true, true);
 	    
@@ -955,8 +1038,7 @@ public class MS_VAR extends HMM{
     	
     	obj_test.calc_MS_VAR();
     	
-    	
-    	plotInputSeriesWithErrorBars();
+    	//plotInputSeriesWithErrorBars();
     	
     	//Plot results
 		double [][] f_probs = get_smoothed_probs();

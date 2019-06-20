@@ -1,5 +1,8 @@
 package Mathematics;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import Utilities.Utilities;
 
 public class MatrixOperations {
@@ -90,12 +93,9 @@ public class MatrixOperations {
 		
 		int col_idx = start_col_idx;
 		
-		for(int i = 0; i < n_cols; i++){
-			
-			for(int j = 0; j<n_rows; j++){
-				
-				sub_matrix[j][i] = A[j][col_idx];	
-				
+		for(int i = 0; i < n_cols; i++){		
+			for(int j = 0; j<n_rows; j++){				
+				sub_matrix[j][i] = A[j][col_idx];					
 			}
 				
 			col_idx = col_idx + 1;
@@ -117,14 +117,11 @@ public class MatrixOperations {
 		
 		int row_idx = start_row_idx;
 		
-		for(int i = 0; i < n_rows; i++){
-			
-			for(int j = 0; j<n_cols; j++){
-				
-				sub_matrix[i][j] = A[row_idx][j];	
-				
+		for(int i = 0; i < n_rows; i++){			
+			for(int j = 0; j<n_cols; j++){				
+				sub_matrix[i][j] = A[row_idx][j];					
 			}
-				
+			
 			row_idx = row_idx + 1;
 			
 		}
@@ -133,6 +130,33 @@ public class MatrixOperations {
 		
 	}
 	
+	
+	// returns rows of a matrix between start and end indices
+	public static double [][] get_sub_matrix_between_row_and_col_idxs(double[][] A, int start_row_idx, int end_row_idx, int start_col_idx, int end_col_idx){
+		
+		int n_rows = end_row_idx - start_row_idx + 1;
+		int n_cols = end_col_idx - start_col_idx + 1;
+		
+		double [][] sub_matrix = matrix(n_rows, n_cols);
+		
+		int row_idx = start_row_idx;
+		
+		for(int i = 0; i < n_rows; i++){	
+			
+			int col_idx = start_col_idx;
+			
+			for(int j = 0; j<n_cols; j++){				
+				sub_matrix[i][j] = A[row_idx][col_idx];	
+				col_idx++;
+			}
+			
+			row_idx++;
+			
+		}
+		
+		return sub_matrix;
+		
+	}
 	
 	//sorts matrix columns
 	public static double [][] resort_matrix_columns(double[][] A, int [] col_idxs){
@@ -232,7 +256,11 @@ public class MatrixOperations {
 	}
 	
 	
-	// returns n x 1 unit vector e
+	/**
+	 * Method for generating nx1 unit (column) vector
+	 * @param n number of rows
+	 * @return nx1 unit vector
+	 */
 	public static double [][] unit_vector(int n){
 		
 		double [][] unit_vector = new double [n][1];
@@ -248,15 +276,55 @@ public class MatrixOperations {
 	}
 	
 	
+	/**
+	 * Method for calculating the determinant of a given matrix
+	 *
+	 * @param matrix matrix for which determinant should be calculated
+	 *
+	 * @return determinant of given matrix
+	 */
+	public static double determinant (double[][] matrix) {
+		
+		double temporary[][];
+		double result = 0;
+
+		if (matrix.length == 1) {
+			result = matrix[0][0];
+			return (result);
+		}
+
+		if (matrix.length == 2) {
+			result = ((matrix[0][0] * matrix[1][1]) - (matrix[0][1] * matrix[1][0]));
+			return (result);
+		}
+
+		for (int i = 0; i < matrix[0].length; i++) {
+			temporary = new double[matrix.length - 1][matrix[0].length-1];
+
+			for (int j = 1; j < matrix.length; j++) {
+				for (int k = 0; k < matrix[0].length; k++) {
+					if (k < i) {
+						temporary[j-1][k] = matrix[j][k];
+					} else if (k > i) {
+						temporary[j-1][k-1] = matrix[j][k];
+					}
+				}
+			}
+
+			result += matrix[0][i]*Math.pow (-1, (double) i)*determinant (temporary);
+		}
+		
+		return (result);
+	}
+	
+	
 	public static double [][] inverse(double [][] X){
 		
 		int n_rows = X.length;
 		int n_cols = X[0].length;
 		
-		if( n_rows != n_cols){
-			
-			throw new RuntimeException("Cannot calculate inverse of matrix. No quadratic Matrix supplied.");
-			
+		if( n_rows != n_cols){			
+			throw new RuntimeException("Cannot calculate inverse of matrix. No quadratic Matrix supplied.");			
 		}
 		
 		double [][] A = matrix(n_rows, n_cols);
@@ -264,10 +332,8 @@ public class MatrixOperations {
 		
 		if(is_diagonal(A) == true){
 			
-			for(int i=0; i<n_rows; i++){
-				
-				A[i][i] = 1.0/A[i][i];
-				
+			for(int i=0; i<n_rows; i++){				
+				A[i][i] = 1.0/A[i][i];				
 			}
 		
 			return A;
@@ -286,35 +352,23 @@ public class MatrixOperations {
 			
 			d = d*pivot;
 			
-			for(int i=0; i<n_rows; i++){
-				
-				A[i][p] =  -A[i][p]/pivot;
-					
-					
+			for(int i=0; i<n_rows; i++){				
+				A[i][p] =  -A[i][p]/pivot;										
 			}
 			
 			for(int i=0; i<n_rows; i++){
 		
-				if(i != p){
-					
-					for(int j=0; j<n_cols; j++){
-						
-						if(j != p){
-							
-							A[i][j] =  A[i][j] + A[p][j]*A[i][p]; 
-							
-						}
-								
-					}
-						
-				}
-				
+				if(i != p){					
+					for(int j=0; j<n_cols; j++){						
+						if(j != p){							
+							A[i][j] =  A[i][j] + A[p][j]*A[i][p]; 							
+						}								
+					}						
+				}				
 			}
 			
-			for(int j=0; j<n_cols; j++){
-						
-				A[p][j] = A[p][j]/pivot;
-												
+			for(int j=0; j<n_cols; j++){						
+				A[p][j] = A[p][j]/pivot;												
 			}
 			
 			A[p][p] = 1.0/pivot;
@@ -1048,21 +1102,36 @@ public class MatrixOperations {
 		
 		int [] c = new int [n_elements];
 		
-		for(int i = 0; i < n_a; i++){
-			
-			c[i] = a[i];
-			
+		for(int i = 0; i < n_a; i++){			
+			c[i] = a[i];			
 		}
 				
-		for(int i = n_a; i < n_elements; i++){
-			
-			c[i] = b[b_idx];
-			
+		for(int i = n_a; i < n_elements; i++){			
+			c[i] = b[b_idx];			
 			b_idx = b_idx + 1;
 			
 		}
 		
 		return c;
+		
+	}
+	
+	
+	// returns trace of matrix (sum of diagonal elements)
+	public static double trace(double [][] A){
+		
+		if(A.length != A[0].length){
+			throw new RuntimeException("Supplied matrix is not a square matrix.");
+		}
+		
+		double trace = 0.0;
+		int n = A.length;
+		
+		for(int i=0; i<n; i++){
+			trace = trace + A[i][i];			
+		}
+		
+		return trace;
 		
 	}
 	
@@ -1110,6 +1179,56 @@ public class MatrixOperations {
 	}
 	
 	
+	//Element wise multiplication of two nx1 vectors a, b
+	public static double [][] multiplyVecByElement(double [][] a, double [][] b){
+		
+		if(a.length != b.length){
+			throw new RuntimeException("Supplied vectors are of unequal length.");
+		}
+		
+		if(a[0].length != 1 || b[0].length != 1){
+			throw new RuntimeException("No column vectors supplied.");
+			
+		}
+		
+		int nRows = a.length;
+		
+		double [][] c = new double [nRows][1];
+		
+		for(int i=0; i<nRows; i++){
+			c[i][0] = a[i][0]*b[i][0];
+		}
+		
+		return c;
+		
+	}
+	
+	
+	//Element wise division of two nx1 vectors a, b
+	public static double [][] divideVecByElement(double [][] a, double [][] b){
+		
+		if(a.length != b.length){
+			throw new RuntimeException("Supplied vectors are of unequal length.");
+		}
+		
+		if(a[0].length != 1 || b[0].length != 1){
+			throw new RuntimeException("No column vectors supplied.");
+			
+		}
+		
+		int nRows = a.length;
+		
+		double [][] c = new double [nRows][1];
+		
+		for(int i=0; i<nRows; i++){
+			c[i][0] = a[i][0]/b[i][0];
+		}
+		
+		return c;
+		
+	}
+	
+	
 	// vec-operator for vectorizing matrix A
 	public static double [] vec(double [][] A){
 		
@@ -1132,6 +1251,25 @@ public class MatrixOperations {
 		
 	}
 	
+	
+	// vec-operator for vectorizing matrix A
+	public static List<Double> vecAsList(double [][] A){
+		
+		int nRows = A.length;
+		int nCols = A[0].length;
+		
+		List<Double> vec = new ArrayList<Double>(nRows*nCols);
+		
+		for(int i=0; i<nCols; i++){
+			
+			for(int j=0; j<nRows; j++){				
+				vec.add(A[j][i]);								
+			}			
+		}
+		
+		return vec;
+		
+	}
 	
 	// vec-operator for vectorizing matrix A
 	public static double [][] vecAs2dArray(double [][] A){
@@ -1162,16 +1300,30 @@ public class MatrixOperations {
 		
 		int idx = 0;
 		
-		for(int i=0; i<n_cols; i++){
-			
-			for(int j=0; j<n_rows; j++){
-				
-				A[j][i] = x[idx];
-				
-				idx++;
-						
-			}
-			
+		for(int i=0; i<n_cols; i++){			
+			for(int j=0; j<n_rows; j++){				
+				A[j][i] = x[idx];				
+				idx++;						
+			}			
+		}
+		
+		return A;
+		
+	}
+	
+	
+	// returns matrix A from column vector x
+	public static double [][] get_matrix_from_vec(double [][] x, int n_rows, int n_cols){
+		
+		double [][] A = new double [n_rows][n_cols];
+		
+		int idx = 0;
+		
+		for(int i=0; i<n_cols; i++){			
+			for(int j=0; j<n_rows; j++){				
+				A[j][i] = x[idx][0];				
+				idx++;						
+			}			
 		}
 		
 		return A;
@@ -1216,7 +1368,7 @@ public class MatrixOperations {
     // test client
     public static void main(String[] args) {
     	    	
-    	//double [][] A = {{1,2},{3,4},{5,6}};
+    	double [][] A = {{1,2,3},{4,5,6},{7,8,9}};
     	//double [][] B = {{7,8},{9,0}};
     	//double [][] a = MatrixOperations.unit_vector(2);
     	//print_matrix(A);
@@ -1229,8 +1381,8 @@ public class MatrixOperations {
     	
     	//print_matrix(kronecker(a,b));
     	
-    	//print_matrix(A);
-    	//print_matrix(get_sub_matrix_between_row_idxs(A, 1, 2));
+    	print_matrix(A);
+    	print_matrix(get_sub_matrix_between_row_and_col_idxs(A, 1, 2, 1, 2));
     	
     	//print_matrix(inverse(B));
 

@@ -50,12 +50,9 @@ public class Utilities {
 			
 			int [] search_idx = get_idx(x, unique_vec[i]);
 			
-            for(int j=0; j<search_idx.length; j++){
-            	
-            	idxs[idx] = search_idx[j];
-            	
-            	idx = idx + 1;
-            	
+            for(int j=0; j<search_idx.length; j++){            	
+            	idxs[idx] = search_idx[j];            	
+            	idx++;            	
             }
 			
 		}
@@ -614,28 +611,20 @@ public class Utilities {
 		
 		int idx = 0;		
 				
-		for(int i=0; i<x.length; i++){
-						
-			if(x[i].contentEquals(search_element) == true){
-				
+		for(int i=0; i<x.length; i++){						
+			if(x[i].contentEquals(search_element) == true){				
 				search_idxs[idx] = i;
-				idx = idx+1;
-				
-			}
-			
+				idx = idx+1;				
+			}			
 		}
 		
-		if(idx == 0){
-			
+		if(idx == 0){			
 			int [] idxs = new int [1];
 			idxs[0] = -1;
-			return idxs;
-			
-		}else{
-			
+			return idxs;			
+		}else{			
 			int [] idxs = MatrixOperations.get_int_sub_vec(search_idxs, 0, (idx-1));
-			return idxs;
-			
+			return idxs;			
 		}
 	   	
 	}

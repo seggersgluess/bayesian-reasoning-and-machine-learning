@@ -42,10 +42,10 @@ public class ForwardBackwardAlgorithm extends HMM{
 			summedProbs = 0.0;
 			
 			for(int s=0; s<n_states; s++){				
-				probs.add(s,obs_model_probs[s][t]*term[s][0]);					
+				probs.add(s,obs_model_probs[s][t]*term[s][0]);		
 				summedProbs += probs.get(s);			
 			}
-			
+							
 			//Normalize probs
 			for(int s=0; s<n_states; s++){
 				probs.set(s,probs.get(s)/summedProbs);

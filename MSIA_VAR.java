@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import Mathematics.MatrixOperations;
+import TimeSeriesAnalysis.VAR;
+import Utilities.Utilities;
 
 public class MSIA_VAR extends HMM{
 
@@ -268,23 +270,56 @@ public class MSIA_VAR extends HMM{
 	
 	//Initialize with conventional VAR(p)-model
 	public void initialize(){
+		
+		double [] summedSeries = new double [n_usedObservations];
+		
+		for(int i=0; i<n_usedObservations; i++){
+			for(int j=0; j<n_variables; j++){
+				summedSeries[i] += observed_variables[startIdx+i][j];
+			}
+		}
+		
+		int [] sortedIdxs = Utilities.get_idxs_for_sorted_vec(summedSeries);
+		
+		int splitLength = Math.round(n_usedObservations/n_states);
+		int idx = 0;
+		
+		for(int m=0; m<n_states; m++){
 			
-		MS_VAR obj_ms = new MS_VAR(startIdx, endIdx, lag, n_states, ms_var_type);
+			if(m==(n_states-1)){
+				splitLength = n_usedObservations-idx;
+			}
 			
-		ArrayList<ArrayList<List<Double>>> var_est_res = obj_ms.est_conventional_VAR();
+			double [][] sortedSeries = new double [splitLength][n_variables];
 			
-	    //--- fill parameter list ---    		    
-	    //state dependent const vectors my(1),...,m(M) and AR matrices A(1),...,A(M)
-	    for(int m=0; m<n_states; m++){		 
+			for(int i=0; i<splitLength; i++){
+				for(int j=0; j<n_variables; j++){
+					sortedSeries[i][j] = observed_variables[(startIdx+sortedIdxs[idx])][j];	
+				}
+				idx++;
+			}
+					
+			int startIdx4VAR = lag;
+			int endIdx4VAR   = sortedSeries.length-1;
+			VAR obj_VAR = new VAR(sortedSeries, startIdx4VAR, endIdx4VAR, lag);
+			
+			obj_VAR.est_conventional_VAR();
+			ArrayList<ArrayList<List<Double>>> var_est_res = obj_VAR.get_VAR_est_parameters();
+			
 	    	my.add(var_est_res.get(0).get(0));
-	    	ARMatrices.add(var_est_res.get(1));	    	
-	    }
-	  
-	    //Sigma
-	    Sigma.add(var_est_res.get(2).get(0));
-	    
-	    initialize_trans_probs();
+	    	ARMatrices.add(var_est_res.get(1));
+	    	
+		}
+				
+		VAR obj_VAR = new VAR(observed_variables, startIdx, endIdx, lag);
+		
+		obj_VAR.est_conventional_VAR();
+		ArrayList<ArrayList<List<Double>>> var_est_res = obj_VAR.get_VAR_est_parameters();
+
+		Sigma.add(var_est_res.get(2).get(0));
 			
+		initialize_trans_probs();
+		
 	}
 
 	

@@ -5,6 +5,8 @@ import java.util.List;
 
 import Mathematics.GeneralMath;
 import Mathematics.MatrixOperations;
+import TimeSeriesAnalysis.VAR;
+import Utilities.Utilities;
 
 public class MSI_VAR extends HMM{
 	
@@ -336,46 +338,53 @@ public class MSI_VAR extends HMM{
 	//Initialize with conventional VAR(p)-model
 	public void initialize(){
 		
-		MS_VAR obj_ms = new MS_VAR(startIdx, endIdx, lag, n_states, ms_var_type);
+		double [] summedSeries = new double [n_usedObservations];
 		
-		ArrayList<ArrayList<List<Double>>> var_est_res = obj_ms.est_conventional_VAR();
+		for(int i=0; i<n_usedObservations; i++){
+			for(int j=0; j<n_variables; j++){
+				summedSeries[i] += observed_variables[startIdx+i][j];
+			}
+		}
 		
-    	//--- fill parameter list ---    	
-    	//state dependent const vectors my(1),...,m(M)
-    	for(int m=0; m<n_states; m++){
-    		my.add(var_est_res.get(0).get(0));
-    	}
-    	
-    	
-    	//---------------------
-    	
-    	List<Double> myMod1 = new ArrayList<Double>();
-    	List<Double> myMod2 = new ArrayList<Double>();
-    	
-    	double scale = 5.0;
-    	int n = my.get(0).size();
-    	
-    	for(int i=0; i<n; i++){
-    		double myValue = my.get(0).get(i);
-    		if(myValue>0.0){
-    			myMod1.add(myValue*scale);
-    			myMod2.add(myValue*(-scale));
-    		}else{
-    			myMod1.add(myValue*(-scale));
-    			myMod2.add(myValue*scale);
-    		}
-    	}
-    	
-    	my.set(0, myMod1);
-    	my.set(1, myMod2);
-    	
-    	//---------------------
-    	
+		int [] sortedIdxs = Utilities.get_idxs_for_sorted_vec(summedSeries);
+		
+		int splitLength = Math.round(n_usedObservations/n_states);
+		int idx = 0;
+		
+		for(int m=0; m<n_states; m++){
+			
+			if(m==(n_states-1)){
+				splitLength = n_usedObservations-idx;
+			}
+			
+			double [][] sortedSeries = new double [splitLength][n_variables];
+			
+			for(int i=0; i<splitLength; i++){
+				for(int j=0; j<n_variables; j++){
+					sortedSeries[i][j] = observed_variables[(startIdx+sortedIdxs[idx])][j];	
+				}
+				idx++;
+			}
+					
+			int startIdx4VAR = lag;
+			int endIdx4VAR   = sortedSeries.length-1;
+			VAR obj_VAR = new VAR(sortedSeries, startIdx4VAR, endIdx4VAR, lag);
+			
+			obj_VAR.est_conventional_VAR();
+			ArrayList<ArrayList<List<Double>>> var_est_res = obj_VAR.get_VAR_est_parameters();
+			
+	    	my.add(var_est_res.get(0).get(0));
+					
+		}
+				
+		VAR obj_VAR = new VAR(observed_variables, startIdx, endIdx, lag);
+		
+		obj_VAR.est_conventional_VAR();
+		ArrayList<ArrayList<List<Double>>> var_est_res = obj_VAR.get_VAR_est_parameters();
+		 
 		ARMatrices.add(var_est_res.get(1));
-    	
-		//Sigma matrix		
 		Sigma.add(var_est_res.get(2).get(0));
-    	
+			
 		initialize_trans_probs();
 		
 	}
