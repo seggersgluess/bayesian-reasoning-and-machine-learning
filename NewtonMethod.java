@@ -1,4 +1,8 @@
+package Optimization;
 import java.util.function.BiFunction;
+
+import Mathematics.MatrixOperations;
+import Utilities.Utilities;
 
 public class NewtonMethod extends UnconstrainedOptimizer{
 
@@ -15,6 +19,13 @@ public class NewtonMethod extends UnconstrainedOptimizer{
 	public NewtonMethod(BiFunction<double [], double [], Double> g, double [] further_args, int max_iterations) {
 		
 		super(g, further_args, max_iterations);
+	
+	}
+	
+	
+	public NewtonMethod(BiFunction<double [], double [], Double> g, BiFunction <double [], double [], double []> grad, int max_iterations) {
+		
+		super(g, grad, max_iterations);
 	
 	}
 	
@@ -74,7 +85,7 @@ public class NewtonMethod extends UnconstrainedOptimizer{
 	
 	}
 	
-	
+
 	// sets version of Newton algorithm
 	public void set_version(String s_version){
 		
@@ -152,6 +163,14 @@ public class NewtonMethod extends UnconstrainedOptimizer{
 					
 				inv_hessian = MatrixOperations.inverse(hessian_matrix);
 				
+				for(int j=0; j<inv_hessian.length; j++){
+					for(int k=0; k<inv_hessian.length; k++){
+						if(Double.isInfinite(inv_hessian[j][k]) == true){
+							inv_hessian[j][k] = Double.MAX_VALUE;
+						}
+					}
+				}
+				
 				direction = MatrixOperations.scalar_vector_multiplication(-1.0, MatrixOperations.multiplyMatrixWithVec(inv_hessian, grad_1));
 				
 				if(version == "ModNewton"){
@@ -178,7 +197,7 @@ public class NewtonMethod extends UnconstrainedOptimizer{
 					args_2 = MatrixOperations.add_vectors(args_1, direction);
 					
 				}
-											
+									
 				if(Math.abs(targetFunction(args_1, further_args_f) - targetFunction(args_2, further_args_f)) < convergence_criterion){
 					
 					System.out.println(version + " Optimization converged after " + i + " iterations");
