@@ -1,4 +1,8 @@
+package Optimization;
 import java.util.function.BiFunction;
+
+import Mathematics.MatrixOperations;
+import Utilities.Utilities;
 
 public class DifferentialEvolution extends UnconstrainedOptimizer{
 
@@ -18,7 +22,7 @@ public class DifferentialEvolution extends UnconstrainedOptimizer{
 	}
 	
 	// number of objective function evaluations until convergence
-	static double evaluations = 100000;
+	static double evaluations = 10000;
 
 	static double [] upper_bounds;
 	static double [] lower_bounds;
@@ -76,7 +80,9 @@ public class DifferentialEvolution extends UnconstrainedOptimizer{
 					
 					optimal_value = f_2;
 					
-					flag = 0;
+					if(Math.abs((f_2-f_1)/f_1)>convergence_criterion){
+						flag = 0;
+					}
 					
 				}else{
 					
@@ -236,6 +242,11 @@ public class DifferentialEvolution extends UnconstrainedOptimizer{
 		return cross_over_generation;
 		
 	}	
+	
+	
+	public static void set_number_of_function_eval(int n_evaluations){
+		evaluations = n_evaluations;
+	}
 	
 	
 	// test client
