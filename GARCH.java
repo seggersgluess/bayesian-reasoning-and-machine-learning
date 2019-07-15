@@ -40,6 +40,11 @@ public class GARCH {
 	static String distribution;
 	static double student_df;
 	
+	//Case of Generalized Error Distribution
+	static double tail_parameter;
+	static double lambda;
+	static double error_mean;
+	
 	static double logLikelihood;
 	
 	static ArrayList<List<Double>> lagged_variables;
@@ -153,7 +158,7 @@ public class GARCH {
 	
 	public static double [][] calc_est_values_from_GARCH(){
 		
-		double [][]conv_lagged_vars = MatrixOperations.get_matrix_from_vec(lagged_variables.get(0), n_usedObservations, (lag4observedVariables+1));
+		double [][] conv_lagged_vars = MatrixOperations.get_matrix_from_vec(lagged_variables.get(0), n_usedObservations, (lag4observedVariables+1));
 		double [][] est_vars = MatrixOperations.multiplication(conv_lagged_vars, arPars);
 		
 		return est_vars;
@@ -196,23 +201,15 @@ public class GARCH {
 		}
 		
 		for(int t=0; t<n_usedObservations; t++){
-			int prevCounter = lag4volatility-t;
-		
-			if(prevCounter > 0){
-				for(int p=0; p<prevCounter; p++){
-					int p_backward = lag4volatility-p-1;
-					h_t[t][0] += volaPars[1+p_backward][0]*h_t_prev;
-				}
-				
-				for(int p=0; p<(lag4volatility-prevCounter); p++){
+			for(int p=0; p<lag4volatility; p++){
+				int prevCounter = t-p-1;
+				if(prevCounter<0){
+					h_t[t][0] += volaPars[1+p][0]*h_t_prev;
+				}else{
 					h_t[t][0] += volaPars[1+p][0]*h_t[t-p-1][0];
 				}
-			}else{
-				for(int p=0; p<lag4volatility; p++){
-					h_t[t][0] += volaPars[1+p][0]*h_t[t-p-1][0];
-				}
-			}
-			
+					
+			}			
 		}
 				
 		return h_t;
@@ -245,11 +242,11 @@ public class GARCH {
 		logLik += (-1.0)*n_usedObservations/2.0*Math.log(2.0*Math.PI);
 			
 		if(Double.isInfinite(logLik) == true){
-			logLik = 1e+100;
+			logLik = -1e+100;
 		}   
 		
 		if(Double.isNaN(logLik) == true){
-			logLik = 1e+100;
+			logLik = -1e+100;
 		}
 		
 		System.out.println(-logLik);
@@ -284,16 +281,110 @@ public class GARCH {
 		logLik += n_usedObservations*Math.log((GammaFunction.gamma((student_df+1.0))/2.0)/(Math.sqrt(Math.PI)*GammaFunction.gamma(student_df/2.0))*Math.pow(student_df-2.0, -0.5));
 		
 		if(Double.isInfinite(logLik) == true){
-			logLik = 1e+100;
+			logLik = -1e+100;
 		}   
 		
 		if(Double.isNaN(logLik) == true){
-			logLik = 1e+100;
+			logLik = -1e+100;
 		}
 		
 		System.out.println(-logLik);
 		
 		return -logLik;
+		
+	}
+	
+	
+	public static double calc_log_likelihood_4_GARCH_with_Cauchy_Dist(){
+		
+		boolean truePars = check_GARCH_par_restrictions();
+		
+		if(truePars == false){			
+			return 1e+100;
+		}
+		
+		double logLik = 0.0;
+		
+		double [][] h_t = calc_volatilies_from_GARCH();		
+		double [][] est_vars = calc_est_values_from_GARCH();
+		
+		for(int t=0; t<n_usedObservations; t++){
+			
+			if(h_t[t][0]<=0.0){
+				h_t[t][0] = 1e-10;
+			}
+			
+			logLik += Math.log(h_t[t][0]/(Math.pow((observed_variables[startIdx+t][0]-est_vars[t][0]), 2.0)+Math.pow(h_t[t][0],2.0)));
+		}
+		
+		logLik += n_usedObservations*Math.log(1.0/Math.PI);
+		
+		if(Double.isInfinite(logLik) == true){
+			logLik = -1e+100;
+		}   
+		
+		if(Double.isNaN(logLik) == true){
+			logLik = -1e+100;
+		}
+		
+		System.out.println(-logLik);
+		
+		return -logLik;
+		
+	}
+	
+	
+	public static double calc_log_likelihood_4_GARCH_with_GED(){
+		
+		boolean truePars = check_GARCH_par_restrictions();
+		
+		if(truePars == false){			
+			return 1e+100;
+		}
+		
+		calc_mean_of_generalized_error_dist_4_GARCH();
+		
+		double logLik = 0.0;
+		
+		double [][] h_t = calc_volatilies_from_GARCH();		
+		double [][] est_vars = calc_est_values_from_GARCH();
+		
+		for(int t=0; t<n_usedObservations; t++){
+			
+			if(h_t[t][0]<=0.0){
+				h_t[t][0] = 1e-10;
+			}
+			
+			double residuals = observed_variables[startIdx+t][0]-est_vars[t][0];
+			residuals = Math.abs(residuals/(Math.sqrt(h_t[t][0])*lambda));
+			
+			logLik += -0.5*(Math.pow(residuals, tail_parameter)+Math.log(h_t[t][0]));
+		
+		}
+		
+		logLik += n_usedObservations*(Math.log(tail_parameter/lambda)-(1.0+1.0/tail_parameter)*Math.log(2.0)-Math.log(GammaFunction.gamma(1.0/tail_parameter)));
+			
+		if(Double.isInfinite(logLik) == true){
+			logLik = -1e+100;
+		}   
+		
+		if(Double.isNaN(logLik) == true){
+			logLik = -1e+100;
+		}
+		
+		System.out.println(-logLik);
+		
+		return -logLik;
+		
+	}
+	
+	
+	public static void calc_mean_of_generalized_error_dist_4_GARCH(){
+			
+		lambda = (Math.pow(2.0, -2.0/tail_parameter)*GammaFunction.gamma(1.0/tail_parameter))/GammaFunction.gamma(3.0/tail_parameter);
+		lambda = Math.sqrt(lambda);
+		
+		error_mean = lambda*Math.pow(2.0, 1.0/tail_parameter)*GammaFunction.gamma(2.0/tail_parameter)/GammaFunction.gamma(1.0/tail_parameter);
 		
 	}
 	
@@ -326,6 +417,12 @@ public class GARCH {
 			}
 		}
 		
+		if(distribution == "GED"){
+			if(tail_parameter <= 0.0){
+				restrictions_satisfied = false;
+			}
+		}
+		
 		return restrictions_satisfied;
 		
 	}
@@ -353,6 +450,28 @@ public class GARCH {
 	}
 	
 	
+	public static double opti_log_likelihood_4_GARCH_with_Cauchy_Dist(double [] pars, double [] further_ars){
+		
+		set_GARCH_pars_from_vec(pars);
+		
+		double logLik = calc_log_likelihood_4_GARCH_with_Cauchy_Dist();
+		
+		return logLik;
+		
+	}
+	
+	
+	public static double opti_log_likelihood_4_GARCH_with_GED(double [] pars, double [] further_ars){
+		
+		set_GARCH_pars_from_vec(pars);
+		
+		double logLik = calc_log_likelihood_4_GARCH_with_GED();
+		
+		return logLik;
+		
+	}
+	
+	
 	@SuppressWarnings("static-access")
 	public static void do_MLE_4_GARCH(){
 		
@@ -364,6 +483,14 @@ public class GARCH {
     	
     	if(distribution == "Student"){
     		target_function = GARCH::opti_log_likelihood_4_GARCH_with_Student_Dist;
+    	}
+    	
+    	if(distribution == "Cauchy"){
+    		target_function = GARCH::opti_log_likelihood_4_GARCH_with_Cauchy_Dist;
+    	}
+    	
+    	if(distribution == "GED"){
+    		target_function = GARCH::opti_log_likelihood_4_GARCH_with_GED;
     	}
     	
     	double [] start_value = get_start_values_4_est_GARCH();
@@ -404,8 +531,14 @@ public class GARCH {
         		upper_values[n_pars-1] = n_usedObservations-1;
         	}
         	
+        	if(distribution == "GED"){
+        		lower_values[n_pars-1] = 0.01;
+        		upper_values[n_pars-1] = n_usedObservations-1;
+        	}
+        	
         	if(optimizer == "DEoptim"){
         		DifferentialEvolution optim = new DifferentialEvolution(target_function, 500);
+        		optim.set_convergence_criterion(1e-02);
             	optim.set_number_of_function_eval(10);
             	optim.do_Differential_Evolution_Optimization(upper_values, lower_values);
             	set_GARCH_pars_from_vec(optim.get_optimal_candidate());        	
@@ -467,6 +600,10 @@ public class GARCH {
 			student_df = par_vec[(lag4observedVariables+lag4volatility+lag4residuals+2)];
 		}
 		
+		if(distribution == "GED"){
+			tail_parameter = par_vec[(lag4observedVariables+lag4volatility+lag4residuals+2)];
+		}
+		
 	}
 	
 	
@@ -476,6 +613,10 @@ public class GARCH {
 		int n_pars = lag4observedVariables+lag4volatility+lag4residuals+2;
 		
 		if(distribution == "Student"){
+			n_pars++;
+		}
+		
+		if(distribution == "GED"){
 			n_pars++;
 		}
 		
@@ -544,6 +685,10 @@ public class GARCH {
 		    
     	if(distribution == "Student"){
     		start_values[parIdx] = 3.0;
+    	}
+    	
+    	if(distribution == "GED"){
+    		start_values[parIdx] = 2.0;
     	}
     	
 		return start_values;
@@ -641,7 +786,7 @@ public class GARCH {
 	 	obj_graph.plotLines(xAxis, fittedValues, false, Color.RED);
 	 	obj_graph.plotLines(xAxis, volatilities, true);
 	 	
-	 	String [] title  = {"Observed vs. fitted Variable", "GARCH("+lag4volatility+","+lag4residuals+") impl. Volatility"};
+	 	String [] title  = {"Observed vs. fitted Variable", "("+ distribution +") GARCH("+lag4volatility+","+lag4residuals+") impl. Volatility"};
 	 	String [] yLabel = title;
 	 		
 	 	obj_graph.setTitle(title, null, "12");
@@ -675,15 +820,15 @@ public class GARCH {
 		inputData.selectLoadedData(rownames, colnames);
 		double [][] obsData = inputData.selectedDblFileData;
 
-		int obsLag  = 2;
-		int volaLag = 2;
-		int maLag   = 2;
+		int obsLag  = 1;
+		int volaLag = 1;
+		int maLag   = 1;
 		int start_idx = obsLag+maLag;
 		int end_idx = obsData.length;
 		
-		GARCH obj_arch = new GARCH(obsData, start_idx, end_idx, obsLag, volaLag, maLag);
+		GARCH obj_arch = new GARCH(obsData, start_idx, end_idx, obsLag, volaLag, maLag, "Cauchy");
 			
-		obj_arch.set_GARCH_optimizer("SANN");
+		//obj_arch.set_GARCH_optimizer("SANN");
 		obj_arch.do_MLE_4_GARCH();
 		
 		MatrixOperations.print_matrix(arPars);

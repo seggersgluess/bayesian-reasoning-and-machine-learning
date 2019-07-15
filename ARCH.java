@@ -204,11 +204,11 @@ public class ARCH {
 		logLik += (-1.0)*n_usedObservations/2.0*Math.log(2.0*Math.PI);
 		
 		if(Double.isInfinite(logLik) == true){
-			logLik = 1e+100;
+			logLik = -1e+100;
 		}   
 		
 		if(Double.isNaN(logLik) == true){
-			logLik = 1e+100;
+			logLik = -1e+100;
 		}
 		
 		System.out.println(-logLik);
@@ -243,11 +243,11 @@ public class ARCH {
 		logLik += n_usedObservations*Math.log((GammaFunction.gamma((student_df+1.0))/2.0)/(Math.sqrt(Math.PI)*GammaFunction.gamma(student_df/2.0))*Math.pow(student_df-2.0, -0.5));
 		
 		if(Double.isInfinite(logLik) == true){
-			logLik = 1e+100;
+			logLik = -1e+100;
 		}   
 		
 		if(Double.isNaN(logLik) == true){
-			logLik = 1e+100;
+			logLik = -1e+100;
 		}
 		
 		System.out.println(-logLik);
@@ -560,7 +560,7 @@ public class ARCH {
 	 	obj_graph.plotLines(xAxis, fittedValues, false, Color.RED);
 	 	obj_graph.plotLines(xAxis, volatilities, true);
 	 	
-	 	String [] title  = {"Observed vs. fitted Variable", "ARCH impl. Volatility"};
+	 	String [] title  = {"Observed vs. fitted Variable", "(" + distribution + ") ARCH impl. Volatility"};
 	 	String [] yLabel = title;
 	 		
 	 	obj_graph.setTitle(title, null, "12");
@@ -599,7 +599,7 @@ public class ARCH {
 		int start_idx = obsLag+heteroscedasticityLag;
 		int end_idx = obsData.length;
 		
-		ARCH obj_arch = new ARCH(obsData, start_idx, end_idx, obsLag, heteroscedasticityLag);
+		ARCH obj_arch = new ARCH(obsData, start_idx, end_idx, obsLag, heteroscedasticityLag, "Student");
 		obj_arch.set_ARCH_optimizer("SANN");		
 		obj_arch.do_MLE_4_ARCH();
 		
