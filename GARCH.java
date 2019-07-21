@@ -33,6 +33,9 @@ public class GARCH {
 	static double [][] volaPars;
 	static double [][] maPars;
 	
+	static int n_arPars;
+	static int n_heteroPars;
+	
 	static double [][] fittedValues;
 	static double [][] residuals;
 	static double [][] volatilities;
@@ -97,6 +100,9 @@ public class GARCH {
 			lagged_variables.add(get_lagged_Y(m));			
 		}
 		
+		n_arPars = lag4observedVariables+1;
+		n_heteroPars = lag4volatility+lag4residuals+1;
+		
 		distribution = "Normal";
 		
 		//Check input consistency!!!
@@ -148,6 +154,9 @@ public class GARCH {
 		for(int m=0; m<n_lagged_vars; m++){			
 			lagged_variables.add(get_lagged_Y(m));			
 		}
+		
+		n_arPars = lag4observedVariables+1;
+		n_heteroPars = lag4volatility+lag4residuals+1;
 		
 		distribution = usedDistribution;
 		
@@ -220,7 +229,7 @@ public class GARCH {
 	public static double calc_log_likelihood_4_GARCH(){
 		
 		boolean truePars = check_GARCH_par_restrictions();
-		
+ 
 		if(truePars == false){			
 			return 1e+100;
 		}
@@ -398,7 +407,7 @@ public class GARCH {
 		}
 		
 		for(int i=0; i<lag4volatility; i++){
-			if(volaPars[i][0] < 0.0){
+			if(volaPars[i+1][0] < 0.0){
 				restrictions_satisfied = false;
 				break;
 			}
@@ -472,6 +481,70 @@ public class GARCH {
 	}
 	
 	
+	public static ArrayList<List<Double>> get_par_limits_4_MLE(double [] start_value){
+		
+		double boundary_par = 3.0;
+		
+    	int n_pars = start_value.length;
+    	
+    	double [] lower_values = new double [n_pars];
+    	double [] upper_values = new double [n_pars];
+		
+    	for(int i=0; i<(n_arPars);i++){
+    		if(start_value[i]<0.0){
+    			upper_values[i] = start_value[i]*(1.0-boundary_par);
+    			lower_values[i] = start_value[i]*(1.0+boundary_par);
+    		}
+    		if(start_value[i]>0.0){
+    			upper_values[i] = start_value[i]*(1.0+boundary_par);
+    			lower_values[i] = start_value[i]*(1.0-boundary_par);
+    		}
+    		if(start_value[i]==0.0){
+    			upper_values[i] = boundary_par;
+    			lower_values[i] =-boundary_par;
+    		}       		
+    	}       	
+    	
+    	int idx = n_arPars;
+    	
+    	for(int i=0; i<n_heteroPars; i++){     		       		
+    		if(start_value[idx]<=0.0){
+    			upper_values[idx] = boundary_par;
+    		}else{
+    			upper_values[idx] = start_value[idx]*(1.0+boundary_par);
+    		}  
+    		idx++;
+    	}
+    	
+    	if(distribution == "Student"){
+    		lower_values[n_pars-1] = 2.0;
+    		upper_values[n_pars-1] = n_usedObservations-1;
+    	}
+    	
+    	if(distribution == "GED"){
+    		lower_values[n_pars-1] = 0.01;
+    		upper_values[n_pars-1] = n_usedObservations-1;
+    	}
+		
+    	ArrayList<List<Double>> limits = new ArrayList<List<Double>>(2);
+    	List<Double> lower_limits = new ArrayList<Double>();
+    	for(int i=0; i<lower_values.length; i++){
+    		lower_limits.add(lower_values[i]);
+    	}
+ 
+    	List<Double> upper_limits = new ArrayList<Double>();
+    	for(int i=0; i<upper_values.length; i++){
+    		upper_limits.add(upper_values[i]);
+    	}
+    	
+    	limits.add(lower_limits);
+    	limits.add(upper_limits);
+    	
+    	return limits;
+    	
+	}
+	
+	
 	@SuppressWarnings("static-access")
 	public static void do_MLE_4_GARCH(){
 		
@@ -494,48 +567,19 @@ public class GARCH {
     	}
     	
     	double [] start_value = get_start_values_4_est_GARCH();
-    	
+ 	
     	if(optimizer == "DEoptim" || optimizer == "SANN"){
-    		
-        	int n_pars = start_value.length;
-        	
+    	
+    		ArrayList<List<Double>> limits = get_par_limits_4_MLE(start_value);
+    		int n_pars = limits.get(0).size();        	
         	double [] lower_values = new double [n_pars];
         	double [] upper_values = new double [n_pars];
+        	
+    		for(int i=0; i<n_pars; i++){
+    			lower_values[i] = limits.get(0).get(i);
+    		    upper_values[i] = limits.get(1).get(i);
+    		}
     		
-        	for(int i=0; i<(lag4observedVariables+1);i++){
-        		if(start_value[i]<0.0){
-        			upper_values[i] = start_value[i]*0.8;
-        			lower_values[i] = start_value[i]*1.2;
-        		}
-        		if(start_value[i]>0.0){
-        			upper_values[i] = start_value[i]*1.2;
-        			lower_values[i] = start_value[i]*0.8;
-        		}
-        		if(start_value[i]==0.0){
-        			upper_values[i] = 0.2;
-        			lower_values[i] =-0.2;
-        		}       		
-        	}       	
-        	
-        	for(int i=0; i<(lag4volatility+lag4residuals+1); i++){     		
-        		int idx = lag4observedVariables+1+i;
-        		if(start_value[idx]<=0.0){
-        			upper_values[idx] = 0.2;
-        		}else{
-        			upper_values[idx] = start_value[idx]*1.2;
-        		}      		
-        	}
-        	
-        	if(distribution == "Student"){
-        		lower_values[n_pars-1] = 2.0;
-        		upper_values[n_pars-1] = n_usedObservations-1;
-        	}
-        	
-        	if(distribution == "GED"){
-        		lower_values[n_pars-1] = 0.01;
-        		upper_values[n_pars-1] = n_usedObservations-1;
-        	}
-        	
         	if(optimizer == "DEoptim"){
         		DifferentialEvolution optim = new DifferentialEvolution(target_function, 500);
         		optim.set_convergence_criterion(1e-02);
@@ -580,7 +624,7 @@ public class GARCH {
 	
 	public static void set_GARCH_pars_from_vec(double [] par_vec){
 		
-		arPars   = new double [lag4observedVariables+1][1];
+		arPars   = new double [n_arPars][1];
 		volaPars = new double [lag4volatility+1][1];
 		maPars   = new double [lag4residuals][1];
 		
@@ -632,7 +676,7 @@ public class GARCH {
     	
     	obj_lm.do_parameter_estimation();
 		
-    	for(int i=0; i<(lag4observedVariables+1); i++){
+    	for(int i=0; i<n_arPars; i++){
     		start_values[parIdx] = (obj_lm.get_est_parameters())[i][0];
     		parIdx++;
     	}
@@ -662,7 +706,7 @@ public class GARCH {
     		n=H_lagged.length;
     	}
     	
-    	double [][] X_new = new double [n][(lag4volatility+lag4residuals+1)];
+    	double [][] X_new = new double [n][n_heteroPars];
     	
     	for(int t=0; t<n; t++){
     		X_new[t][0] = 1.0;
@@ -678,11 +722,11 @@ public class GARCH {
     	obj_lm = new LinearRegression(h_t, X_new, false);    	
     	obj_lm.do_parameter_estimation();
     	
-    	for(int i=0; i<(lag4volatility+lag4residuals+1); i++){
-    		start_values[parIdx] = (obj_lm.get_est_parameters())[i][0];
+    	for(int i=0; i<n_heteroPars; i++){
+    		start_values[parIdx] = (obj_lm.get_est_parameters())[i][0];	
     		parIdx++;
     	}
-		    
+		      		
     	if(distribution == "Student"){
     		start_values[parIdx] = 3.0;
     	}
@@ -741,6 +785,21 @@ public class GARCH {
 	}
 	
 	
+	public static void set_arPars(double [][] ar_pars){
+		arPars = ar_pars;
+	}
+	
+	
+	public static void set_volaPars(double [][] vola_pars){
+		volaPars = vola_pars;
+	}
+	
+	
+	public static void set_maPars(double [][] ma_pars){
+		maPars = ma_pars;
+	}
+	
+	
 	public static double [][] get_GARCH_fitted_values(){
 		return fittedValues;
 	}
@@ -780,8 +839,6 @@ public class GARCH {
 	 	
 	 	double [][] obs_data = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(observed_variables, startIdx, endIdx, 0, 0);
 
-	 	//MatrixOperations.print_matrix(volatilities);
-	 	
 	 	obj_graph.plotLines(xAxis, obs_data, true);	
 	 	obj_graph.plotLines(xAxis, fittedValues, false, Color.RED);
 	 	obj_graph.plotLines(xAxis, volatilities, true);
@@ -806,7 +863,7 @@ public class GARCH {
     	
     	//Load & select data input:
     	String file = "C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Test_MS_Models/InterestRates.txt";
-    	String [] colnames = {"UK"};
+    	String [] colnames = {"Germany"};
     	
 		InputDataManager inputData = new InputDataManager();		
 		inputData.fileReader(file, true, true, true);
@@ -821,12 +878,12 @@ public class GARCH {
 		double [][] obsData = inputData.selectedDblFileData;
 
 		int obsLag  = 1;
-		int volaLag = 1;
+		int volaLag = 2;
 		int maLag   = 1;
 		int start_idx = obsLag+maLag;
 		int end_idx = obsData.length;
 		
-		GARCH obj_arch = new GARCH(obsData, start_idx, end_idx, obsLag, volaLag, maLag, "Cauchy");
+		GARCH obj_arch = new GARCH(obsData, start_idx, end_idx, obsLag, volaLag, maLag);
 			
 		//obj_arch.set_GARCH_optimizer("SANN");
 		obj_arch.do_MLE_4_GARCH();
