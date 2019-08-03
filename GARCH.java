@@ -863,7 +863,7 @@ public class GARCH {
     	
     	//Load & select data input:
     	String file = "C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Test_MS_Models/InterestRates.txt";
-    	String [] colnames = {"Germany"};
+    	String [] colnames = {"France"};
     	
 		InputDataManager inputData = new InputDataManager();		
 		inputData.fileReader(file, true, true, true);

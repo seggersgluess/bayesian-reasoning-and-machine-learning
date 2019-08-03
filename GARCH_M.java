@@ -12,9 +12,12 @@ import Regression.LinearRegression;
 
 public class GARCH_M extends GARCH{
 
+	public static String garch_m_type;
+	
 	public GARCH_M(double[][] obs_variables, int start_idx, int end_idx, int obsLag, int volaLag, int resLag) {
 		super(obs_variables, start_idx, end_idx, obsLag, volaLag, resLag);
 		n_arPars = lag4observedVariables+2;
+		garch_m_type = "linear";
 	}
 	
 	//public GARCH_M(double[][] obs_variables, int start_idx, int end_idx, int obsLag, int volaLag, int resLag,String usedDistribution) {
@@ -25,6 +28,10 @@ public class GARCH_M extends GARCH{
 	public static double [][] calc_volatilies_from_GARCH_M(){
 		
 		double [][] h_t = new double [n_usedObservations][1];
+	
+		for(int t=0; t<n_usedObservations; t++){
+			h_t[t][0] = 1e-100;
+		}
 		
 		double [][] estValues = calc_est_values_from_GARCH_M(h_t);
 		
@@ -120,9 +127,20 @@ public class GARCH_M extends GARCH{
 				if(j<(n_vars-1)){
 					X[i][j] = prev_obs_values[i][j];
 				}else{
-					X[i][j] = h_t[i][0];
-				}
-				
+					
+					if(garch_m_type == "linear"){
+						X[i][j] = h_t[i][0];
+					}
+					
+					if(garch_m_type == "log"){
+						X[i][j] = Math.log(h_t[i][0]);
+					}
+					
+					if(garch_m_type == "sqrt"){
+						X[i][j] = Math.sqrt(h_t[i][0]);
+					}
+					
+				}			
 			}
 		}
 		
@@ -319,6 +337,29 @@ public class GARCH_M extends GARCH{
 	}
 	
 	
+	public static String [] get_valid_garch_m_types(){
+		
+		String [] valid_types = {"linear", "log", "sqrt"};
+		
+		return valid_types;
+		
+	}
+	
+	
+	public static void set_garch_m_types(String type){
+		
+		String [] valid_types = get_valid_garch_m_types();
+		int [] idx = Utilities.Utilities.get_idx(valid_types, type);
+		
+		if(idx[0] == -1){
+			throw new RuntimeException(type + " is not a valid type for M-GARCH specification.");
+		}
+		
+		garch_m_type = type;
+		
+	}
+	
+	
 	@SuppressWarnings("static-access")
 	public static void main(String[] args) throws Exception {
     	
@@ -345,7 +386,8 @@ public class GARCH_M extends GARCH{
 		int end_idx = obsData.length;
 		
 		GARCH_M obj_arch = new GARCH_M(obsData, start_idx, end_idx, obsLag, volaLag, maLag);
-			
+		obj_arch.set_garch_m_types("linear");	
+		
 		//obj_arch.set_GARCH_optimizer("SANN");
 		obj_arch.do_MLE_4_GARCH_M();
 		

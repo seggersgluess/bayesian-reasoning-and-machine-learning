@@ -134,18 +134,26 @@ public class GARCH_MV extends GARCH{
 		    	
     	double [] start_value = get_start_values_4_first_step_est_GARCH_MV();
  	
-    	//TODO: start_values for second estimation step!
+    	set_start_values_4_second_step_est_GARCH_MV();
     	
     	if(optimizer == "DEoptim" || optimizer == "SANN"){
     	
     		ArrayList<List<Double>> limits = get_par_limits_4_MLE(start_value);
-    		int n_pars = limits.get(0).size();        	
-        	double [] lower_values = new double [n_pars];
-        	double [] upper_values = new double [n_pars];
+    		int n_pars_first_step = limits.get(0).size();   
+    		int n_pars_sec_step   = lag4StandDev + lag4Corr;
+        	double [] lower_values_first_step = new double [n_pars_first_step];
+        	double [] upper_values_first_step = new double [n_pars_first_step];
+        	double [] lower_values_sec_step   = new double [n_pars_sec_step];
+        	double [] upper_values_sec_step   = new double [n_pars_sec_step];
         	
-    		for(int i=0; i<n_pars; i++){
-    			lower_values[i] = limits.get(0).get(i);
-    		    upper_values[i] = limits.get(1).get(i);
+    		for(int i=0; i<n_pars_first_step; i++){
+    			lower_values_first_step[i] = limits.get(0).get(i);
+    		    upper_values_first_step[i] = limits.get(1).get(i);
+    		}
+    		
+    		for(int i=0; i<n_pars_sec_step; i++){
+    			lower_values_sec_step[i] = -1.0;
+    			upper_values_sec_step[i] = 1.0;
     		}
     		
         	if(optimizer == "DEoptim"){
@@ -153,22 +161,26 @@ public class GARCH_MV extends GARCH{
         		DifferentialEvolution optim = new DifferentialEvolution(GARCH_MV::opti_log_likelihood_4_GARCH_MV_first_step, 500);
         		optim.set_convergence_criterion(1e-02);
             	optim.set_number_of_function_eval(10);
-            	optim.do_Differential_Evolution_Optimization(upper_values, lower_values);
+            	optim.do_Differential_Evolution_Optimization(upper_values_first_step, lower_values_first_step);
             	set_GARCH_MV_pars_of_first_step_from_par_vec(optim.get_optimal_candidate());
             	volatilities = calc_volatilies_from_GARCH_MV();
             	//Second step Q-MLE:
             	optim = new DifferentialEvolution(GARCH_MV::opti_log_likelihood_4_GARCH_MV_second_step, 500);
+            	optim.do_Differential_Evolution_Optimization(upper_values_sec_step, lower_values_sec_step);
+            	set_corr_R_t();
             	logLikelihood = (-1.0)*optim.get_optimal_value();
         	}
     		
         	if(optimizer == "SANN"){
         		//First step Q-MLE:
         		SimulatedAnnealing optim = new SimulatedAnnealing(GARCH_MV::opti_log_likelihood_4_GARCH_MV_first_step, 10000);
-            	optim.do_Simulated_Annealing_Optimization(upper_values, lower_values);
+            	optim.do_Simulated_Annealing_Optimization(upper_values_first_step, lower_values_first_step);
             	set_GARCH_MV_pars_of_first_step_from_par_vec(optim.get_optimal_candidate());   
             	volatilities = calc_volatilies_from_GARCH_MV();
             	//Second step Q-MLE:
             	optim = new SimulatedAnnealing(GARCH_MV::opti_log_likelihood_4_GARCH_MV_second_step, 500);
+            	optim.do_Simulated_Annealing_Optimization(upper_values_sec_step, lower_values_sec_step);
+            	set_corr_R_t();
             	logLikelihood = (-1.0)*optim.get_optimal_value();
         	}   
         	
@@ -409,28 +421,32 @@ public class GARCH_MV extends GARCH{
 	}
 	
 	
-	public static double [] get_start_values_4_second_step_est_GARCH_MV(){
+	public static void set_start_values_4_second_step_est_GARCH_MV(){
 		
-		//TODO: Not implemented yet!
+		alpha_corr = new double [lag4StandDev][1];
+		beta_corr  = new double [lag4Corr][1];
+		
+		alpha_corr[0][0] = 0.5;
+		beta_corr[0][0] = 0.5;
 		
 	}
 	
 	
-	public static boolean check_GARCH_MV_second_step_par_restrictions(){
+	//public static boolean check_GARCH_MV_second_step_par_restrictions(){
 		
 		//TODO: Not implemented yet!
 		
-	}
+	//}
 	
 	
 	public static double calc_quasi_log_likelihood_4_GARCH_MV_second_step(){
 		
 		//TODO: check corr pars!
-		boolean truePars = check_GARCH_MV_second_step_par_restrictions();
+		//boolean truePars = check_GARCH_MV_second_step_par_restrictions();
 		 
-		if(truePars == false){			
-			return 1e+100;
-		}
+		//if(truePars == false){			
+		//	return 1e+100;
+		//}
 		
 		double logLik = 0.0;
 		
@@ -476,6 +492,13 @@ public class GARCH_MV extends GARCH{
 		return -logLik;
 			
 	}
+	
+	
+	//public static double calc_total_log_likelihood_4_GARCH_MV(){
+		
+		
+		
+	//}
 	
 	
 	public static double opti_log_likelihood_4_GARCH_MV_second_step(double [] pars, double [] further_ars){
@@ -689,17 +712,27 @@ public class GARCH_MV extends GARCH{
 	public static void plot_GARCH_MV_estimates(){
 		
         GenGraphics obj_graph = new GenGraphics();
-		       
+		    
+        int n_correlations = 0;
+        for(int i=0; i<n_observedVariables; i++){
+        	for(int j=(i+1); j<n_observedVariables; j++){
+        		n_correlations++;
+        	}
+        }
+        
+        int addPlotLines = (int) Math.ceil((double)n_correlations/(double)n_observedVariables);
+        
         obj_graph.setNumberOfPlotColums(n_observedVariables);
-        obj_graph.setNumberOfPlotRows(2);
+        obj_graph.setNumberOfPlotRows(2+addPlotLines);
 	 	
         obj_graph.setGraphWidth(1000);
         obj_graph.setGraphHeight(600);
-
-        String [] title = new String [2*n_observedVariables];
+        
+        String [] title = new String [2*n_observedVariables+n_correlations];
            
         double [][] xAxis = new double [n_usedObservations][1];
         double [][] vola  = new double [n_usedObservations][1];
+        double [][] corr  = new double [n_usedObservations][1];
         
         for(int i=0; i<n_usedObservations; i++){
 	 		xAxis[i][0] = i+1;
@@ -731,7 +764,19 @@ public class GARCH_MV extends GARCH{
         	idx++;
         	
     	}
-        
+        	
+    	for(int i=0; i<n_observedVariables; i++){
+    		for(int j=(i+1); j<n_observedVariables; j++){
+    			title[idx] = "Correlation Variables " + (i+1) + " and " + (j+1);
+              	for(int t=0; t<n_usedObservations; t++){
+              		double [][] corr_matrix = get_GARCH_MV_corr_matrix(t);
+              		corr[t][0] = corr_matrix[i][j];
+              	}
+              	obj_graph.plotLines(xAxis, corr, true);
+              	idx++;
+    		}
+        }
+    	   	
 	    String [] yLabel = title; 	 	
 	
 	 	obj_graph.setTitle(title, null, "10");
@@ -748,10 +793,10 @@ public class GARCH_MV extends GARCH{
 	
 	@SuppressWarnings("static-access")
 	public static void main(String[] args) throws Exception {
-    	
+    		
     	//Load & select data input:
     	String file = "C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Test_MS_Models/InterestRates.txt";
-    	String [] colnames = {"Germany", "France", "UK", "USA"};
+    	String [] colnames = {"Germany", "France", "UK", "USA"}; //{"Germany", "France", "UK", "USA"};
     	
 		InputDataManager inputData = new InputDataManager();		
 		inputData.fileReader(file, true, true, true);
