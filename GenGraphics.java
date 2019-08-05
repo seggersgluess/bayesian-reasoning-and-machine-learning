@@ -25,12 +25,13 @@ public class GenGraphics extends GraphicDevice{
     public static List<Color> graph_line_color = new ArrayList<Color>();
     public static List<Color> graph_point_color = new ArrayList<Color>();
     public static Stroke graph_stroke = new BasicStroke(3f);
-    public static final int graph_point_width = 6;
+    public static int graph_point_width = 6;
    	
     public static List<List<Point>> graphPoints4Samples = new ArrayList<List<Point>>();
     
     static boolean drawErrorBars           = false;
     static List<Integer> errorBarPlotInfos = new ArrayList<Integer>();
+    static Color color4ErrorBars = Color.RED;
     
     static boolean drawShadedAreas                 = false;
     static List<Integer> shadedAreasPlotInfos      = new ArrayList<Integer>();
@@ -299,13 +300,20 @@ public class GenGraphics extends GraphicDevice{
 	    	int [] errorBarIdxs = Utilities.get_idx(errorBarPlotInfos, i);
 	    	
 	    	if(errorBarIdxs[0] != -1){
-	    		if(plotIdxs.length == 2){
+	    		if(plotIdxs.length >= 2){
 		    			
 		    		if(plotType.get(plotIdxs[0]) != plotType.get(plotIdxs[1])){
-		    		
-		    			g2.setColor(Color.RED);
+		    			
+		    			int pointIdx = 0;
+		    			if(plotType.get(plotIdxs[0]) != "P"){
+		    				pointIdx = 1;
+		    			}
+		    			
 			  		    g2.setStroke(graph_stroke);
-			  		    	           
+			  		    				  		    
+			  		    List<Point> pointPlotsSample = graphPoints4Samples.get(plotIdxs[pointIdx]);
+			  		    Color pointColor = graph_point_color.get(pointIdx);
+			  		    
 			  		    List<Point> GraphPoints1 = graphPoints4Samples.get(plotIdxs[0]);
 			  		    List<Point> GraphPoints2 = graphPoints4Samples.get(plotIdxs[1]);
 			  		        	
@@ -315,15 +323,24 @@ public class GenGraphics extends GraphicDevice{
 			  		        	
 			  		    for(int j=0; j<GraphPoints1.size(); j++){
 			  		    		 
+			  		    	g2.setColor(color4ErrorBars);
 			  		        int x1 = GraphPoints1.get(j).x;
 			  		        int y1 = GraphPoints1.get(j).y;
 			  		        int x2 = GraphPoints2.get(j).x;
 			  		        int y2 = GraphPoints2.get(j).y;
 			  		        g2.drawLine(x1, y1, x2, y2); 
-			  		    		 
+			  		    		
+			  		        //
+			  		        g2.setColor(pointColor);
+			  		        int x = pointPlotsSample.get(j).x - graph_point_width / 2;
+			  		        int y = pointPlotsSample.get(j).y - graph_point_width / 2;;
+			  		        int ovalW = graph_point_width;
+			  		        int ovalH = graph_point_width;
+			  		        g2.fillOval(x, y, ovalW, ovalH);
+			  		        
 			  		    } 
 		    			
-		    		}
+		    		}    		
 		    		
 		    	}
 	    		
@@ -499,6 +516,11 @@ public class GenGraphics extends GraphicDevice{
 		setFontOfYAxisUnits("bold",12);
 		setColorOfYAxisUnits(new Color(128,128,128));
 	    	
+	}
+	
+	
+	public void set_point_width(int point_width){
+		graph_point_width = point_width;
 	}
 	
 	
@@ -747,7 +769,12 @@ public class GenGraphics extends GraphicDevice{
 			
 	}
 	
-	    
+	
+	public static void setColor4ErrorBars(Color errorBarColor){
+		color4ErrorBars = errorBarColor;
+	}
+	
+	   
 	public static void plotLines(double [][] x_values, double [][] y_values, boolean newPlot){
 	 	   
 		convert_input_data(x_values, y_values, "L");
@@ -1263,8 +1290,8 @@ public class GenGraphics extends GraphicDevice{
    		
 	public static void main(String[] args) {
 		
-		//parametrizationExample1();
-		parametrizationExample2();
+		parametrizationExample1();
+		//parametrizationExample2();
 		//parametrizationExample3();
 		//parametrizationExample4();
 		
