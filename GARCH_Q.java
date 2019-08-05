@@ -6,14 +6,18 @@ import java.util.List;
 import DataManagement.InputDataManager;
 import Mathematics.MatrixOperations;
 import Optimization.DifferentialEvolution;
+import Optimization.NumDeriv;
 import Optimization.SimulatedAnnealing;
 
 public class GARCH_Q extends GARCH{
 
 	static double [][] linear_maPars;
+	static double [][] standErrors_linear_maPars;
+	static double [][] tValues_linear_maPars;
 	
 	public GARCH_Q(double[][] obs_variables, int start_idx, int end_idx, int obsLag, int volaLag, int resLag) {
 		super(obs_variables, start_idx, end_idx, obsLag, volaLag, resLag);
+		GARCH_model = "Q-GARCH";
 	}
 
 	
@@ -77,11 +81,14 @@ public class GARCH_Q extends GARCH{
 	public static void do_MLE_4_GARCH_Q(){
 		
     	double [] start_value = get_start_values_4_est_GARCH_Q();
+    	double [] optimal_value = new double [start_value.length];
+    	
+    	n_modelPars = start_value.length;
     	
     	if(optimizer == "DEoptim" || optimizer == "SANN"){
     		
     		ArrayList<List<Double>> limits = get_par_limits_4_MLE(start_value);
-    		int n_pars = limits.get(0).size();        	
+    		int n_pars = limits.get(0).size();     
         	double [] lower_values = new double [n_pars];
         	double [] upper_values = new double [n_pars];
         	int n_GARCH_pars = lag4observedVariables+lag4volatility+lag4residuals+2;
@@ -97,18 +104,22 @@ public class GARCH_Q extends GARCH{
     		
         	if(optimizer == "DEoptim"){
         		DifferentialEvolution optim = new DifferentialEvolution(GARCH_Q::opti_log_likelihood_4_GARCH_Q, 200);
-        		optim.set_convergence_criterion(1e-02);
+        		optim.set_convergence_criterion(convergence_criterion);
             	optim.set_number_of_function_eval(10);
             	optim.do_Differential_Evolution_Optimization(upper_values, lower_values);
-            	set_GARCH_Q_pars_from_vec(optim.get_optimal_candidate());        	
+            	optimal_value = optim.get_optimal_candidate();
+            	set_GARCH_Q_pars_from_vec(optimal_value);        	
             	logLikelihood = (-1.0)*optim.get_optimal_value();
+            	convergence = optim.get_convergence_info();
         	}
     		
         	if(optimizer == "SANN"){
         		SimulatedAnnealing optim = new SimulatedAnnealing(GARCH_Q::opti_log_likelihood_4_GARCH_Q, 10000);
             	optim.do_Simulated_Annealing_Optimization(upper_values, lower_values);
-            	set_GARCH_Q_pars_from_vec(optim.get_optimal_candidate());        	
+            	optimal_value = optim.get_optimal_candidate();
+            	set_GARCH_Q_pars_from_vec(optimal_value);        	
             	logLikelihood = (-1.0)*optim.get_optimal_value();
+            	convergence = optim.get_convergence_info();
         	}   
         	
     	}
@@ -119,12 +130,22 @@ public class GARCH_Q extends GARCH{
     		System.out.println("Q-GARCH restrictions for heteroscedasticity parameters violated.");
     	}
     	
+    	if(convergence == false){
+    		System.out.println("MLE has not converged for " + GARCH_model);
+    	}
+    	
     	double [][] obs_data = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(observed_variables, startIdx, endIdx, 0, 0);
 
     	volatilities = calc_volatilies_from_GARCH_Q();
     	fittedValues = calc_est_values_from_GARCH();
     	residuals = MatrixOperations.substract(obs_data, fittedValues);
-    		
+    	
+    	hessian = NumDeriv.hessian(GARCH_Q::opti_log_likelihood_4_GARCH_Q, optimal_value, null);
+    	estParCovariance = MatrixOperations.inverse(hessian);
+    	set_GARCH_Q_standard_errors_and_t_values_of_est_pars();
+    	
+    	calc_information_criteria();
+    	
 	}
 	
 	
@@ -160,8 +181,6 @@ public class GARCH_Q extends GARCH{
 			logLik = -1e+100;
 		}
 		
-		System.out.println(-logLik);
-		
 		return -logLik;
 		
 	}
@@ -174,6 +193,47 @@ public class GARCH_Q extends GARCH{
 		double logLik = calc_log_likelihood_4_GARCH_Q();
 		
 		return logLik;
+		
+	}
+	
+	
+	public static void set_GARCH_Q_standard_errors_and_t_values_of_est_pars(){
+		
+		standErrors_arPars        = new double [lag4observedVariables+1][1];
+		standErrors_volaPars      = new double [lag4volatility+1][1];
+		standErrors_maPars        = new double [lag4residuals][1];
+		standErrors_linear_maPars = new double [lag4residuals][1];
+		
+		tValues_arPars        = new double [lag4observedVariables+1][1];
+		tValues_volaPars      = new double [lag4volatility+1][1];
+		tValues_maPars        = new double [lag4residuals][1];
+		tValues_linear_maPars = new double [lag4residuals][1];
+		
+		int idx = 0;
+		
+		for(int i=0; i<(lag4observedVariables+1); i++){
+			standErrors_arPars[i][0] = Math.sqrt(estParCovariance[idx][idx]);
+			tValues_arPars[i][0] = arPars[i][0]/standErrors_arPars[i][0];
+			idx++;
+		}
+		
+		for(int i=0; i<(lag4volatility+1); i++){
+			standErrors_volaPars[i][0] = Math.sqrt(estParCovariance[idx][idx]);
+			tValues_volaPars[i][0] = volaPars[i][0]/standErrors_volaPars[i][0];
+			idx++;
+		}
+		
+		for(int i=0; i<lag4residuals; i++){
+			standErrors_maPars[i][0] = Math.sqrt(estParCovariance[idx][idx]);
+			tValues_maPars[i][0] = maPars[i][0]/standErrors_maPars[i][0];
+			idx++;
+		}
+		
+		for(int i=0; i<lag4residuals; i++){
+			standErrors_linear_maPars[i][0] = Math.sqrt(estParCovariance[idx][idx]);
+			tValues_linear_maPars[i][0] = linear_maPars[i][0]/standErrors_linear_maPars[i][0];
+			idx++;
+		}
 		
 	}
 	
@@ -249,18 +309,24 @@ public class GARCH_Q extends GARCH{
 
 		int obsLag  = 1;
 		int volaLag = 1;
-		int maLag   = 2;
+		int maLag   = 1;
 		int start_idx = obsLag+maLag;
 		int end_idx = obsData.length;
 		
 		GARCH_Q obj_arch = new GARCH_Q(obsData, start_idx, end_idx, obsLag, volaLag, maLag);
 		obj_arch.do_MLE_4_GARCH_Q();
 		
+		System.out.println("Parameter estimates:");
 		MatrixOperations.print_matrix(arPars);
 		MatrixOperations.print_matrix(volaPars);
-		
-		System.out.println("");
+		MatrixOperations.print_matrix(maPars);		
 		MatrixOperations.print_matrix(linear_maPars);
+		System.out.println("");
+		System.out.println("SE´s of parameters:");
+		MatrixOperations.print_matrix(standErrors_arPars);
+		MatrixOperations.print_matrix(standErrors_volaPars);
+		MatrixOperations.print_matrix(standErrors_maPars);
+		MatrixOperations.print_matrix(standErrors_linear_maPars);
 		
 		System.out.println(logLikelihood);
 		

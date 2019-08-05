@@ -6,6 +6,7 @@ import java.util.List;
 import DataManagement.InputDataManager;
 import Mathematics.MatrixOperations;
 import Optimization.DifferentialEvolution;
+import Optimization.NumDeriv;
 import Optimization.SimulatedAnnealing;
 
 public class GARCH_Spline extends GARCH{
@@ -13,12 +14,15 @@ public class GARCH_Spline extends GARCH{
 	static int n_spline_knots;
 	static int [] data_points_4_spline;
 	static double [][] spline_pars;
+	static double [][] standErrors_spline_pars;
+	static double [][] tValues_spline_pars;
 	static double [][] spline_pars_limits;
 	
 	public GARCH_Spline(double[][] obs_variables, int start_idx, int end_idx, int obsLag, int volaLag, int resLag, int number_of_spline_knots) {
 		super(obs_variables, start_idx, end_idx, obsLag, volaLag, resLag);
 		n_spline_knots = number_of_spline_knots;
 		calc_equi_dist_data_points_4_GARCH();
+		GARCH_model = "Spline-GARCH";
 	}
 
 	
@@ -76,11 +80,14 @@ public class GARCH_Spline extends GARCH{
 	public static void do_MLE_4_GARCH_Spline(){
 		
     	double [] start_value = get_start_values_4_est_GARCH_Spline();
+    	double [] optimal_value = new double [start_value.length];
+    	
+    	n_modelPars = start_value.length;
     	
     	if(optimizer == "DEoptim" || optimizer == "SANN"){
     		
     		ArrayList<List<Double>> limits = get_par_limits_4_MLE(start_value);
-    		int n_pars = limits.get(0).size();        	
+    		int n_pars = limits.get(0).size(); 
         	double [] lower_values = new double [n_pars];
         	double [] upper_values = new double [n_pars];
         	int n_GARCH_pars = lag4observedVariables+lag4volatility+lag4residuals+2;
@@ -103,18 +110,22 @@ public class GARCH_Spline extends GARCH{
     		
         	if(optimizer == "DEoptim"){
         		DifferentialEvolution optim = new DifferentialEvolution(GARCH_Spline::opti_log_likelihood_4_GARCH_Spline, 200);
-        		optim.set_convergence_criterion(1e-02);
+        		optim.set_convergence_criterion(convergence_criterion);
             	optim.set_number_of_function_eval(10);
             	optim.do_Differential_Evolution_Optimization(upper_values, lower_values);
-            	set_GARCH_Spline_pars_from_vec(optim.get_optimal_candidate());        	
+            	optimal_value = optim.get_optimal_candidate();
+            	set_GARCH_Spline_pars_from_vec(optimal_value);        	
             	logLikelihood = (-1.0)*optim.get_optimal_value();
+            	convergence = optim.get_convergence_info();
         	}
     		
         	if(optimizer == "SANN"){
         		SimulatedAnnealing optim = new SimulatedAnnealing(GARCH_Spline::opti_log_likelihood_4_GARCH_Spline, 10000);
             	optim.do_Simulated_Annealing_Optimization(upper_values, lower_values);
-            	set_GARCH_Spline_pars_from_vec(optim.get_optimal_candidate());        	
+            	optimal_value = optim.get_optimal_candidate();
+            	set_GARCH_Spline_pars_from_vec(optimal_value);       	
             	logLikelihood = (-1.0)*optim.get_optimal_value();
+            	convergence = optim.get_convergence_info();
         	}   
         	
     	}
@@ -125,12 +136,22 @@ public class GARCH_Spline extends GARCH{
     		System.out.println("Spline-GARCH restrictions for heteroscedasticity parameters violated.");
     	}
     	
+    	if(convergence == false){
+    		System.out.println("MLE has not converged for " + GARCH_model);
+    	}
+    	
     	double [][] obs_data = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(observed_variables, startIdx, endIdx, 0, 0);
 
     	volatilities = calc_volatilies_from_GARCH_Spline();
     	fittedValues = calc_est_values_from_GARCH();
     	residuals = MatrixOperations.substract(obs_data, fittedValues);
-    		
+    	
+    	hessian = NumDeriv.hessian(GARCH_Spline::opti_log_likelihood_4_GARCH_Spline, optimal_value, null);
+    	estParCovariance = MatrixOperations.inverse(hessian);
+    	set_GARCH_Spline_standard_errors_and_t_values_of_est_pars();
+    	
+    	calc_information_criteria();
+    	
 	}
 	
 	
@@ -177,9 +198,48 @@ public class GARCH_Spline extends GARCH{
 			logLik = -1e+100;
 		}
 		
-		System.out.println(-logLik);
-		
 		return -logLik;
+		
+	}
+	
+	
+	public static void set_GARCH_Spline_standard_errors_and_t_values_of_est_pars(){
+		
+		standErrors_arPars      = new double [lag4observedVariables+1][1];
+		standErrors_volaPars    = new double [lag4volatility+1][1];
+		standErrors_maPars      = new double [lag4residuals][1];
+		standErrors_spline_pars = new double [n_spline_knots][1];
+		
+		tValues_arPars      = new double [lag4observedVariables+1][1];
+		tValues_volaPars    = new double [lag4volatility+1][1];
+		tValues_maPars      = new double [lag4residuals][1];
+		tValues_spline_pars = new double [n_spline_knots][1];;
+		
+		int idx = 0;
+		
+		for(int i=0; i<(lag4observedVariables+1); i++){
+			standErrors_arPars[i][0] = Math.sqrt(estParCovariance[idx][idx]);
+			tValues_arPars[i][0] = arPars[i][0]/standErrors_arPars[i][0];
+			idx++;
+		}
+		
+		for(int i=0; i<(lag4volatility+1); i++){
+			standErrors_volaPars[i][0] = Math.sqrt(estParCovariance[idx][idx]);
+			tValues_volaPars[i][0] = volaPars[i][0]/standErrors_volaPars[i][0];
+			idx++;
+		}
+		
+		for(int i=0; i<lag4residuals; i++){
+			standErrors_maPars[i][0] = Math.sqrt(estParCovariance[idx][idx]);
+			tValues_maPars[i][0] = maPars[i][0]/standErrors_maPars[i][0];
+			idx++;
+		}
+		
+		for(int i=0; i<n_spline_knots; i++){
+			standErrors_spline_pars[i][0] = Math.sqrt(estParCovariance[idx][idx]);
+			tValues_spline_pars[i][0] = spline_pars[i][0]/standErrors_spline_pars[i][0];
+			idx++;
+		}
 		
 	}
 	
@@ -245,6 +305,58 @@ public class GARCH_Spline extends GARCH{
 	}
 	
 	
+	public static void get_GARCH_Spline_forecast(int n_steps){
+		
+		if(n_steps <= 0){
+			System.out.println("Invalid number of steps supplied for " + GARCH_model + " volatility forecasting.");
+		}
+		
+		forecastingSteps = n_steps;
+		volatilityForecast = new double [n_steps][1];
+		
+		double expSpline = 0.0;
+		
+		for(int i=0; i<n_spline_knots; i++){
+			expSpline += spline_pars[i][0]*Math.pow(((n_usedObservations+1)-data_points_4_spline[i]), 2.0);
+		}
+		expSpline = Math.exp(expSpline);
+		
+		for(int s=0; s<n_steps; s++){
+			volatilityForecast[s][0] += volaPars[0][0];
+			int idx=0;
+			for(int i=0; i<lag4residuals; i++){
+				int histStep = s-i;
+				if(histStep <=0){
+					int lagIdx = n_usedObservations-i-1+idx;
+					double u_t = residuals[lagIdx][0];
+					u_t = Math.pow(u_t, 2.0);
+					volatilityForecast[s][0] += maPars[i][0]*u_t;
+				}else{
+					volatilityForecast[s][0] += maPars[i][0]*volatilityForecast[(s-i-1)][0];
+					idx++;
+				}				
+			}
+			
+			idx=0;
+			for(int i=0; i<lag4volatility; i++){				
+				int histStep = s-i;
+				if(histStep <=0){
+					int lagIdx = n_usedObservations-i-1+idx;
+					double h_t = volatilities[lagIdx][0];
+					volatilityForecast[s][0] += volaPars[(1+i)][0]*h_t;
+				}else{
+					volatilityForecast[s][0] += volaPars[(1+i)][0]*volatilityForecast[(s-i-1)][0];
+					idx++;
+				}
+			}
+			
+			volatilityForecast[s][0] *= expSpline;
+			
+		}
+		
+	}
+		
+	
 	@SuppressWarnings("static-access")
 	public static void main(String[] args) throws Exception {
     	
@@ -267,30 +379,41 @@ public class GARCH_Spline extends GARCH{
 		int obsLag  = 1;
 		int volaLag = 1;
 		int maLag   = 1;
-		int n_knots = 5;
+		int n_knots = 3;
 		int start_idx = obsLag+maLag;
 		int end_idx = obsData.length;
 		
 		double [][] limits = new double [n_knots][2];
 		for(int i=0; i<n_knots; i++){
-			limits[i][0] = -1e-06;
-			limits[i][1] = 1e-06;
+			limits[i][0] = -1e-05;
+			limits[i][1] = 1e-05;
 		}
 		
 		GARCH_Spline obj_arch = new GARCH_Spline(obsData, start_idx, end_idx, obsLag, volaLag, maLag, n_knots);
 		obj_arch.set_spline_pars_limits(limits);
+		obj_arch.set_convergence_criterion(1e-06);
 		obj_arch.do_MLE_4_GARCH_Spline();
+		obj_arch.get_GARCH_Spline_forecast(100);
 		
+		System.out.println("Parameter estimates:");
 		MatrixOperations.print_matrix(arPars);
 		MatrixOperations.print_matrix(volaPars);
-		MatrixOperations.print_matrix(maPars);
-		
+		MatrixOperations.print_matrix(maPars);		
 		System.out.println("");
 		MatrixOperations.print_matrix(spline_pars);
+		System.out.println("");
+		System.out.println("SE´s of parameters:");
+		MatrixOperations.print_matrix(standErrors_arPars);
+		MatrixOperations.print_matrix(standErrors_volaPars);
+		MatrixOperations.print_matrix(standErrors_maPars);		
+		
+		MatrixOperations.print_matrix(standErrors_spline_pars);
+		
 		
 		System.out.println(logLikelihood);
 		
-		plot_GARCH_estimates();
+		//plot_GARCH_estimates();
+		plot_GARCH_volatility_forecast();
 		
 	}
 	

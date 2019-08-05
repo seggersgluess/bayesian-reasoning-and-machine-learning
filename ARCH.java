@@ -1,51 +1,21 @@
 package TimeSeriesAnalysis;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 
 import DataManagement.InputDataManager;
-import Graphics.GenGraphics;
 import Mathematics.GammaFunction;
 import Mathematics.MatrixOperations;
 import Optimization.DifferentialEvolution;
-import Optimization.NewtonMethod;
+import Optimization.NumDeriv;
 import Optimization.SimulatedAnnealing;
 import Regression.LinearRegression;
 
-public class ARCH {
-
-	static double [][] observed_variables;
-	
-	static int n_observations;
-	static int n_usedObservations;
-	static int n_variables; 
-	
-	static int startIdx;
-	static int endIdx;
-	
-	static int lag4observedVariables;
-	static int lag4heteroscedasticity;
-	
-	static double [][] arPars;
-	static double [][] heteroPars;
-	
-	static double [][] fittedValues;
-	static double [][] residuals;
-	static double [][] volatilities;
-	
-	static String distribution;
-	static double student_df;
-	
-	static double logLikelihood;
-	
-	static ArrayList<List<Double>> lagged_variables;
-	
-	static String optimizer = "DEoptim";
+public class ARCH extends GARCH_ParentClass{
 	
 	//constructor
-	public ARCH(double [][] obs_variables, int start_idx, int end_idx, int obsLag, int heteroscedasticityLag){
+	public ARCH(double [][] obs_variables, int start_idx, int end_idx, int obsLag, int volaLag){
 		
 		if(start_idx < 0){
 			throw new RuntimeException("No valid start index supplied.");
@@ -63,7 +33,7 @@ public class ARCH {
 			throw new RuntimeException("No valid number of lags supplied.");
 		}
 		
-		if(heteroscedasticityLag < 0){
+		if(volaLag < 0){
 			throw new RuntimeException("No valid number of lags for heteroscedasticity term supplied.");
 		}
 		
@@ -74,11 +44,11 @@ public class ARCH {
 		startIdx               = start_idx;
 		endIdx                 = end_idx-1;
 		lag4observedVariables  = obsLag;
-		lag4heteroscedasticity = heteroscedasticityLag;
+		lag4volatility = volaLag;
 		
 		n_usedObservations = endIdx-startIdx+1;
 			
-		int n_lagged_vars    = lag4heteroscedasticity+1;
+		int n_lagged_vars    = lag4volatility+1;
 		lagged_variables = new ArrayList<List<Double>>(n_lagged_vars);
 		
 		for(int m=0; m<n_lagged_vars; m++){			
@@ -87,12 +57,12 @@ public class ARCH {
 		
 		distribution = "Normal";
 		
-		//Check input consistency!!!
+		GARCH_model = "ARCH";
 		
 	}
 	
 	
-	public ARCH(double [][] obs_variables, int start_idx, int end_idx, int obsLag, int heteroscedasticityLag, String usedDistribution){
+	public ARCH(double [][] obs_variables, int start_idx, int end_idx, int obsLag, int volaLag, String usedDistribution){
 		
 		if(start_idx < 0){
 			throw new RuntimeException("No valid start index supplied.");
@@ -110,7 +80,7 @@ public class ARCH {
 			throw new RuntimeException("No valid number of lags supplied.");
 		}
 		
-		if(heteroscedasticityLag < 0){
+		if(volaLag < 0){
 			throw new RuntimeException("No valid number of lags for heteroscedasticity term supplied.");
 		}
 		
@@ -121,11 +91,11 @@ public class ARCH {
 		startIdx               = start_idx;
 		endIdx                 = end_idx-1;
 		lag4observedVariables  = obsLag;
-		lag4heteroscedasticity = heteroscedasticityLag;
+		lag4volatility = volaLag;
 		
 		n_usedObservations = endIdx-startIdx+1;
 			
-		int n_lagged_vars    = lag4heteroscedasticity+1;
+		int n_lagged_vars    = lag4volatility+1;
 		lagged_variables = new ArrayList<List<Double>>(n_lagged_vars);
 		
 		for(int m=0; m<n_lagged_vars; m++){			
@@ -134,8 +104,8 @@ public class ARCH {
 		
 		distribution = usedDistribution;
 		
-		//Check input consistency!!!
-		
+		GARCH_model = "ARCH";
+			
 	}
 	
 	
@@ -154,12 +124,12 @@ public class ARCH {
 		double [][] h_t = new double [n_usedObservations][1];
 		
 		for(int t=0; t<n_usedObservations; t++){
-			h_t[t][0] = heteroPars[0][0];
+			h_t[t][0] = volaPars[0][0];
 		}
 		
-		double [][] conv_lagged_vars = get_lagged_Y_for_lag(observed_variables, startIdx, endIdx, lag4heteroscedasticity);
+		double [][] conv_lagged_vars = get_lagged_Y_for_lag(observed_variables, startIdx, endIdx, lag4volatility);
 				
-		for(int m=0; m<lag4heteroscedasticity; m++){
+		for(int m=0; m<lag4volatility; m++){
 			double [][] higher_lagged_vars = MatrixOperations.get_matrix_from_vec(lagged_variables.get(m+1), n_usedObservations, (lag4observedVariables+1));
 			
 			for(int r=0; r<n_usedObservations; r++){
@@ -169,7 +139,7 @@ public class ARCH {
 				}
 				u_t = conv_lagged_vars[r][m+1]-u_t;
 				u_t = Math.pow(u_t,2.0);
-				h_t[r][0] += heteroPars[m+1][0]*u_t;
+				h_t[r][0] += volaPars[m+1][0]*u_t;
 			}
 			
 		}
@@ -211,8 +181,6 @@ public class ARCH {
 			logLik = -1e+100;
 		}
 		
-		System.out.println(-logLik);
-		
 		return -logLik;
 		
 	}
@@ -250,8 +218,6 @@ public class ARCH {
 			logLik = -1e+100;
 		}
 		
-		System.out.println(-logLik);
-		
 		return -logLik;
 		
 	}
@@ -261,12 +227,12 @@ public class ARCH {
 		
 		boolean restrictions_satisfied = true;
 		
-		if(heteroPars[0][0] <= 0.0){
+		if(volaPars[0][0] <= 0.0){
 			restrictions_satisfied = false;
 		}
 		
-		for(int i=0; i<lag4heteroscedasticity; i++){
-			if(heteroPars[i+1][0] < 0.0){
+		for(int i=0; i<lag4volatility; i++){
+			if(volaPars[i+1][0] < 0.0){
 				restrictions_satisfied = false;
 				break;
 			}
@@ -319,30 +285,34 @@ public class ARCH {
     	}
     	
     	double [] start_value = get_start_values_4_est_ARCH();
+    	double [] optimal_value = new double [start_value.length];
+    	
+    	n_modelPars = start_value.length;
     	
     	if(optimizer == "DEoptim" || optimizer == "SANN"){
     		
         	int n_pars = start_value.length;
-        	
         	double [] lower_values = new double [n_pars];
         	double [] upper_values = new double [n_pars];
-    		
+        	
+        	double boundary_par = 3.0;
+        	
         	for(int i=0; i<(lag4observedVariables+1);i++){
         		if(start_value[i]<0.0){
-        			upper_values[i] = start_value[i]*0.8;
-        			lower_values[i] = start_value[i]*1.2;
+        			upper_values[i] = start_value[i]*(1.0-boundary_par);
+        			lower_values[i] = start_value[i]*(1.0+boundary_par);
         		}
         		if(start_value[i]>0.0){
-        			upper_values[i] = start_value[i]*1.2;
-        			lower_values[i] = start_value[i]*0.8;
+        			upper_values[i] = start_value[i]*(1.0+boundary_par);
+        			lower_values[i] = start_value[i]*(1.0-boundary_par);
         		}
         		if(start_value[i]==0.0){
-        			upper_values[i] = 0.2;
-        			lower_values[i] =-0.2;
+        			upper_values[i] = boundary_par;
+        			lower_values[i] =-boundary_par;
         		}       		
         	}
         	
-        	for(int i=0; i<(lag4heteroscedasticity+1); i++){     		
+        	for(int i=0; i<(lag4volatility+1); i++){     		
         		int idx = lag4observedVariables+1+i;
         		if(start_value[idx]<=0.0){
         			upper_values[idx] = 0.2;
@@ -358,28 +328,24 @@ public class ARCH {
         	
         	if(optimizer == "DEoptim"){
         		DifferentialEvolution optim = new DifferentialEvolution(target_function, 500);
+        		optim.set_convergence_criterion(convergence_criterion);
             	optim.set_number_of_function_eval(10);
             	optim.do_Differential_Evolution_Optimization(upper_values, lower_values);
-            	set_ARCH_pars_from_vec(optim.get_optimal_candidate());        	
+            	optimal_value = optim.get_optimal_candidate();
+            	set_ARCH_pars_from_vec(optimal_value);        	
             	logLikelihood = (-1.0)*optim.get_optimal_value();
+            	convergence = optim.get_convergence_info();
         	}
     		
         	if(optimizer == "SANN"){
         		SimulatedAnnealing optim = new SimulatedAnnealing(target_function, 10000);
             	optim.do_Simulated_Annealing_Optimization(upper_values, lower_values);
-            	set_ARCH_pars_from_vec(optim.get_optimal_candidate());        	
+            	optimal_value = optim.get_optimal_candidate();
+            	set_ARCH_pars_from_vec(optimal_value);        	
             	logLikelihood = (-1.0)*optim.get_optimal_value();
+            	convergence = optim.get_convergence_info();
         	}   
         	
-    	}
-    	
-    	if(optimizer == "Newton"){
-    		NewtonMethod optim = new NewtonMethod(target_function, 100000);  	
-        	optim.set_convergence_criterion(1e-08);
-        	optim.do_Newton_Optimization(start_value);
-        	
-        	set_ARCH_pars_from_vec(optim.get_optimal_candidate());        	
-        	logLikelihood = (-1.0)*optim.get_optimal_value();
     	}
     			
     	boolean truePars = check_ARCH_par_restrictions();
@@ -388,30 +354,65 @@ public class ARCH {
     		System.out.println("GARCH restrictions for heteroscedasticity parameters violated.");
     	}
     	
+    	if(convergence == false){
+    		System.out.println("MLE has not converged for " + GARCH_model);
+    	}
+    	
     	double [][] obs_data = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(observed_variables, startIdx, endIdx, 0, 0);
 
     	fittedValues = calc_est_values_from_ARCH();
     	residuals = MatrixOperations.substract(obs_data, fittedValues);
     	volatilities = calc_volatilies_from_ARCH();
     	
+    	hessian = NumDeriv.hessian(target_function, optimal_value, null);
+    	estParCovariance = MatrixOperations.inverse(hessian);
+    	set_ARCH_standard_errors_and_t_values_of_est_pars();
+    	
+    	calc_information_criteria();
+    	
+	}
+	
+	
+	public static void set_ARCH_standard_errors_and_t_values_of_est_pars(){
+		
+		standErrors_arPars   = new double [lag4observedVariables+1][1];
+		standErrors_volaPars = new double [lag4volatility+1][1];
+		tValues_arPars       = new double [lag4observedVariables+1][1];
+		tValues_volaPars     = new double [lag4volatility+1][1];
+		
+		for(int i=0; i<(lag4observedVariables+1); i++){
+			standErrors_arPars[i][0] = Math.sqrt(estParCovariance[i][i]);
+			tValues_arPars[i][0] = arPars[i][0]/standErrors_arPars[i][0];
+		}
+		
+		for(int i=0; i<(lag4volatility+1); i++){
+			standErrors_volaPars[i][0] = Math.sqrt(estParCovariance[(lag4observedVariables+1+i)][(lag4observedVariables+1+i)]);
+			tValues_volaPars[i][0] = volaPars[i][0]/standErrors_volaPars[i][0];
+		}
+		
+		if(distribution == "Student"){
+			standError_student_df = Math.sqrt(estParCovariance[(lag4observedVariables+lag4volatility+2)][(lag4observedVariables+lag4volatility+2)]);
+		    tValue_student_df = student_df/standError_student_df;
+		}
+		
 	}
 	
 	
 	public static void set_ARCH_pars_from_vec(double [] par_vec){
 		
 		arPars = new double [lag4observedVariables+1][1];
-		heteroPars = new double [lag4heteroscedasticity+1][1];
+		volaPars = new double [lag4volatility+1][1];
 		
 		for(int i=0; i<(lag4observedVariables+1); i++){
 			arPars[i][0] = par_vec[i];
 		}
 		
-		for(int i=0; i<(lag4heteroscedasticity+1); i++){
-			heteroPars[i][0] = par_vec[(lag4observedVariables+1+i)];
+		for(int i=0; i<(lag4volatility+1); i++){
+			volaPars[i][0] = par_vec[(lag4observedVariables+1+i)];
 		}
 		
 		if(distribution == "Student"){
-			student_df = par_vec[(lag4observedVariables+lag4heteroscedasticity+2)];
+			student_df = par_vec[(lag4observedVariables+lag4volatility+2)];
 		}
 		
 	}
@@ -420,7 +421,7 @@ public class ARCH {
 	@SuppressWarnings("static-access")
 	public static double [] get_start_values_4_est_ARCH(){
 		
-		int n_pars = lag4observedVariables + lag4heteroscedasticity + 2;
+		int n_pars = lag4observedVariables + lag4volatility + 2;
 		
 		if(distribution == "Student"){
 			n_pars++;
@@ -450,13 +451,13 @@ public class ARCH {
         	residuals[i][0] = Math.pow(residuals[i][0], 2.0);
         }
     	
-    	y = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(residuals, (startIdx+lag4heteroscedasticity), (nResiduals-1), 0, 0);
-    	X = get_lagged_Y_for_lag(residuals, (startIdx+lag4heteroscedasticity), (nResiduals-1), lag4heteroscedasticity); 
+    	y = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(residuals, (startIdx+lag4volatility), (nResiduals-1), 0, 0);
+    	X = get_lagged_Y_for_lag(residuals, (startIdx+lag4volatility), (nResiduals-1), lag4volatility); 
     		
     	obj_lm = new LinearRegression(y, X, false);    	
     	obj_lm.do_parameter_estimation();
 
-    	for(int i=0; i<(lag4heteroscedasticity+1); i++){
+    	for(int i=0; i<(lag4volatility+1); i++){
     		start_values[parIdx] = (obj_lm.get_est_parameters())[i][0];
     		parIdx++;
     	}
@@ -469,52 +470,7 @@ public class ARCH {
 		
 	}
 	
-	
-	//sets TxP matrix X_bar = [Y_t-1-m,...,Y_t-p-m] w.r.t. additional lag m beside lag p
-	public static List<Double> get_lagged_Y(int m){
-		
-		List<Double> lagged_Y = new ArrayList<Double>((lag4observedVariables+1));
-		
-		int T = n_usedObservations;
-				
-		for(int p=0; p<(lag4observedVariables+1); p++){	
-			for(int t=0; t<T; t++){	
-				if(p==0){
-					lagged_Y.add(1.0);
-				}else{
-					int curIdx = startIdx+t;
-					int lagIdx = curIdx-p-m;
-					lagged_Y.add(observed_variables[lagIdx][0]);
-				}						
-			}
-		}
-			
-		return lagged_Y;
-		
-	}
-	
-	
-	//sets TxP matrix X_bar = [Y_t-1,...,Y_t-p] for specific lag p
-	public static double [][] get_lagged_Y_for_lag(double [][] obs_data, int start_idx, int end_idx, int lag){
-		
-		int T = end_idx-start_idx+1;
-		
-		double [][] lagged_Y = new double [T][(lag+1)];
-		
-		for(int t=0; t<T; t++){
-			lagged_Y[t][0] = 1.0;
-			int curIdx = start_idx+t;
-			for(int p=0; p<lag; p++){
-				int lagIdx = curIdx-p-1;
-				lagged_Y[t][(p+1)] = obs_data[lagIdx][0];			
-			}
-		}
-			
-		return lagged_Y;
-		
-	}
-	
-	
+
 	public static double [][] get_ARCH_fitted_values(){
 		return fittedValues;
 	}
@@ -530,51 +486,77 @@ public class ARCH {
 	}
 	
 	
-	public static void set_ARCH_optimizer(String opti_algorithm){
-		optimizer = opti_algorithm;
-	}
-	
-	
-	@SuppressWarnings("static-access")
-	public static void plot_GARCH_estimates(){
+	public static void get_ARCH_forecast_4_Gaussian(int n_steps){
 		
-        GenGraphics obj_graph = new GenGraphics();
-		       
-        obj_graph.setNumberOfPlotColums(1);
-        obj_graph.setNumberOfPlotRows(2);
-	 	
-        obj_graph.setGraphWidth(1000);
-        obj_graph.setGraphHeight(600);
-
-	 	double [][] xAxis = new double [n_usedObservations][1];
-	 	
-	 	for(int i=0; i<n_usedObservations; i++){
-	 		xAxis[i][0] = i+1;
-	 	}
-	 	
-	 	double [][] obs_data = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(observed_variables, startIdx, endIdx, 0, 0);
-
-	 	//MatrixOperations.print_matrix(volatilities);
-	 	
-	 	obj_graph.plotLines(xAxis, obs_data, true);	
-	 	obj_graph.plotLines(xAxis, fittedValues, false, Color.RED);
-	 	obj_graph.plotLines(xAxis, volatilities, true);
-	 	
-	 	String [] title  = {"Observed vs. fitted Variable", "(" + distribution + ") ARCH impl. Volatility"};
-	 	String [] yLabel = title;
-	 		
-	 	obj_graph.setTitle(title, null, "12");
-	 	obj_graph.setYLabel(yLabel, null, "10");
-	 	obj_graph.setNumberOfDigits4XAxis(0);   
-	 	obj_graph.setNumberOfDigits4YAxis(2);
-	 	obj_graph.setFontOfXAxisUnits("bold", 10);
-	 	obj_graph.setFontOfYAxisUnits("bold", 10);
-	 	
-	 	obj_graph.plot();
+		if(n_steps <= 0){
+			System.out.println("Invalid number of steps supplied for " + GARCH_model + " volatility forecasting.");
+		}
+		
+		forecastingSteps = n_steps;
+		volatilityForecast = new double [n_steps][1];
+		
+		for(int s=0; s<n_steps; s++){
+			volatilityForecast[s][0] += volaPars[0][0];
+			int idx=0;
+			for(int i=0; i<lag4volatility; i++){
+				int histStep = s-i;
+				if(histStep <=0){
+					int lagIdx = n_usedObservations-i-1+idx;
+					double u_t = residuals[lagIdx][0];
+					u_t = Math.pow(u_t, 2.0);
+					volatilityForecast[s][0] += volaPars[(1+i)][0]*u_t;
+				}else{
+					volatilityForecast[s][0] += volaPars[(1+i)][0]*volatilityForecast[(s-i-1)][0];
+					idx++;
+				}				
+			}
+		}
 		
 	}
 	
-
+	
+	public static void get_ARCH_forecast_4_Student_Dist(int n_steps){
+		
+		if(n_steps <= 0){
+			System.out.println("Invalid number of steps supplied for " + GARCH_model + " volatility forecasting.");
+		}
+		
+		forecastingSteps = n_steps;
+		volatilityForecast = new double [n_steps][1];
+		
+		for(int s=0; s<n_steps; s++){
+			volatilityForecast[s][0] += volaPars[0][0];
+			int idx=0;
+			for(int i=0; i<lag4volatility; i++){
+				int histStep = s-i;
+				if(histStep <=0){
+					int lagIdx = n_usedObservations-i-1+idx;
+					double u_t = residuals[lagIdx][0];
+					u_t = Math.pow(u_t, 2.0);
+					volatilityForecast[s][0] += volaPars[(1+i)][0]*u_t;
+				}else{
+					volatilityForecast[s][0] += (student_df/(student_df-1))*volaPars[(1+i)][0]*volatilityForecast[(s-i-1)][0];
+					idx++;
+				}			
+			}
+		}
+		
+	}
+	
+	
+	public static void get_ARCH_forecast(int n_steps){
+		
+		if(distribution == "Normal"){
+			get_ARCH_forecast_4_Gaussian(n_steps);
+		}
+	
+		if(distribution == "Student"){
+			get_ARCH_forecast_4_Student_Dist(n_steps);
+		}
+		
+	}
+	
+	
 	@SuppressWarnings("static-access")
 	public static void main(String[] args) throws Exception {
     	
@@ -594,21 +576,36 @@ public class ARCH {
 		inputData.selectLoadedData(rownames, colnames);
 		double [][] obsData = inputData.selectedDblFileData;
 
-		int obsLag = 1;
-		int heteroscedasticityLag = 1;
-		int start_idx = obsLag+heteroscedasticityLag;
+		int obsLag = 2;
+		int volaLag = 1;
+		int start_idx = obsLag+volaLag;
 		int end_idx = obsData.length;
 		
-		ARCH obj_arch = new ARCH(obsData, start_idx, end_idx, obsLag, heteroscedasticityLag, "Student");
-		obj_arch.set_ARCH_optimizer("SANN");		
+		ARCH obj_arch = new ARCH(obsData, start_idx, end_idx, obsLag, volaLag);
+		//obj_arch.set_ARCH_optimizer("SANN");		
 		obj_arch.do_MLE_4_ARCH();
 		
-		MatrixOperations.print_matrix(arPars);
-		MatrixOperations.print_matrix(heteroPars);
+		obj_arch.get_ARCH_forecast(12);
 		
-		System.out.println(student_df);
+		System.out.println("Parameter estimates:");
+		MatrixOperations.print_matrix(arPars);
+		System.out.println("");
+		MatrixOperations.print_matrix(volaPars);
+		System.out.println("");
+		System.out.println("SE´s of parameters:");
+		MatrixOperations.print_matrix(standErrors_arPars);
+		System.out.println("");
+		MatrixOperations.print_matrix(standErrors_volaPars);
+		System.out.println("");
+		System.out.println("");
+		
+		MatrixOperations.print_matrix(volatilityForecast);
+		
+		//System.out.println(student_df);
 		
 		plot_GARCH_estimates();
+		//plot_GARCH_volatility_forecast();
+		//plot_histogram_of_residuals(100);
 		
 	}
 	

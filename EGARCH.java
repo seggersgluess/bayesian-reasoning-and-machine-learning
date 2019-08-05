@@ -1,27 +1,28 @@
 package TimeSeriesAnalysis;
 
-import java.awt.Color;
-
 import DataManagement.InputDataManager;
-import Graphics.GenGraphics;
 import Mathematics.GammaFunction;
 import Mathematics.MatrixOperations;
 import Optimization.DifferentialEvolution;
-import Optimization.NewtonMethod;
+import Optimization.NumDeriv;
 import Optimization.SimulatedAnnealing;
 
 public class EGARCH extends GARCH{
 
 	static double asymmetry_parameter; 
+	static double standError_asymmetry_parameter;
+	static double tValue_asymmetry_parameter;
 	
 	public EGARCH(double[][] obs_variables, int start_idx, int end_idx, int obsLag, int volaLag, int resLag) {
 		super(obs_variables, start_idx, end_idx, obsLag, volaLag, resLag, "GED");
+		GARCH_model = "E-GARCH";
 	}
 	
 	
 	public static double [][] calc_volatilies_from_EGARCH(){
 			
 		double [][] h_t = new double [n_usedObservations][1];
+		double [][] exp_h_t = new double [n_usedObservations][1];
 		
 		for(int t=0; t<n_usedObservations; t++){
 			h_t[t][0] = volaPars[0][0];
@@ -36,7 +37,8 @@ public class EGARCH extends GARCH{
 		}
     
 		h_t_prev /= n_usedObservations;
-			
+		h_t_prev = Math.log(h_t_prev);	
+		
 		double [][] conv_lagged_vars = get_lagged_Y_for_lag(observed_variables, startIdx, endIdx, lag4residuals);
 				
 		for(int t=0; t<n_usedObservations; t++){	
@@ -53,7 +55,7 @@ public class EGARCH extends GARCH{
 				int prevCounter = t-m-1;
 				
 				if(prevCounter<0){
-					u_t = (conv_lagged_vars[t][m+1]-u_t)/Math.sqrt(h_t_prev);
+					u_t = (conv_lagged_vars[t][m+1]-u_t)/Math.sqrt(Math.exp(h_t_prev));
 				}else{
 					u_t = (conv_lagged_vars[t][m+1]-u_t)/Math.sqrt(Math.exp(h_t[t-m-1][0]));
 				}
@@ -66,16 +68,57 @@ public class EGARCH extends GARCH{
 			for(int p=0; p<lag4volatility; p++){
 				int prevCounter = t-p-1;
 				if(prevCounter<0){
-					h_t[t][0] += volaPars[1+p][0]*Math.log(h_t_prev);
+					h_t[t][0] += volaPars[1+p][0]*h_t_prev;
 				}else{
 					h_t[t][0] += volaPars[1+p][0]*h_t[t-p-1][0];
 				}
 					
 			}
-					
+			
+			exp_h_t[t][0] = Math.exp(h_t[t][0]);
+			
 		}
 			
-		return h_t;
+		return exp_h_t;
+		
+	}
+	
+	
+	public static void set_EGARCH_standard_errors_and_t_values_of_est_pars(){
+		
+		standErrors_arPars   = new double [lag4observedVariables+1][1];
+		standErrors_volaPars = new double [lag4volatility+1][1];
+		standErrors_maPars   = new double [lag4residuals][1];
+		
+		tValues_arPars   = new double [lag4observedVariables+1][1];
+		tValues_volaPars = new double [lag4volatility+1][1];
+		tValues_maPars   = new double [lag4residuals][1];
+		
+		int idx = 0;
+		
+		for(int i=0; i<(lag4observedVariables+1); i++){
+			standErrors_arPars[i][0] = estParCovariance[idx][idx];
+			tValues_arPars[i][0] = arPars[i][0]/standErrors_arPars[i][0];
+			idx++;
+		}
+		
+		for(int i=0; i<(lag4volatility+1); i++){
+			standErrors_volaPars[i][0] = estParCovariance[idx][idx];
+			tValues_volaPars[i][0] = volaPars[i][0]/standErrors_volaPars[i][0];
+			idx++;
+		}
+		
+		for(int i=0; i<lag4residuals; i++){
+			standErrors_maPars[i][0] = estParCovariance[idx][idx];
+			tValues_maPars[i][0] = maPars[i][0]/standErrors_maPars[i][0];
+			idx++;
+		}
+		
+		standError_asymmetry_parameter = estParCovariance[idx][idx];
+		tValue_asymmetry_parameter     = asymmetry_parameter/standError_asymmetry_parameter;
+		
+		standError_tail_parameter      = estParCovariance[idx+1][idx+1];
+		tValue_tail_parameter          = tail_parameter/standError_tail_parameter ;
 		
 	}
 	
@@ -160,8 +203,6 @@ public class EGARCH extends GARCH{
 			logLik = -1e+100;
 		}
 		
-		System.out.println(-logLik);
-		
 		return -logLik;
 		
 	}
@@ -182,13 +223,15 @@ public class EGARCH extends GARCH{
 	public static void do_MLE_4_EGARCH(){
 		
     	double [] start_value = get_start_values_4_est_GARCH();
+    	double [] optimal_value = new double [start_value.length];
+    	
+    	n_modelPars = start_value.length;
     	
     	if(optimizer == "DEoptim" || optimizer == "SANN"){
     		
-    		double boundary_par = 0.2;
+    		double boundary_par = 0.8;
     		
         	int n_pars = start_value.length+1;
-        	
         	double [] lower_values = new double [n_pars];
         	double [] upper_values = new double [n_pars];
     		
@@ -228,29 +271,24 @@ public class EGARCH extends GARCH{
         	
         	if(optimizer == "DEoptim"){
         		DifferentialEvolution optim = new DifferentialEvolution(EGARCH::opti_log_likelihood_4_EGARCH, 200);
-        		optim.set_convergence_criterion(1e-02);
+        		optim.set_convergence_criterion(convergence_criterion);
             	optim.set_number_of_function_eval(10);
             	optim.do_Differential_Evolution_Optimization(upper_values, lower_values);
-            	set_GARCH_pars_from_vec(optim.get_optimal_candidate());        	
+            	optimal_value = optim.get_optimal_candidate();
+            	set_EGARCH_pars_from_vec(optimal_value);          	
             	logLikelihood = (-1.0)*optim.get_optimal_value();
+            	convergence = optim.get_convergence_info();
         	}
     		
         	if(optimizer == "SANN"){
         		SimulatedAnnealing optim = new SimulatedAnnealing(EGARCH::opti_log_likelihood_4_EGARCH, 10000);
             	optim.do_Simulated_Annealing_Optimization(upper_values, lower_values);
-            	set_GARCH_pars_from_vec(optim.get_optimal_candidate());        	
+            	optimal_value = optim.get_optimal_candidate();
+            	set_EGARCH_pars_from_vec(optimal_value);        	
             	logLikelihood = (-1.0)*optim.get_optimal_value();
+            	convergence = optim.get_convergence_info();
         	}   
         	
-    	}
-    	
-    	if(optimizer == "Newton"){
-    		NewtonMethod optim = new NewtonMethod(EGARCH::opti_log_likelihood_4_EGARCH, 100000);  	
-        	optim.set_convergence_criterion(1e-08);
-        	optim.do_Newton_Optimization(start_value);
-        	
-        	set_GARCH_pars_from_vec(optim.get_optimal_candidate());        	
-        	logLikelihood = (-1.0)*optim.get_optimal_value();
     	}
     			
     	boolean truePars = check_EGARCH_par_restrictions();
@@ -259,52 +297,22 @@ public class EGARCH extends GARCH{
     		System.out.println("EGARCH restrictions for heteroscedasticity parameters violated.");
     	}
     	
+    	if(convergence == false){
+    		System.out.println("MLE has not converged for " + GARCH_model);
+    	}
+    	
     	double [][] obs_data = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(observed_variables, startIdx, endIdx, 0, 0);
 
     	fittedValues = calc_est_values_from_GARCH();
     	residuals = MatrixOperations.substract(obs_data, fittedValues);
-    	volatilities = calc_volatilies_from_GARCH();
+    	volatilities = calc_volatilies_from_EGARCH();
     	
-	}
-	
-	
-	@SuppressWarnings("static-access")
-	public static void plot_EGARCH_estimates(){
-		
-        GenGraphics obj_graph = new GenGraphics();
-		       
-        obj_graph.setNumberOfPlotColums(1);
-        obj_graph.setNumberOfPlotRows(2);
-	 	
-        obj_graph.setGraphWidth(1000);
-        obj_graph.setGraphHeight(600);
-
-	 	double [][] xAxis = new double [n_usedObservations][1];
-	 	
-	 	for(int i=0; i<n_usedObservations; i++){
-	 		xAxis[i][0] = i+1;
-	 	}
-	 	
-	 	double [][] obs_data = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(observed_variables, startIdx, endIdx, 0, 0);
-
-	 	//MatrixOperations.print_matrix(volatilities);
-	 	
-	 	obj_graph.plotLines(xAxis, obs_data, true);	
-	 	obj_graph.plotLines(xAxis, fittedValues, false, Color.RED);
-	 	obj_graph.plotLines(xAxis, volatilities, true);
-	 	
-	 	String [] title  = {"Observed vs. fitted Variable", "EGARCH("+lag4volatility+","+lag4residuals+") impl. Volatility"};
-	 	String [] yLabel = title;
-	 		
-	 	obj_graph.setTitle(title, null, "12");
-	 	obj_graph.setYLabel(yLabel, null, "10");
-	 	obj_graph.setNumberOfDigits4XAxis(0);   
-	 	obj_graph.setNumberOfDigits4YAxis(2);
-	 	obj_graph.setFontOfXAxisUnits("bold", 10);
-	 	obj_graph.setFontOfYAxisUnits("bold", 10);
-	 	
-	 	obj_graph.plot();
-		
+    	hessian = NumDeriv.hessian(EGARCH::opti_log_likelihood_4_EGARCH, optimal_value, null);
+    	estParCovariance = MatrixOperations.inverse(hessian);
+    	set_EGARCH_standard_errors_and_t_values_of_est_pars();
+    	
+    	calc_information_criteria();
+    	
 	}
 	
 	
@@ -335,18 +343,25 @@ public class EGARCH extends GARCH{
 		
 		EGARCH obj_arch = new EGARCH(obsData, start_idx, end_idx, obsLag, volaLag, maLag);
 			
-		//obj_arch.set_GARCH_optimizer("Newton");
 		obj_arch.do_MLE_4_EGARCH();
 		
+		System.out.println("Parameter estimates:");
 		MatrixOperations.print_matrix(arPars);
 		MatrixOperations.print_matrix(volaPars);
-		MatrixOperations.print_matrix(maPars);
-		
-		System.out.println(student_df);
+		MatrixOperations.print_matrix(maPars);	
+		System.out.println(tail_parameter);
+		System.out.println(asymmetry_parameter);
+		System.out.println("");
+		System.out.println("SE´s of parameters:");
+		MatrixOperations.print_matrix(standErrors_arPars);
+		MatrixOperations.print_matrix(standErrors_volaPars);
+		MatrixOperations.print_matrix(standErrors_maPars);	
+		System.out.println(standError_tail_parameter);
+		System.out.println(standError_asymmetry_parameter);
 		
 		System.out.println(logLikelihood);
 		
-		plot_EGARCH_estimates();
+		plot_GARCH_estimates();
 		
 	}
 	

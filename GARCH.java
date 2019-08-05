@@ -1,58 +1,27 @@
 package TimeSeriesAnalysis;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 
 import DataManagement.InputDataManager;
-import Graphics.GenGraphics;
 import Mathematics.GammaFunction;
 import Mathematics.MatrixOperations;
 import Optimization.DifferentialEvolution;
-import Optimization.NewtonMethod;
+import Optimization.NumDeriv;
 import Optimization.SimulatedAnnealing;
 import Regression.LinearRegression;
 
-public class GARCH {
+public class GARCH extends GARCH_ParentClass{
 
-	static double [][] observed_variables;
-	
-	static int n_observations;
-	static int n_usedObservations;
-	static int n_variables; 
-	
-	static int startIdx;
-	static int endIdx;
-	
-	static int lag4observedVariables;
-	static int lag4volatility;
-	static int lag4residuals;
-	
-	static double [][] arPars;
-	static double [][] volaPars;
-	static double [][] maPars;
-	
-	static int n_arPars;
-	static int n_heteroPars;
-	
-	static double [][] fittedValues;
-	static double [][] residuals;
-	static double [][] volatilities;
-	
-	static String distribution;
-	static double student_df;
-	
 	//Case of Generalized Error Distribution
 	static double tail_parameter;
+	static double standError_tail_parameter;
+	static double tValue_tail_parameter;
+	
 	static double lambda;
 	static double error_mean;
 	
-	static double logLikelihood;
-	
-	static ArrayList<List<Double>> lagged_variables;
-	
-	static String optimizer = "DEoptim";
 	
 	//constructor
 	public GARCH(double [][] obs_variables, int start_idx, int end_idx, int obsLag, int volaLag, int resLag){
@@ -105,7 +74,7 @@ public class GARCH {
 		
 		distribution = "Normal";
 		
-		//Check input consistency!!!
+		GARCH_model = "GARCH";
 		
 	}
 	
@@ -160,8 +129,8 @@ public class GARCH {
 		
 		distribution = usedDistribution;
 		
-		//Check input consistency!!!
-		
+		GARCH_model = "GARCH";
+			
 	}
 	
 	
@@ -258,8 +227,6 @@ public class GARCH {
 			logLik = -1e+100;
 		}
 		
-		System.out.println(-logLik);
-		
 		return -logLik;
 		
 	}
@@ -297,8 +264,6 @@ public class GARCH {
 			logLik = -1e+100;
 		}
 		
-		System.out.println(-logLik);
-		
 		return -logLik;
 		
 	}
@@ -335,8 +300,6 @@ public class GARCH {
 		if(Double.isNaN(logLik) == true){
 			logLik = -1e+100;
 		}
-		
-		System.out.println(-logLik);
 		
 		return -logLik;
 		
@@ -380,9 +343,7 @@ public class GARCH {
 		if(Double.isNaN(logLik) == true){
 			logLik = -1e+100;
 		}
-		
-		System.out.println(-logLik);
-		
+			
 		return -logLik;
 		
 	}
@@ -567,7 +528,10 @@ public class GARCH {
     	}
     	
     	double [] start_value = get_start_values_4_est_GARCH();
- 	
+    	double [] optimal_value = new double [start_value.length];
+    	
+    	n_modelPars = start_value.length;
+    	
     	if(optimizer == "DEoptim" || optimizer == "SANN"){
     	
     		ArrayList<List<Double>> limits = get_par_limits_4_MLE(start_value);
@@ -582,29 +546,24 @@ public class GARCH {
     		
         	if(optimizer == "DEoptim"){
         		DifferentialEvolution optim = new DifferentialEvolution(target_function, 500);
-        		optim.set_convergence_criterion(1e-02);
+        		optim.set_convergence_criterion(convergence_criterion);
             	optim.set_number_of_function_eval(10);
             	optim.do_Differential_Evolution_Optimization(upper_values, lower_values);
-            	set_GARCH_pars_from_vec(optim.get_optimal_candidate());        	
+            	optimal_value = optim.get_optimal_candidate();
+            	set_GARCH_pars_from_vec(optimal_value);        	
             	logLikelihood = (-1.0)*optim.get_optimal_value();
+            	convergence = optim.get_convergence_info();
         	}
     		
         	if(optimizer == "SANN"){
         		SimulatedAnnealing optim = new SimulatedAnnealing(target_function, 10000);
             	optim.do_Simulated_Annealing_Optimization(upper_values, lower_values);
-            	set_GARCH_pars_from_vec(optim.get_optimal_candidate());        	
+            	optimal_value = optim.get_optimal_candidate();
+            	set_GARCH_pars_from_vec(optimal_value);        	
             	logLikelihood = (-1.0)*optim.get_optimal_value();
+            	convergence = optim.get_convergence_info();
         	}   
         	
-    	}
-    	
-    	if(optimizer == "Newton"){
-    		NewtonMethod optim = new NewtonMethod(target_function, 100000);  	
-        	optim.set_convergence_criterion(1e-08);
-        	optim.do_Newton_Optimization(start_value);
-        	
-        	set_GARCH_pars_from_vec(optim.get_optimal_candidate());        	
-        	logLikelihood = (-1.0)*optim.get_optimal_value();
     	}
     			
     	boolean truePars = check_GARCH_par_restrictions();
@@ -613,12 +572,67 @@ public class GARCH {
     		System.out.println("GARCH restrictions for heteroscedasticity parameters violated.");
     	}
     	
+    	if(convergence == false){
+    		System.out.println("MLE has not converged for " + GARCH_model);
+    	}
+    	
     	double [][] obs_data = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(observed_variables, startIdx, endIdx, 0, 0);
 
     	fittedValues = calc_est_values_from_GARCH();
     	residuals = MatrixOperations.substract(obs_data, fittedValues);
     	volatilities = calc_volatilies_from_GARCH();
     	
+    	hessian = NumDeriv.hessian(target_function, optimal_value, null);
+    	estParCovariance = MatrixOperations.inverse(hessian);
+    	set_GARCH_standard_errors_and_t_values_of_est_pars();
+    	
+    	calc_information_criteria();
+    	
+	}
+	
+	
+	public static void set_GARCH_standard_errors_and_t_values_of_est_pars(){
+		
+		standErrors_arPars   = new double [n_arPars][1];
+		standErrors_volaPars = new double [lag4volatility+1][1];
+		standErrors_maPars   = new double [lag4residuals][1];
+		
+		tValues_arPars   = new double [n_arPars][1];
+		tValues_volaPars = new double [lag4volatility+1][1];
+		tValues_maPars   = new double [lag4residuals][1];
+		
+		int idx=0;
+		
+		for(int i=0; i<(lag4observedVariables+1); i++){
+			standErrors_arPars[i][0] = Math.sqrt(estParCovariance[idx][idx]);
+			tValues_arPars[i][0] = arPars[i][0]/standErrors_arPars[i][0];
+			idx++;
+		}
+		
+		for(int i=0; i<(lag4volatility+1); i++){
+			standErrors_volaPars[i][0] = Math.sqrt(estParCovariance[idx][idx]);
+			tValues_volaPars[i][0] = volaPars[i][0]/standErrors_volaPars[i][0];
+			idx++;
+		}
+		
+		for(int i=0; i<lag4residuals; i++){
+			standErrors_maPars[i][0] = Math.sqrt(estParCovariance[idx][idx]);
+			tValues_maPars[i][0] = maPars[i][0]/standErrors_maPars[i][0];
+			idx++;
+		}
+		
+		if(distribution == "Student"){
+			standError_student_df = Math.sqrt(estParCovariance[idx][idx]);
+			tValue_student_df = student_df/standError_student_df;
+			idx++;
+		}
+		
+		if(distribution == "GED"){
+			standError_tail_parameter = Math.sqrt(estParCovariance[idx][idx]);
+			tValue_tail_parameter = tail_parameter/standError_tail_parameter;
+			idx++;
+		}
+		
 	}
 	
 	
@@ -740,47 +754,101 @@ public class GARCH {
 	}
 	
 	
-	//sets TxP matrix X_bar = [Y_t-1-m,...,Y_t-p-m] w.r.t. additional lag m beside lag p
-	public static List<Double> get_lagged_Y(int m){
+	public static void get_GARCH_forecast_4_Gaussian(int n_steps){
 		
-		List<Double> lagged_Y = new ArrayList<Double>((lag4observedVariables+1));
-		
-		int T = n_usedObservations;
-				
-		for(int p=0; p<(lag4observedVariables+1); p++){	
-			for(int t=0; t<T; t++){	
-				if(p==0){
-					lagged_Y.add(1.0);
-				}else{
-					int curIdx = startIdx+t;
-					int lagIdx = curIdx-p-m;
-					lagged_Y.add(observed_variables[lagIdx][0]);
-				}						
-			}
+		if(n_steps <= 0){
+			System.out.println("Invalid number of steps supplied for " + GARCH_model + " volatility forecasting.");
 		}
+		
+		forecastingSteps = n_steps;
+		volatilityForecast = new double [n_steps][1];
+		
+		for(int s=0; s<n_steps; s++){
+			volatilityForecast[s][0] += volaPars[0][0];
+			int idx=0;
+			for(int i=0; i<lag4residuals; i++){
+				int histStep = s-i;
+				if(histStep <=0){
+					int lagIdx = n_usedObservations-i-1+idx;
+					double u_t = residuals[lagIdx][0];
+					u_t = Math.pow(u_t, 2.0);
+					volatilityForecast[s][0] += maPars[i][0]*u_t;
+				}else{
+					volatilityForecast[s][0] += maPars[i][0]*volatilityForecast[(s-i-1)][0];
+					idx++;
+				}				
+			}
 			
-		return lagged_Y;
+			idx=0;
+			for(int i=0; i<lag4volatility; i++){				
+				int histStep = s-i;
+				if(histStep <=0){
+					int lagIdx = n_usedObservations-i-1+idx;
+					double h_t = volatilities[lagIdx][0];
+					volatilityForecast[s][0] += volaPars[(1+i)][0]*h_t;
+				}else{
+					volatilityForecast[s][0] += volaPars[(1+i)][0]*volatilityForecast[(s-i-1)][0];
+					idx++;
+				}
+			}
+			
+		}
 		
 	}
 	
 	
-	//sets TxP matrix X_bar = [Y_t-1,...,Y_t-p] for specific lag p
-	public static double [][] get_lagged_Y_for_lag(double [][] obs_data, int start_idx, int end_idx, int lag){
+	public static void get_GARCH_forecast_4_Student_Dist(int n_steps){
 		
-		int T = end_idx-start_idx+1;
-		
-		double [][] lagged_Y = new double [T][(lag+1)];
-		
-		for(int t=0; t<T; t++){
-			lagged_Y[t][0] = 1.0;
-			int curIdx = start_idx+t;
-			for(int p=0; p<lag; p++){
-				int lagIdx = curIdx-p-1;
-				lagged_Y[t][(p+1)] = obs_data[lagIdx][0];			
-			}
+		if(n_steps <= 0){
+			System.out.println("Invalid number of steps supplied for " + GARCH_model + " volatility forecasting.");
 		}
+		
+		forecastingSteps = n_steps;
+		volatilityForecast = new double [n_steps][1];
+		
+		for(int s=0; s<n_steps; s++){
+			volatilityForecast[s][0] += volaPars[0][0];
+			int idx=0;
+			for(int i=0; i<lag4residuals; i++){
+				int histStep = s-i;
+				if(histStep <=0){
+					int lagIdx = n_usedObservations-i-1+idx;
+					double u_t = residuals[lagIdx][0];
+					u_t = Math.pow(u_t, 2.0);
+					volatilityForecast[s][0] += maPars[i][0]*u_t;
+				}else{
+					volatilityForecast[s][0] += (student_df/(student_df-1))*maPars[i][0]*volatilityForecast[(s-i-1)][0];
+					idx++;
+				}				
+			}
 			
-		return lagged_Y;
+			idx=0;
+			for(int i=0; i<lag4volatility; i++){				
+				int histStep = s-i;
+				if(histStep <=0){
+					int lagIdx = n_usedObservations-i-1+idx;
+					double h_t = volatilities[lagIdx][0];
+					volatilityForecast[s][0] += volaPars[(1+i)][0]*h_t;
+				}else{
+					volatilityForecast[s][0] += volaPars[(1+i)][0]*volatilityForecast[(s-i-1)][0];
+					idx++;
+				}
+			}
+			
+		}
+		
+	}
+
+	
+	public static void get_GARCH_forecast(int n_steps){
+		
+		if(distribution == "Normal"){
+			get_GARCH_forecast_4_Gaussian(n_steps);
+		}
+	
+		if(distribution == "Student"){
+			get_GARCH_forecast_4_Student_Dist(n_steps);
+		}
 		
 	}
 	
@@ -819,44 +887,6 @@ public class GARCH {
 		optimizer = opti_algorithm;
 	}
 	
-	
-	@SuppressWarnings("static-access")
-	public static void plot_GARCH_estimates(){
-		
-        GenGraphics obj_graph = new GenGraphics();
-		       
-        obj_graph.setNumberOfPlotColums(1);
-        obj_graph.setNumberOfPlotRows(2);
-	 	
-        obj_graph.setGraphWidth(1000);
-        obj_graph.setGraphHeight(600);
-
-	 	double [][] xAxis = new double [n_usedObservations][1];
-	 	
-	 	for(int i=0; i<n_usedObservations; i++){
-	 		xAxis[i][0] = i+1;
-	 	}
-	 	
-	 	double [][] obs_data = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(observed_variables, startIdx, endIdx, 0, 0);
-
-	 	obj_graph.plotLines(xAxis, obs_data, true);	
-	 	obj_graph.plotLines(xAxis, fittedValues, false, Color.RED);
-	 	obj_graph.plotLines(xAxis, volatilities, true);
-	 	
-	 	String [] title  = {"Observed vs. fitted Variable", "("+ distribution +") GARCH("+lag4volatility+","+lag4residuals+") impl. Volatility"};
-	 	String [] yLabel = title;
-	 		
-	 	obj_graph.setTitle(title, null, "12");
-	 	obj_graph.setYLabel(yLabel, null, "10");
-	 	obj_graph.setNumberOfDigits4XAxis(0);   
-	 	obj_graph.setNumberOfDigits4YAxis(2);
-	 	obj_graph.setFontOfXAxisUnits("bold", 10);
-	 	obj_graph.setFontOfYAxisUnits("bold", 10);
-	 	
-	 	obj_graph.plot();
-		
-	}
-	
 
 	@SuppressWarnings("static-access")
 	public static void main(String[] args) throws Exception {
@@ -878,27 +908,37 @@ public class GARCH {
 		double [][] obsData = inputData.selectedDblFileData;
 
 		int obsLag  = 1;
-		int volaLag = 2;
+		int volaLag = 1;
 		int maLag   = 1;
 		int start_idx = obsLag+maLag;
 		int end_idx = obsData.length;
 		
-		GARCH obj_arch = new GARCH(obsData, start_idx, end_idx, obsLag, volaLag, maLag);
-			
+		GARCH obj_arch = new GARCH(obsData, start_idx, end_idx, obsLag, volaLag, maLag, "Cauchy");
+		obj_arch.set_convergence_criterion(1e-08);
 		//obj_arch.set_GARCH_optimizer("SANN");
 		obj_arch.do_MLE_4_GARCH();
+		//obj_arch.get_GARCH_forecast(100);
 		
+		System.out.println("Parameter estimates:");
 		MatrixOperations.print_matrix(arPars);
 		MatrixOperations.print_matrix(volaPars);
-		MatrixOperations.print_matrix(maPars);
+		MatrixOperations.print_matrix(maPars);		
+		System.out.println("");
+		System.out.println("SE´s of parameters:");
+		MatrixOperations.print_matrix(standErrors_arPars);
+		MatrixOperations.print_matrix(standErrors_volaPars);
+		MatrixOperations.print_matrix(standErrors_maPars);	
 		
 		System.out.println(student_df);
+		System.out.println(standError_student_df);
 		
 		System.out.println(logLikelihood);
 		
+		//MatrixOperations.print_matrix(estParCovariance);
+		
 		plot_GARCH_estimates();
+		//plot_GARCH_volatility_forecast();
 		
 	}
-	
 	
 }

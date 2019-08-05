@@ -159,7 +159,7 @@ public class GARCH_MV extends GARCH{
         	if(optimizer == "DEoptim"){
         		//First step Q-MLE:
         		DifferentialEvolution optim = new DifferentialEvolution(GARCH_MV::opti_log_likelihood_4_GARCH_MV_first_step, 500);
-        		optim.set_convergence_criterion(1e-02);
+        		optim.set_convergence_criterion(convergence_criterion);
             	optim.set_number_of_function_eval(10);
             	optim.do_Differential_Evolution_Optimization(upper_values_first_step, lower_values_first_step);
             	set_GARCH_MV_pars_of_first_step_from_par_vec(optim.get_optimal_candidate());
