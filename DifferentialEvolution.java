@@ -116,14 +116,10 @@ public class DifferentialEvolution extends UnconstrainedOptimizer{
 		
 		int n_args = upper_bounds.length;
 		
-		for(int i = 0; i < n_args; i++){
-			
-			if(upper_bounds[i] <= lower_bounds[i]){
-				
-				throw new RuntimeException("Upper bounds lower than lower bounds.");
-				
-			}
-			
+		for(int i = 0; i < n_args; i++){			
+			if(upper_bounds[i] <= lower_bounds[i]){				
+				throw new RuntimeException("Upper bounds lower than lower bounds.");				
+			}			
 		}
 		
 	}
