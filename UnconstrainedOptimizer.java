@@ -1,4 +1,7 @@
+package Optimization;
 import java.util.function.BiFunction;
+
+import Mathematics.MatrixOperations;
 
 public class UnconstrainedOptimizer {
 
@@ -409,5 +412,24 @@ public class UnconstrainedOptimizer {
 		 
 	}
 	
+	
+	public static boolean get_convergence_info(){
+		return convergence;
+	}
+	
+	
+	public static double [] get_optimal_candidate(){		
+		return optimal_candidate;		
+	}
+	
+	
+	public static double get_optimal_value(){		
+		return optimal_value;		
+	}
+	
+	
+	public static void set_convergence_criterion(double convergence){
+		convergence_criterion = convergence;
+	}
 	
 }
