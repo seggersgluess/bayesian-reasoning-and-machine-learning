@@ -1,3 +1,7 @@
+package Regression;
+import DataManagement.ReadTextFile;
+import Mathematics.GeneralMath;
+import Mathematics.MatrixOperations;
 
 public class LinearRegression {
 
@@ -19,7 +23,7 @@ public class LinearRegression {
 	static double [][] parameters;
 	static double [][] parameter_errors;
 	static double [][] parameter_t_values;
-	static double [][] paramter_p_values;
+	static double [][] parameter_p_values;
 	
 	static double [][] ss_pars;
 	
@@ -108,7 +112,7 @@ public class LinearRegression {
 		residuals                 = MatrixOperations.add(explained_variable, MatrixOperations.scalar_multiplication(-1.0, fitted_explained_variable));		
 		
 		ss_res                    = MatrixOperations.multiplication(MatrixOperations.transpose(residuals), residuals)[0][0];
-		sigma                     = ss_res/(n_observations-(n_explaining_variables+1));
+		sigma                     = ss_res/(n_observations-(n_explaining_variables+1.0));
 			
 		covariance                = MatrixOperations.scalar_multiplication(sigma,inv_term);
 		errors                    = MatrixOperations.get_diagonal_from_matrix(covariance);
@@ -134,10 +138,10 @@ public class LinearRegression {
 		
 		calculate_sums_of_squares_4_est_pars(regressor_matrix);
 				
-		print_estimation_res();
-		print_linear_model_stats();
-		print_covariance_matrix();
-		print_linear_model_diagnostics();
+		//print_estimation_res();
+		//print_linear_model_stats();
+		//print_covariance_matrix();
+		//print_linear_model_diagnostics();
 		
 	}
 	
@@ -358,6 +362,92 @@ public class LinearRegression {
 	    
 	    MatrixOperations.print_matrix(diagnostics); 
 	    
+	}
+	
+	
+	public static double get_est_constant(){
+		
+		return constant;
+		
+	}
+	
+	
+	public static double get_constant_error(){
+		
+		return constant_error;
+		
+	}
+	
+	
+	public static double get_constant_t_value(){
+		
+		return constant_t_value;
+		
+	}
+	
+	
+	public static double get_constant_p_value(){
+		
+		return constant_p_value;
+		
+	}
+	
+	
+	public static double [][] get_est_parameters(){
+		
+		return parameters;
+		
+	}
+	
+	
+	public static double [][] get_parameter_errors(){
+		
+		return parameter_errors;
+		
+	}
+	
+	
+	public static double [][] get_parameter_t_values(){
+		
+		return parameter_t_values;
+		
+	}
+	
+	
+	public static double [][] get_parameter_p_values(){
+		
+		return parameter_p_values;
+		
+	}
+	
+	
+	public static double get_sigma(){		
+		return sigma;		
+	}
+	
+	
+	public static double get_R_squared(){		
+		return R_squared;		
+	}
+	
+	
+	public static double get_adj_R_squared(){		
+		return adj_R_squared;		
+	}
+	
+	
+	public static double get_F_stat(){		
+		return F;		
+	}
+	
+	
+	public static double [][] get_residuals(){		
+		return residuals;		
+	}
+	
+	
+	public static double [][] get_fitted_values(){
+		return fitted_explained_variable;
 	}
 	
 	
