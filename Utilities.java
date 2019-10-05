@@ -35,6 +35,35 @@ public class Utilities {
 	}
 	
 	
+	public static List<Double> get_sorted_elements_of_matrix_column(double [][] X, int colIdx){
+		
+		double [] x = MatrixOperations.get_column_from_matrix(X, colIdx);
+		
+		int idx = 0;
+		
+		List<Double> sorted_vec = new ArrayList<Double>();		
+		double [] unique_vec = get_unique_elements(x);
+		
+		for(int i=0; i<unique_vec.length; i++){
+			
+			double min      = getMin(x);
+			int [] min_idxs = get_idx(x, min);
+			
+			for(int j=0; j<min_idxs.length; j++){
+				
+				sorted_vec.add(min);
+				idx = idx + 1;
+			}
+						
+			x = MatrixOperations.get_double_comp_sub_vec_4_indices(x, min_idxs);
+			
+		}
+		
+		return sorted_vec;		
+		
+	}
+	
+	
 	// returns indices of sorted elements in unsorted vector
 	public static int [] get_idxs_for_sorted_vec(double [] x){
 		
