@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 import DataManagement.InputDataManager;
+import Graphics.DecisionTreeGraphics;
+import Regression.LinearRegression;
 
 public class CART {
 
@@ -28,7 +30,7 @@ public class CART {
 	//User specified values to control tree growing
 	static double minCostReduction = 0.0;
 	static double maxNumberOfClassesInKnot = 0.0;
-	static double minNumberOfElementsInKnot = 0.0;
+	static double minNumberOfElementsInKnot = 1.0;
 	static int maxTreeDepth = 0;
 	
 	//Cost Measures
@@ -37,17 +39,16 @@ public class CART {
 	//Number of layers of the tree
 	static int treeDepth;
 	
+	//Tree
 	static HashMap <String, HashMap<String, HashMap<String,List<String>>>> tree;
 	
+	//CART model
+	static boolean useConstant = true;
+	static double [][] regressor_matrix;
+	static LinearRegression obj_linearReg;
 	
-	//Tree infos for knots
-	//static ArrayList<List<Double>> Cost;
-	//static ArrayList<List<Double>> CostReduction;
-	//static ArrayList<List<String>> SplittingFeature;
-	//static ArrayList<ArrayList<List<Integer>>> NumberOfElements4Class;
-	//static ArrayList<ArrayList<List<Integer>>> IndicesOfElementsInKnot;
-	
-	
+	//Graph control
+	static boolean showLeafs = true;
 	
 	public static void fit_tree() {
 		
@@ -83,6 +84,8 @@ public class CART {
 		knot.put("nElementsOfClasses",classDistribution);
 		//Indices for elements in knot
 		knot.put("IdxsOfElements", strKnotIdxs);
+		//Threshold
+		knot.get("Threshold").add("--");
 		
 		HashMap<String, HashMap<String,List<String>>> layer = new HashMap<String, HashMap<String,List<String>>>();
 		layer.put("Knot1", knot);
@@ -104,7 +107,7 @@ public class CART {
 			for(int k=0; k<nKnots; k++) {
 				
 				knotIdxs = new ArrayList<Integer>();
-				String parentKnotLabel = "Knot" + k+1;
+				String parentKnotLabel = "Knot" + (k+1);
 				strKnotIdxs = tree.get(prevLayerLabel).get(parentKnotLabel).get("IdxsOfElements");
 				int nElements = strKnotIdxs.size();
 				for(int i=0; i<nElements; i++) {
@@ -161,19 +164,30 @@ public class CART {
 				
 				if(doSplit == true) {
 					
-					String splittingFeature = splitInfos.get("SplittingFeature").get(0);
-					tree.get(prevLayerLabel).get(parentKnotLabel).get("SplittingFeature").add(splittingFeature);
-					
 					HashMap<String,List<String>> leftKnot = get_knot_structure();
 					HashMap<String,List<String>> rightKnot = get_knot_structure();
 					
+					//SplittingFeature
+					String splittingFeature = splitInfos.get("SplittingFeature").get(0);
+					//tree.get(prevLayerLabel).get(parentKnotLabel).get("SplittingFeature").add(splittingFeature);
+					leftKnot.get("SplittingFeature").add(splittingFeature);
+					rightKnot.get("SplittingFeature").add(splittingFeature);
+						
 					//ParentKnot
 					leftKnot.get("ParentKnot").add(parentKnotLabel);
 					rightKnot.get("ParentKnot").add(parentKnotLabel);
 					
-					//Cost
+					//Cost (absolute)
 					leftKnot.get("Cost").add(splitInfos.get("Cost").get(1));
 					rightKnot.get("Cost").add(splitInfos.get("Cost").get(2));
+					
+					//CostReduction (weighted by knots share of elements)
+					leftKnot.get("CostReduction").add(splitInfos.get("CostReductionLeftKnot").get(0));
+					rightKnot.get("CostReduction").add(splitInfos.get("CostReductionRightKnot").get(0));
+					
+					//Threshold
+					leftKnot.get("Threshold").add(splitInfos.get("Threshold").get(0));
+					rightKnot.get("Threshold").add(splitInfos.get("Threshold").get(0));
 					
 					//IdxsOfElements
 					leftKnot.put("IdxsOfElements",leftIdxs);
@@ -202,10 +216,11 @@ public class CART {
 				
 	        if(knotCount != 0) {
 	        	tree.put(layerLabel, layer);
-				layerCount++;
+				//layerCount++;
 	        }else {
 	        	//Tree stops to grow (no further split)
 	        	stop = true;
+	        	layerCount--;
 	        }
 			
 	        if(maxTreeDepth != 0) {
@@ -226,14 +241,29 @@ public class CART {
 		
 		HashMap<String, List<String>> knot_struct = new HashMap<String, List<String>>();
 		
-		List<String> emptyList = new ArrayList<String>();
+		List<String> emptyList1 = new ArrayList<String>();		
+		knot_struct.put("Cost", emptyList1);
 		
-		knot_struct.put("Cost", emptyList);
-		knot_struct.put("SplittingFeature", emptyList);
-		knot_struct.put("NumberOfElements", emptyList);
-		knot_struct.put("nElementsOfClasses", emptyList);
-		knot_struct.put("IdxsOfElements", emptyList);
-		knot_struct.put("ParentKnot", emptyList);
+		List<String> emptyList2 = new ArrayList<String>();
+		knot_struct.put("SplittingFeature", emptyList2);
+		
+		List<String> emptyList3 = new ArrayList<String>();
+		knot_struct.put("NumberOfElements", emptyList3);
+		
+		List<String> emptyList4 = new ArrayList<String>();
+		knot_struct.put("nElementsOfClasses", emptyList4);
+		
+		List<String> emptyList5 = new ArrayList<String>();
+		knot_struct.put("IdxsOfElements", emptyList5);
+		
+		List<String> emptyList6 = new ArrayList<String>();
+		knot_struct.put("ParentKnot", emptyList6);
+		
+		List<String> emptyList7 = new ArrayList<String>();
+		knot_struct.put("CostReduction", emptyList7);
+		
+		List<String> emptyList8 = new ArrayList<String>();
+		knot_struct.put("Threshold", emptyList8);
 		
 		return knot_struct;
 		
@@ -256,6 +286,7 @@ public class CART {
 		double minLeftCost  = Double.MAX_VALUE;
 		double minRightCost = Double.MAX_VALUE;
 		double overallCost  = Double.MAX_VALUE;
+		double threshold    = 0.0;
 		
 		int knotSampleLength = knotIdxs.size();
 		
@@ -268,9 +299,9 @@ public class CART {
 		
 		for(int j=0; j<n_explaining_variables; j++) {
 			int n_sorted_elements = sorted_knot_sample.get(j).size();
-			List<Integer> leftIdxs = new ArrayList<Integer>();
-			List<Integer> rightIdxs = new ArrayList<Integer>();
 			for(int k=0; k<n_sorted_elements; k++) {
+				List<Integer> leftIdxs = new ArrayList<Integer>();
+				List<Integer> rightIdxs = new ArrayList<Integer>();
 				double t = sorted_knot_sample.get(j).get(k);
 	            for(int i=0; i<knotSampleLength; i++) {	
 	            	int sampleIdx = knotIdxs.get(i);
@@ -296,7 +327,8 @@ public class CART {
 	            	minRightCost = rightCost;
 	            	optLeftIdxs = leftIdxs;
 	            	optRightIdxs = rightIdxs;
-	            	selectedExplainingVariable = names_of_explaining_variables[j];        	
+	            	selectedExplainingVariable = names_of_explaining_variables[j];      
+	            	threshold = t;
 	            }
 	            	            
 			}
@@ -316,11 +348,24 @@ public class CART {
     	
     	//Cost reduction
     	info = new ArrayList<String>(1);
-    	double leftShare = optLeftIdxs.size()/knotSampleLength;
-    	double rightShare = optRightIdxs.size()/knotSampleLength;
+    	double leftShare = (double) optLeftIdxs.size()/ (double) knotSampleLength;
+    	double rightShare = (double) optRightIdxs.size()/(double) knotSampleLength;
     	double costReduction = overallCost-(leftShare*minLeftCost + rightShare*minRightCost);
     	info.add(Double.toString(costReduction));
     	split_infos.put("CostReduction",info);
+    	
+    	info = new ArrayList<String>(1);
+    	info.add(Double.toString(leftShare*minLeftCost));
+    	split_infos.put("CostReductionLeftKnot",info);
+    	
+    	info = new ArrayList<String>(1);
+    	info.add(Double.toString(rightShare*minRightCost));
+    	split_infos.put("CostReductionRightKnot",info);
+    	
+    	//Threshold
+    	info = new ArrayList<String>(1);
+    	info.add(Double.toString(threshold));
+    	split_infos.put("Threshold",info);
     	
     	//SplittingFeature
     	info = new ArrayList<String>(1);
@@ -572,6 +617,12 @@ public class CART {
 	}
 	
 	
+	public static HashMap <String, HashMap<String, HashMap<String,List<String>>>>  get_tree(){
+		
+		return tree;
+		
+	}
+	
 	public static HashMap<String, List<String>> get_knot_infos(int layerNumber, int knotNumber){
 		
 		if(layerNumber <= 0 || layerNumber > treeDepth) {
@@ -606,13 +657,35 @@ public class CART {
 	}
 	
 	
+	public static double get_knot_threshold(int layerNumber, int knotNumber) {
+		
+		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
+		
+		double threshold = Double.parseDouble(knot_info.get("Threshold").get(0));
+		
+		return threshold;
+		
+	}
+	
+	
+	public static double get_knot_costReduction(int layerNumber, int knotNumber) {
+		
+		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
+		
+		double costReduction = Double.parseDouble(knot_info.get("CostReduction").get(0));
+		
+		return costReduction;
+		
+	}
+	
+	
 	public static int get_knot_number_of_elements(int layerNumber, int knotNumber) {
 		
 		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
 		
-		int splitFeature = Integer.parseInt(knot_info.get("NumberOfElements").get(0));
+		int n = Integer.parseInt(knot_info.get("NumberOfElements").get(0));
 		
-		return splitFeature;
+		return n;
 		
 	}
 	
@@ -735,6 +808,20 @@ public class CART {
 	
 	public static void set_CART_explained_variable(String var_name) {
 		name_of_explained_variable = var_name;
+		if(inputData != null) {
+			String [] colNames = inputData.colnames;
+			int [] idx = Utilities.Utilities.get_idx(colNames, var_name);
+			if(idx[0] == -1) {
+				throw new RuntimeException(var_name + " not found in loaded input data.");
+			}
+			int n_vars = colNames.length;
+			names_of_explaining_variables = new String [(n_vars-1)];
+			for(int i=0; i<n_vars; i++) {
+				if(colNames[i].contentEquals(var_name) == false) {
+					names_of_explaining_variables[i] = colNames[i];
+				}
+			}
+		}
 	}
 	
 	
@@ -748,10 +835,14 @@ public class CART {
 	}
 	
 	
-	//TODO: Integrate this method into constructor of CART!
+	public static void set_CART_sampleName(String name) {
+		inputData.setSampleName(name);
+	}
+	
+	
 	public static void set_CART_inputData() {
 		
-		int n_explaining_variables = names_of_explaining_variables.length;
+		n_explaining_variables = names_of_explaining_variables.length;
 		
 		String [] colNames = new String [1+n_explaining_variables];
 		colNames[0] = name_of_explained_variable;
@@ -772,13 +863,16 @@ public class CART {
 	    	}
 		}
 			
-		inputData.selectLoadedData(rowNames, colNames);
-		
 		explained_variable = new double [n_observations][1];
 		explaining_variables = new double [n_observations][n_explaining_variables];
 		
 		if(categorical_explained_var == true) {
 			
+			String [] explained_var = new String [1];
+			explained_var[0] = colNames[0];
+			
+			inputData.selectLoadedData(rowNames, explained_var);
+			 
 			classNames = Utilities.Utilities.get_unique_elements(inputData.selectedStrFileData);
 			int nClasses = classNames.length;
 			
@@ -788,6 +882,7 @@ public class CART {
 				classes[i] = i;
 			}
 					
+			inputData.selectLoadedData(rowNames, colNames);			
 			for(int i=0; i<n_observations; i++) {
 				int [] idx = Utilities.Utilities.get_idx(classNames, inputData.selectedStrFileData[i][0]);
 				explained_variable[i][0] = classes[idx[0]];
@@ -797,6 +892,7 @@ public class CART {
 			}
 
 		}else {
+			inputData.selectLoadedData(rowNames, colNames);
 			for(int i=0; i<n_observations; i++) {
 				explained_variable[i][0] = inputData.selectedDblFileData[i][0];
 				for(int j=0; j<n_explaining_variables; j++) {
@@ -808,11 +904,517 @@ public class CART {
 	}
 	
 	
-	public static void plot_tree() {
+	public static int getTreeDepth() {
+		return treeDepth;
+	}
+	
+	
+	public static boolean isCategoricalTree() {
+		return categorical_explained_var;
+	}
+	
+	
+	public static HashMap<String,List<String>> get_leafs_4_layers(){
 		
+		HashMap<String,List<String>> leafs = new HashMap<String,List<String>>();
 		
+		List<String> layerLeafs = new ArrayList<String>();
+		
+		if(treeDepth >= 2) {
+			for(int i=1; i<treeDepth; i++) {
+				
+				int layerNumber = i+1;
+				String layerLabel = "Layer"+layerNumber;
+				layerLeafs = new ArrayList<String>();
+				
+				int prevLayerNumber = i;
+				String prevLayerLabel = "Layer"+prevLayerNumber;
+				HashMap<String, HashMap<String,List<String>>> layer = tree.get(prevLayerLabel);
+				int n_prevKnots = layer.size();
+				String [] prevLayerKnots = new String [n_prevKnots];
+				for(int k=0; k<n_prevKnots; k++) {
+					prevLayerKnots[k] = "Knot"+(k+1);
+				}
+									
+				layer = tree.get(layerLabel);
+				int nKnots = layer.size()/2;
+				String [] parentKnots = new String [nKnots];
+				int s = 0;
+				for(int k=0; k<nKnots; k++) {
+					parentKnots[k] = get_parent_knot(layerNumber, s+1);
+					s += 2;
+				}
+				
+				for(int k=0; k<n_prevKnots; k++) {
+					String prevLayerKnot = prevLayerKnots[k];
+					int [] idx = Utilities.Utilities.get_idx(parentKnots, prevLayerKnot);
+					if(idx[0] == -1) {
+						layerLeafs.add(prevLayerKnot);
+					}
+				}
+				
+				//if(layerLeafs.isEmpty() == false) {
+				leafs.put(prevLayerLabel, layerLeafs);
+				//}
+																		
+			}
+		}
+		
+		//Leafs of the last layer
+		String layerLabel = "Layer"+treeDepth;
+		HashMap<String, HashMap<String,List<String>>> layer = tree.get(layerLabel);
+		layerLeafs = new ArrayList<String>();
+		int nKnots = layer.size();
+		
+		for(int k=0; k<nKnots; k++) {
+			layerLeafs.add("Knot"+(k+1));
+		}
+		
+		leafs.put(layerLabel, layerLeafs);
+		
+		return leafs;
 		
 	}
 	
+	
+	public static HashMap<String, Integer> get_distOfSplittingFeatures() {
+		
+		HashMap<String, Integer> distOfSplitFeat = new HashMap<String, Integer>(n_explaining_variables);
+		
+		for(int i=0; i<n_explaining_variables; i++) {
+			distOfSplitFeat.put(names_of_explaining_variables[i], 0);
+		}
+		
+		for(int l=1; l<treeDepth; l++) {
+			int layerNumber = (l+1);
+			String layerLabel = "Layer"+layerNumber;
+			int nKnots = tree.get(layerLabel).size();
+			nKnots /=2;
+			int s=0;
+			for(int k=0; k<nKnots; k++) {
+				int knotNumber = s+1;
+				String splitFeat = get_knot_splitFeature(layerNumber,knotNumber);
+				s += 2;
+				int newNumber = distOfSplitFeat.get(splitFeat)+1;
+				distOfSplitFeat.put(splitFeat, newNumber);
+			}
+		}
+		
+		return distOfSplitFeat;
+		
+	}
+	
+	
+	public static void set_maxTreeDepth(int maxDepth) {
+		maxTreeDepth = maxDepth;
+	}
+	
+	
+	public static void set_minNumberOfElementsInKnot(int minNumber) {
+		minNumberOfElementsInKnot = minNumber;
+	}
+	
+	
+	public static HashMap<String, HashMap<String,Integer>> get_colPosOfLeafsInRegressionMatrix() {
+		
+		HashMap<String,List<String>> leafs = get_leafs_4_layers();
+		int nLayers = leafs.size();		
+		HashMap<String, HashMap<String,Integer>> colPosInRegMatrix = new HashMap<String, HashMap<String,Integer>>();
+	    int idx = 0;
+		for(int l=0; l<nLayers; l++) {
+			String layerLabel = "Layer"+(l+1);
+			int nLeafsInLayer = leafs.get(layerLabel).size();
+			if(nLeafsInLayer != 0) {
+				HashMap<String,Integer> colPos = new HashMap<String,Integer>();
+				for(int i=0; i<nLeafsInLayer; i++) {
+					String knotLabel = leafs.get(layerLabel).get(i);
+					colPos.put(knotLabel, idx);					
+					idx++;
+				}
+				colPosInRegMatrix.put(layerLabel, colPos);
+			}
+		}
+		
+		return colPosInRegMatrix;
+		
+	}
+	
+	
+	public static void calc_regressor_matrix() {
+		
+		HashMap<String, HashMap<String,Integer>> colPosInRegMatrix = get_colPosOfLeafsInRegressionMatrix();
+		
+		int nLayersWithLeafs = colPosInRegMatrix.size();
+		Object [] keys = colPosInRegMatrix.keySet().toArray();
+		
+		int nLeafs = 0;
+		
+		for(int l=0; l<nLayersWithLeafs; l++) {
+			String layerLabel = (String) keys[l];
+			nLeafs += colPosInRegMatrix.get(layerLabel).size();
+		}
+		
+		regressor_matrix = new double [n_observations][nLeafs];
+		
+		for(int i=0; i<n_observations; i++) {
+
+			for(int l=0; l<nLayersWithLeafs; l++) {
+				String layerLabel = (String) keys[l];
+				int layerNumber = Integer.parseInt(layerLabel.substring(5));
+				Object [] leafNames = colPosInRegMatrix.get(layerLabel).keySet().toArray();	
+				int nLeafNames = leafNames.length;
+				for(int k=0; k<nLeafNames; k++) {
+					String leafName = (String) leafNames[k];
+					int knotNumber = Integer.parseInt(leafName.substring(4));
+					List<Integer> leafIdxs = get_knot_idxs(layerNumber,knotNumber);
+					int [] idxs = Utilities.Utilities.get_idx(leafIdxs, i);
+					if(idxs[0] != -1) {
+						int colIdx = colPosInRegMatrix.get(layerLabel).get(leafName);
+						regressor_matrix[i][colIdx] = 1.0;
+					}
+				}
+			}
+					
+		}
+	
+	}
+	
+	
+	public static void calc_least_square_regressor_weights() {
+		
+		calc_regressor_matrix();
+		
+		if(regressor_matrix == null) {
+			throw new RuntimeException("Regressor matrix for tree is not calculated yet.");
+		}
+			
+    	obj_linearReg = new LinearRegression(explained_variable, regressor_matrix, useConstant);
+    	
+    	obj_linearReg.do_parameter_estimation();
+		
+    	System.out.println("");
+    	
+	}
+	
+	
+	public static double [][] get_explained_variables() {
+		return explained_variable;
+	}
+	
+	
+	public static String get_name_of_explained_variable() {
+		return name_of_explained_variable;
+	}
+	
+	
+	public static String [] get_names_of_explaining_variables() {
+		return names_of_explaining_variables;
+	}
+	
+	
+	public static LinearRegression get_linearRegObject() {
+		if(obj_linearReg == null) {
+			System.out.println("Linear regression not done yet for fitted tree.");
+		}
+		return obj_linearReg;
+	}
+	
+	
+	public static void set_dummy_tree() {
+		
+		HashMap <String, HashMap<String, HashMap<String,List<String>>>> dummyTree = new HashMap <String, HashMap<String, HashMap<String,List<String>>>>();
+		
+		//Layer no. 1 (Root Layer):
+		HashMap<String, HashMap<String,List<String>>> layer = new HashMap<String, HashMap<String,List<String>>>();
+		HashMap<String, List<String>> knot = get_knot_structure();
+		knot.get("ParentKnot").add("Knot0");
+		knot.get("Cost").add("100");
+		knot.get("NumberOfElements").add("150");
+		knot.get("nElementsOfClasses").add("50");
+		knot.get("nElementsOfClasses").add("50");
+		knot.get("nElementsOfClasses").add("50");
+		layer.put("Knot1", knot);
+		
+		dummyTree.put("Layer1", layer);	
+		
+		//Layer no. 2 (Root Layer):
+		layer = new HashMap<String, HashMap<String,List<String>>>();
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot1");
+	    knot.get("Cost").add("70");	    
+	    knot.get("NumberOfElements").add("50");
+	    knot.get("nElementsOfClasses").add("15");
+	    knot.get("nElementsOfClasses").add("30");
+	    knot.get("nElementsOfClasses").add("5");
+	    knot.get("SplittingFeature").add("X1");
+	    knot.get("Threshold").add("7.0");
+	    knot.get("CostReduction").add("20.0");
+	    layer.put("Knot1", knot);
+		
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot1");
+	    knot.get("Cost").add("30");	    
+	    knot.get("NumberOfElements").add("100");
+	    knot.get("nElementsOfClasses").add("35");
+	    knot.get("nElementsOfClasses").add("20");
+	    knot.get("nElementsOfClasses").add("45");
+	    knot.get("SplittingFeature").add("X1");
+	    knot.get("Threshold").add("7.0");
+	    knot.get("CostReduction").add("40.2");
+	    layer.put("Knot2", knot);
+	    
+	    dummyTree.put("Layer2", layer);	
+		
+		//Layer no. 3 (Root Layer):
+		layer = new HashMap<String, HashMap<String,List<String>>>();
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot1");
+	    layer.put("Knot1", knot);
+		
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot1");
+	    layer.put("Knot2", knot);
+	    
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot2");
+	    layer.put("Knot3", knot);
+	    
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot2");
+	    layer.put("Knot4", knot);
+	    
+	    dummyTree.put("Layer3", layer);	
+	    
+		//Layer no. 4 (Root Layer):
+		layer = new HashMap<String, HashMap<String,List<String>>>();
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot1");
+	    layer.put("Knot1", knot);
+		
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot1");
+	    layer.put("Knot2", knot);
+	    
+	    knot = get_knot_structure(); 
+	    knot.get("ParentKnot").add("Knot4");
+	    knot.get("Cost").add("70");	    
+	    knot.get("NumberOfElements").add("50");
+	    knot.get("nElementsOfClasses").add("15");
+	    knot.get("nElementsOfClasses").add("30");
+	    knot.get("nElementsOfClasses").add("5");
+	    knot.get("SplittingFeature").add("X1");
+	    knot.get("Threshold").add("7.0");
+	    knot.get("CostReduction").add("20.0");
+	    layer.put("Knot3", knot);
+	    	    	    
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot4");
+	    knot.get("Cost").add("30");	    
+	    knot.get("NumberOfElements").add("100");
+	    knot.get("nElementsOfClasses").add("35");
+	    knot.get("nElementsOfClasses").add("20");
+	    knot.get("nElementsOfClasses").add("45");
+	    knot.get("SplittingFeature").add("X1");
+	    knot.get("Threshold").add("7.0");
+	    knot.get("CostReduction").add("40.2");
+	    layer.put("Knot4", knot);
+	    
+	    dummyTree.put("Layer4", layer);
+	    
+		//Layer no. 5 (Root Layer):
+		layer = new HashMap<String, HashMap<String,List<String>>>();
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot1");
+	    layer.put("Knot1", knot);
+		
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot1");
+	    layer.put("Knot2", knot);
+	    
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot2");
+	    layer.put("Knot3", knot);
+		
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot2");
+	    layer.put("Knot4", knot);
+	    
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot4");
+	    layer.put("Knot5", knot);
+		
+	    knot = get_knot_structure();
+	    knot.get("ParentKnot").add("Knot4");
+	    knot.get("Cost").add("30");	    
+	    knot.get("NumberOfElements").add("100");
+	    knot.get("nElementsOfClasses").add("35");
+	    knot.get("nElementsOfClasses").add("20");
+	    knot.get("nElementsOfClasses").add("45");
+	    knot.get("SplittingFeature").add("X1");
+	    knot.get("Threshold").add("7.0");
+	    knot.get("CostReduction").add("40.2");
+	    layer.put("Knot6", knot);
+	    
+	    dummyTree.put("Layer5", layer);
+	    
+	    nClasses = 3;
+		tree = dummyTree;
+		treeDepth = tree.size();
+				
+	}
+
+	
+	public static void showLeafs(boolean show) {
+		showLeafs = show;
+	}
+	
+	
+	@SuppressWarnings("static-access")
+	public static CART clone_CART_obj_4_plots() {
+				   
+		CART cart_obj = new CART();
+		cart_obj.tree                       = tree;
+		cart_obj.classes                    = classes;
+		cart_obj.classNames                 = classNames;
+		cart_obj.nClasses                   = nClasses;
+		cart_obj.treeDepth                  = treeDepth;
+		cart_obj.explaining_variables       = explaining_variables;
+		cart_obj.n_explaining_variables     = n_explaining_variables;
+		cart_obj.explained_variable         = explained_variable;
+		cart_obj.name_of_explained_variable = name_of_explained_variable;
+		cart_obj.categorical_explained_var  = categorical_explained_var;
+		cart_obj.obj_linearReg              = obj_linearReg;
+		
+		return cart_obj;
+		
+	}
+	
+	
+	@SuppressWarnings("static-access")
+	public static void plot_tree() {
+		
+		//TODO: Delete this test method!
+		//set_dummy_tree();
+		   
+		CART cart_obj = clone_CART_obj_4_plots();
+		
+		DecisionTreeGraphics obj_graph = new DecisionTreeGraphics();
+		
+		obj_graph.setCARTObject(cart_obj);
+		obj_graph.setGraphWidth(800);
+		obj_graph.setGraphHeight(600);
+		obj_graph.showLeafs(showLeafs);
+		String [] title    = {"Decision Tree"};
+		obj_graph.setTitle(title, null, "15");
+		if(inputData.sampleName != null) {
+			String [] subTitle = {inputData.sampleName};
+			obj_graph.setSubTitle1(subTitle, null, "12");
+		}
+		obj_graph.plotLayerGrid = true;
+		obj_graph.setDecimalPlaces4InfoBox(2);
+		obj_graph.plotDecisionTree();
+        	
+	}
+	
+	
+	@SuppressWarnings("static-access")
+	public static void plotFittedExplainedVariable() {
+		
+		CART cart_obj = clone_CART_obj_4_plots();
+		
+		DecisionTreeGraphics obj_graph = new DecisionTreeGraphics();
+
+		obj_graph.setCARTObject(cart_obj);
+		obj_graph.setGraphWidth(600);
+		obj_graph.setGraphHeight(600);
+		
+		obj_graph.plotFittedExplainedVariable();
+		
+	}
+	
+	
+	@SuppressWarnings("static-access")
+	public static void plotHistOfResiduals() {
+		
+		CART cart_obj = clone_CART_obj_4_plots();
+		
+		DecisionTreeGraphics obj_graph = new DecisionTreeGraphics();
+
+		obj_graph.setCARTObject(cart_obj);
+		obj_graph.setGraphWidth(600);
+		obj_graph.setGraphHeight(600);
+		
+		obj_graph.plotHistOfResiduals();
+		
+	}
+	
+	
+	@SuppressWarnings("static-access")
+	public static void plotLeafWeights() {
+		
+		CART cart_obj = clone_CART_obj_4_plots();
+		
+		DecisionTreeGraphics obj_graph = new DecisionTreeGraphics();
+
+		obj_graph.setCARTObject(cart_obj);
+		obj_graph.setGraphWidth(600);
+		obj_graph.setGraphHeight(600);
+		
+		obj_graph.plotLeafWeights();
+		
+	}
+	
+	
+	@SuppressWarnings("static-access")
+	public static void plot_DistOfSplittingFeature() {
+   
+		CART cart_obj = clone_CART_obj_4_plots();
+		
+		DecisionTreeGraphics obj_graph = new DecisionTreeGraphics();
+		
+		obj_graph.setCARTObject(cart_obj);
+		obj_graph.setGraphWidth(600);
+		obj_graph.setGraphHeight(300);
+
+		if(inputData.sampleName != null) {
+			String [] subTitle = {inputData.sampleName};
+			obj_graph.setSubTitle1(subTitle, null, "12");
+		}
+		
+		obj_graph.plotLayerGrid = true;
+		obj_graph.plotDistOfSplittingFeature();
+		
+	}
+	
+	
+	@SuppressWarnings("static-access")
+	public static void main(String[] args) throws Exception {
+		
+		String dirName = "C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Tests/DecisionTrees/BostonHousePriceData.txt";
+		
+		CART obj_cart = new CART();
+		
+		obj_cart.read_CART_numerical_input_data(dirName, true, true);
+		obj_cart.set_CART_explained_variable("MEDV");
+		obj_cart.set_CART_sampleName("Boston Housing Data");
+		obj_cart.set_CART_inputData();
+		obj_cart.set_minNumberOfElementsInKnot(2);
+		obj_cart.set_maxTreeDepth(10);
+		obj_cart.fit_tree();
+		
+		calc_least_square_regressor_weights();
+		
+		
+		//obj_cart.showLeafs(true);
+		//obj_cart.plot_tree();
+		//obj_cart.plot_DistOfSplittingFeature();
+		
+		obj_cart.plotFittedExplainedVariable();
+		//obj_cart.plotHistOfResiduals();
+		//obj_cart.plotLeafWeights();
+		
+		System.out.println("Finished.");
+		
+	}
 	
 }

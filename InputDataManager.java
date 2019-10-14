@@ -7,23 +7,24 @@ import Utilities.Utilities;
 
 public class InputDataManager { 
 	
-	static String file;
-	static String [] colnames;
-	static String [] rownames;
-	public static int numberOfColumns;
-	public static int numberOfRows;
-	static String seperator;
-	static String [][] strFileData;
-	static double [][] dblFileData;
+	public String sampleName;
+	public String file;
+	public String [] colnames;
+	public String [] rownames;
+	public int numberOfColumns;
+	public int numberOfRows;
+	public String seperator;
+	public String [][] strFileData;
+	public double [][] dblFileData;
 	
 	//if data selection is done
-	public static String [] selected_colnames;
-	public static String [] selected_rownames;
-	public static String [][] selectedStrFileData;
-	public static double [][] selectedDblFileData;
+	public String [] selected_colnames;
+	public String [] selected_rownames;
+	public String [][] selectedStrFileData;
+	public double [][] selectedDblFileData;
 	
 	//reads input data as string array
-    public static void fileReader(String fileName, boolean dblData, boolean hasRowNames, boolean hasColNames) throws Exception{
+    public void fileReader(String fileName, boolean dblData, boolean hasRowNames, boolean hasColNames) throws Exception{
     	
  	    file = fileName;  
 	  	
@@ -178,7 +179,7 @@ public class InputDataManager {
 	}
 
     
-    public static void show_loaded_data(){
+    public void show_loaded_data(){
     	
     	if(strFileData != null){
     		
@@ -193,7 +194,7 @@ public class InputDataManager {
     }
     
     
-    public static void show_selected_loaded_data(){
+    public void show_selected_loaded_data(){
     	
     	if(selectedStrFileData != null){
     		
@@ -208,7 +209,7 @@ public class InputDataManager {
     }
     
     
-    public static void show_colnames(){
+    public void show_colnames(){
     	
     	if(colnames != null){
     		
@@ -221,7 +222,7 @@ public class InputDataManager {
     }
     
     
-    public static BufferedReader getBufferedReader(){
+    public BufferedReader getBufferedReader(){
     	
 		BufferedReader reader = null;
 		
@@ -236,7 +237,7 @@ public class InputDataManager {
     }
     
     
-    public static String [] get_allowed_seperators(){
+    public String [] get_allowed_seperators(){
     	
     	String [] allowed_seperators = {",", ";", " "};
     	
@@ -245,7 +246,7 @@ public class InputDataManager {
     }
     
     
-    public static void determine_and_set_seperator(String strLine){
+    public void determine_and_set_seperator(String strLine){
     	
     	String [] allowed_seps = get_allowed_seperators();
     	
@@ -275,7 +276,7 @@ public class InputDataManager {
     }
     
     
-    public static void numberOfLines() throws Exception{
+    public void numberOfLines() throws Exception{
     	
     	String st;
     	
@@ -302,11 +303,11 @@ public class InputDataManager {
     }
     
     
-    public static void numberOfColumns(String strLine){
+    public void numberOfColumns(String strLine){
     	
     	int n_cols = 0;
     	int posIdx1 = 0;
-    	int posIdx2 = strLine.indexOf(seperator, 0);;
+    	int posIdx2 = strLine.indexOf(seperator, 0);
     	
     	while(posIdx2 != -1){
     		
@@ -329,7 +330,7 @@ public class InputDataManager {
     
     
     //returns double values from string line
-    public static double [] convertLineIntoDoubleArray(String strLine){
+    public double [] convertLineIntoDoubleArray(String strLine){
     	    	
     	int sepCount = 0;
     	  		
@@ -391,8 +392,11 @@ public class InputDataManager {
     
     
     //returns double values from string line
-    public static String [] convertLineIntoStringArray(String strLine){
-    	    	
+    public String [] convertLineIntoStringArray(String strLine){
+    	    
+    	//Replace blanks
+    	strLine = strLine.replaceAll("\\s","");
+    	
     	int sepCount = 0;
     	  		
     	int posIdx1;
@@ -403,11 +407,11 @@ public class InputDataManager {
     	
     	posIdx1 = 0;
     	posIdx2 = strLine.indexOf(seperator, 0);
-    
+     	  	
     	while(posIdx2 != -1){
     		  
     		str = strLine.substring(posIdx1, posIdx2);
-    		
+    		    		
     		if(sepCount == 0){
     			
     			strArray[0] = str;
@@ -443,7 +447,7 @@ public class InputDataManager {
     }
     
     
-    public static void selectLoadedData(String [] rowNames, String [] colNames){
+    public void selectLoadedData(String [] rowNames, String [] colNames){
     	
     	int n_rownames = rownames.length;
     	int n_colnames = colnames.length;
@@ -532,8 +536,13 @@ public class InputDataManager {
     }
     
     
+    public void setSampleName(String name) {
+    	sampleName = name;
+    }
+    
+    
     //test client
-    public static void main(String[] args) throws Exception {
+    public void main(String[] args) throws Exception {
     	
 	    fileReader("C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Tests/LogisticRegression/Data.txt", false, true, true);
 	    

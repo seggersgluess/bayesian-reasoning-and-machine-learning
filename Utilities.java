@@ -288,25 +288,40 @@ public class Utilities {
 	}
 	
 	
-	// returns maximum of a supplied vector
+	// returns maximum of a supplied matrix
+	public static int getMax(int[][] x){ 
+	    
+		int nRows = x.length; 
+		int nCols = x[0].length;
+		
+		int maxValue = x[0][0]; 
+		
+		for(int i=0; i<nRows;i++){ 
+			for(int j=0; j<nCols; j++) {
+				if(x[i][0] > maxValue){ 			    	  
+					maxValue = x[i][j]; 
+				} 
+			}      
+		} 
+		
+		return maxValue; 
+		    
+	}
+	
+	
+	// returns maximum of a supplied matrix
 	public static double getMax(double[][] x){ 
 		    
 		double maxValue = x[0][0]; 
 		int nRows = x.length; 
 		int nCols = x[0].length;
 		
-		for(int i=0; i<nRows;i++){ 
-		    
-			for(int j=0; j<nCols; j++){
-				
-				if(x[i][j] > maxValue){ 
-			    	  
-					maxValue = x[i][j]; 
-				         
-				}
-				
-			}
-			  		      
+		for(int i=0; i<nRows;i++){ 		    
+			for(int j=0; j<nCols; j++){				
+				if(x[i][j] > maxValue){ 			    	  
+					maxValue = x[i][j]; 				         
+				}				
+			}			  		      
 		} 
 		    
 		return maxValue; 
