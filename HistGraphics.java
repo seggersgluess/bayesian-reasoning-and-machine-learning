@@ -30,8 +30,8 @@ public class HistGraphics extends GraphicDevice{
     public static List<Double> minValue = new ArrayList<Double>();
 	public static boolean freq = true;
 	
-	public static Color barColor = new Color(135,206,250,180);
-	public static Color lineColor = new Color(0,0,128,180); //Color.WHITE;
+	public static List<Color> barColor = new ArrayList<Color>();
+	public static List<Color> lineColor = new ArrayList<Color>() ; //Color.WHITE;
 
 	public static boolean plotNormalPDF = false;
 	public static List<Integer> plotIdxs4NormalPDF = new ArrayList<Integer>();
@@ -82,11 +82,22 @@ public class HistGraphics extends GraphicDevice{
     	
     	int nSamples = y.size();
     	
+		if(useDifferentColors == true){			
+			barColor = new ArrayList<Color>(nSamples);			
+			for(int i=0; i<nSamples; i++) {
+				int red   = getDefaultColors()[i][0];
+				int green = getDefaultColors()[i][1];
+				int blue  = getDefaultColors()[i][2];
+				
+				barColor.add(new Color(red,green,blue,210));
+			}					
+		}
+    	
 	    set_breakpoints();
 	    count_elements_between_breakpoints();
 	    	
-	    int rectangularWidth  = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
-	    int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+	    int rectangularWidth  = (int) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
+	    int rectangularHeight = (int) ((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
 	    
     	set_x_axis();
     	set_y_axis();
@@ -142,7 +153,7 @@ public class HistGraphics extends GraphicDevice{
     	    		    	    		
     	    	}
     	    	   	    	
-    	    	double stepSize = (double) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns)/nBins;
+    	    	double stepSize = (double) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns)/nBins;
     	    	double maxFreq  = 0.0;
     	    	
     	    	//Determine maximum regarding pdfs
@@ -168,33 +179,23 @@ public class HistGraphics extends GraphicDevice{
     	    	int y1 = 0;
     	    	
     	    	for(int p=0; p<nPlotIdxs; p++){
-    	    		
-    				if(useDifferentColors == true){
-    					
-    					int red   = getDefaultColors()[idx][0];
-    					int green = getDefaultColors()[idx][1];
-    					int blue  = getDefaultColors()[idx][2];
-    					
-    					barColor = new Color(red,green,blue,210);
-    					
-    				}
-    	    		
+    	    		  	    		
         	    	for(int i=0; i<nBins; i++){
 
-        	    		x0 = (int) (border_gap*(c+1)+rectangularWidth*c + i*stepSize);
+        	    		x0 = (int) (leftPosition+border_gap*(c+1)+rectangularWidth*c + i*stepSize);
         	    		x1 = (int) stepSize;
         	    			
-        	    		y0 = (int)((border_gap*(r+1)+rectangularHeight*(r+1))-scale*(listOfCounts.get(p)).get(i));						
+        	    		y0 = (int)(upperPosition+(border_gap*(r+1)+rectangularHeight*(r+1))-scale*(listOfCounts.get(p)).get(i));						
         	    		y1 = (int)(scale*(listOfCounts.get(p)).get(i));
         								
-        				g2.setColor(barColor);
+        				g2.setColor(barColor.get(idx));
         				g2.fillRect(x0, y0, x1, y1);
         					
-        				g2.setColor(lineColor);
+        				g2.setColor(lineColor.get(idx));
         				g2.drawRect(x0, y0, x1, y1);
         				
-        				int xLeft   = border_gap*(c+1)+rectangularWidth*c;
-            	    	int xRight  = (border_gap+rectangularWidth)*(c+1);
+        				int xLeft   = leftPosition+border_gap*(c+1)+rectangularWidth*c;
+            	    	int xRight  = leftPosition+(border_gap+rectangularWidth)*(c+1);
          			
             	    	g2.setColor(grid_color);
             	    	g2.drawLine(xLeft, yBottom, xRight, yBottom);
@@ -216,6 +217,24 @@ public class HistGraphics extends GraphicDevice{
    
 	}
 	
+    
+    public static Color getDefaultBarColor() {
+    	
+    	Color defaultBarColor = new Color(135,206,250,180);
+    	
+    	return defaultBarColor;
+    	
+    }
+    
+    
+    public static Color getDefaultBarLineColor() {
+    	
+    	Color defaultLineColor = new Color(0,0,128,180);
+    	
+    	return defaultLineColor;
+    	
+    }
+    
     
     public static void setDefaultDesign(){
     	
@@ -392,8 +411,40 @@ public class HistGraphics extends GraphicDevice{
 			}
 		}
     	
+    	barColor.add(getDefaultBarColor());
+    	lineColor.add(getDefaultBarLineColor());
+    	
     }
 	
+    
+    public static void plotHistogram(double [][] values, boolean newPlot, Color barCol){
+   	   
+    	setDefaultDesign();
+    	
+    	double [][] x_values = new double [values.length][1];
+    	
+    	convert_input_data(x_values, values, "H");
+	    
+    	//maxValue.add(Utilities.getMax(y.get(y.size()-1)));
+    	//minValue.add(Utilities.getMin(y.get(y.size()-1)));
+    	
+    	int nPlotInfos = plotInfo.size();
+    	
+    	if(nPlotInfos == 0){
+			plotInfo.add(0);
+		}else{
+			if(newPlot == true){				
+				plotInfo.add(plotInfo.get(nPlotInfos-1)+1);				
+			}else{			
+				plotInfo.add(plotInfo.get(nPlotInfos-1));			
+			}
+		}
+    	
+    	barColor.add(barCol);
+    	lineColor.add(getDefaultBarLineColor());
+    	
+    }
+    
     
     public static void plotHistogram(double [][] values, boolean newPlot, boolean plotNormalPDF){
    	   
@@ -426,8 +477,48 @@ public class HistGraphics extends GraphicDevice{
     		
     	}
     	
+    	barColor.add(getDefaultBarColor());
+    	lineColor.add(getDefaultBarLineColor());
+    	
     }
      
+    
+    public static void plotHistogram(double [][] values, boolean newPlot, boolean plotNormalPDF, Color barCol){
+    	   
+    	setDefaultDesign();
+    	
+    	double [][] x_values = new double [values.length][1];
+    	
+    	convert_input_data(x_values, values, "H");
+	    
+    	//maxValue.add(Utilities.getMax(y.get(y.size()-1)));
+    	//minValue.add(Utilities.getMin(y.get(y.size()-1)));
+    	
+    	int nPlotInfos = plotInfo.size();
+    	
+    	if(nPlotInfos == 0){
+			plotInfo.add(0);
+		}else{
+			if(newPlot == true){				
+				plotInfo.add(plotInfo.get(nPlotInfos-1)+1);				
+			}else{			
+				plotInfo.add(plotInfo.get(nPlotInfos-1));			
+			}
+		}
+    	
+    	if(plotNormalPDF == true){
+    		
+    		plotIdxs4NormalPDF.add(plotInfo.size()-1);
+    		
+    		plotNormalPDF(true);
+    		
+    	}
+    	
+    	barColor.add(barCol);
+    	lineColor.add(getDefaultBarLineColor());
+    	
+    }
+    
     
     private static void createAndShowGui() {
 
@@ -449,7 +540,11 @@ public class HistGraphics extends GraphicDevice{
     
     public static void noLinesAroundBars(){
     	
-    	lineColor = barColor;
+    	int nColors = barColor.size();
+    	
+    	for(int i=0; i<nColors; i++) {
+    		lineColor.add(barColor.get(i));
+    	}
     	
     }
     
@@ -513,9 +608,9 @@ public class HistGraphics extends GraphicDevice{
 	    Font orgFont = g2.getFont();
 	    g2.setFont(fontOfXAxisUnits);
 	    
-	    double step_size      = (double) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns)/numberXDivisions;
-	    int rectangularWidth  = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
-	    int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+	    double step_size      = (double) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns)/numberXDivisions;
+	    int rectangularWidth  = (int) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
+	    int rectangularHeight = (int) ((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
 	    
 	    int idx       = 0;
 	    int plotIdx   = -1;
@@ -542,13 +637,13 @@ public class HistGraphics extends GraphicDevice{
     		    double width      = 0.0;//0.01*(getHeight()-2*border_gap);
     			double xLength    = (maxValue.get(idx)-minValue.get(idx))/numberXDivisions; 
     		    			
-    		    int y0 = border_gap*(r+1)+rectangularHeight*(r+1);
+    		    int y0 = upperPosition+border_gap*(r+1)+rectangularHeight*(r+1);
     	    	int y1 = y0 - (int) width;
     		    
     		    for(int i = 0; i<numberXDivisions+1; i++) {
     			       
     		    	g2.setColor(Color.BLACK);
-    		    	int x0 = (int) (step_size*(i)+border_gap*(c+1)+rectangularWidth*c);
+    		    	int x0 = (int) (leftPosition+step_size*(i)+border_gap*(c+1)+rectangularWidth*c);
     		    	int x1 = x0;
     		    	
     		    	//g2.drawLine(x0, y0, x1, y1);
@@ -559,7 +654,7 @@ public class HistGraphics extends GraphicDevice{
     		        	
     		        	g2.setStroke(new BasicStroke(4));	
     		    		g2.setColor(grid_color);
-    		    		g2.drawLine(x0, y1, x1, (border_gap*(r+1)+rectangularHeight*r)); 
+    		    		g2.drawLine(x0, y1, x1, (upperPosition+border_gap*(r+1)+rectangularHeight*r)); 
     		    		
     		    		if(i != numberXDivisions){
     		    			
@@ -567,7 +662,7 @@ public class HistGraphics extends GraphicDevice{
     			    		
     			    		int x0_half = (int) (x0+0.5*step_size);
     			    		int x1_half = x0_half;
-    			    		g2.drawLine(x0_half, y1, x1_half, (border_gap*(r+1)+rectangularHeight*r)); 
+    			    		g2.drawLine(x0_half, y1, x1_half, (upperPosition+border_gap*(r+1)+rectangularHeight*r)); 
     		    			
     		    		}
     		    		
@@ -575,7 +670,7 @@ public class HistGraphics extends GraphicDevice{
     			    	
     		    	}
     		    	
-    		    	g2.setColor(colorOfXAxisUnits );
+    		    	g2.setColor(colorOfXAxisUnits);
     		    	String xlabel = String.format(xAxisUnitsFormat, minValue.get(idx)+xLength*(i))+ "";
     			    FontMetrics metrics = g2.getFontMetrics();
     			    int labelWidth = metrics.stringWidth(xlabel);
@@ -609,8 +704,8 @@ public class HistGraphics extends GraphicDevice{
     	Font orgFont = g2.getFont();
 	    g2.setFont(fontOfYAxisUnits);
    		
-	    int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
-	    int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+	    int rectangularWidth = (int) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
+	    int rectangularHeight = (int) ((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
 	    
 	    int idx       = 0;
 	    int plotIdx   = -1;
@@ -651,7 +746,7 @@ public class HistGraphics extends GraphicDevice{
     	    	}
     		        	    		    
     			double scale     = (double) ((rectangularHeight)/maxFreq);
-    		    int yMaxPos      = (int) ((double)(border_gap*(r+1)+rectangularHeight*(r+1))-scale*maxFreq);
+    		    int yMaxPos      = (int) ((double)(upperPosition+border_gap*(r+1)+rectangularHeight*(r+1))-scale*maxFreq);
     		    int yMinPos      = (int) ((double)yMaxPos-scale*maxFreq);
     			
     		    double step_size  = (yMaxPos-yMinPos)/(numberYDivisions); 
@@ -667,7 +762,7 @@ public class HistGraphics extends GraphicDevice{
     		    for(int i = 0; i<numberYDivisions+1; i++){
     			       
     		    	g2.setColor(Color.BLACK);
-    		    	int x0 = border_gap*(c+1)+rectangularWidth*c;
+    		    	int x0 = leftPosition+border_gap*(c+1)+rectangularWidth*c;
     		    	int x1 = x0+(int) width;
     		    	
     		    	if(i==numberYDivisions){
@@ -684,7 +779,7 @@ public class HistGraphics extends GraphicDevice{
     		        	
     		        	g2.setStroke(new BasicStroke(4));
     		           	g2.setColor(grid_color);
-    		           	g2.drawLine(x1, y1, (border_gap+rectangularWidth)*(c+1), y1); 
+    		           	g2.drawLine(x1, y1, (leftPosition+border_gap+rectangularWidth)*(c+1), y1); 
     			    	
     		    		if(i != numberYDivisions){
     		    			
@@ -692,7 +787,7 @@ public class HistGraphics extends GraphicDevice{
     			    		
     			    		int y0_half = (int) (y0+0.5*step_size);
     			    		int y1_half = y0_half;
-    			    		g2.drawLine(x1, y1_half, (border_gap+rectangularWidth)*(c+1), y1_half); 
+    			    		g2.drawLine(x1, y1_half, (leftPosition+border_gap+rectangularWidth)*(c+1), y1_half); 
     		    			
     		    		}
     		           	
@@ -718,14 +813,14 @@ public class HistGraphics extends GraphicDevice{
     		         
     		    }
     	   		
-    		    if(yMaxPos>(border_gap*(r+1)+rectangularHeight*r)){
+    		    if(yMaxPos>(upperPosition+border_gap*(r+1)+rectangularHeight*r)){
     	            	    	
     		    	int i = 0;
     		    	
-    		    	while(yMaxPos-(step_size*i)>(border_gap*(r+1)+rectangularHeight*r)){
+    		    	while(yMaxPos-(step_size*i)>(upperPosition+border_gap*(r+1)+rectangularHeight*r)){
     	                
     		    		g2.setColor(Color.BLACK);
-    		 	    	int x0 = border_gap*(c+1)+rectangularWidth*c;
+    		 	    	int x0 = leftPosition+border_gap*(c+1)+rectangularWidth*c;
     		 	    	int x1 = x0+(int) width;
     		 	    	int y0 = (int) (yMaxPos-(step_size*i));
     		 	    	int y1 = y0;
@@ -737,7 +832,7 @@ public class HistGraphics extends GraphicDevice{
     			        	
     			        	g2.setStroke(new BasicStroke(4));
     			           	g2.setColor(grid_color);
-    			           	g2.drawLine(x1, y1, (border_gap+rectangularWidth)*(c+1), y1); 
+    			           	g2.drawLine(x1, y1, (leftPosition+border_gap+rectangularWidth)*(c+1), y1); 
     			           	
     			    		if(i != numberYDivisions){
     			    			
@@ -745,7 +840,7 @@ public class HistGraphics extends GraphicDevice{
     				    		
     				    		int y0_half = (int) (y0+0.5*step_size);
     				    		int y1_half = y0_half;
-    				    		g2.drawLine(x1, y1_half, (border_gap+rectangularWidth)*(c+1), y1_half); 
+    				    		g2.drawLine(x1, y1_half, (leftPosition+border_gap+rectangularWidth)*(c+1), y1_half); 
     			    			
     			    		}
     			           		           	
@@ -796,7 +891,7 @@ public class HistGraphics extends GraphicDevice{
    			ArrayList<List<Double>> xOrg = x;
    			ArrayList<List<Double>> yOrg = y;
    			
-   		    int rectangularHeight = (int)((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+   		    int rectangularHeight = (int)((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
    			
    	   		GenGraphics linePlot = new GenGraphics();
 
@@ -978,9 +1073,9 @@ public class HistGraphics extends GraphicDevice{
    	}
    	
    	
-	public static void main(String[] args) {
-		
-		int maxDataPoints = 1000;
+   	public static void histExample1() {
+   		
+   		int maxDataPoints = 1000;
 		
 	 	double [][] x = new double [maxDataPoints][1];
 	 	double [][] y = new double [maxDataPoints][1];
@@ -1044,6 +1139,13 @@ public class HistGraphics extends GraphicDevice{
 	 	setPDFLineWidth(2);
 	 	//noLinesAroundBars();
 	 	plot();
+   		
+   	}
+   	
+   	
+	public static void main(String[] args) {
+		
+		histExample1();
 	 	
 	}
 	

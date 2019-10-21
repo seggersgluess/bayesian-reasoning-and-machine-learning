@@ -8,6 +8,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Polygon;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.math.RoundingMode;
@@ -27,9 +28,9 @@ import Utilities.Utilities;
 public class DecisionTreeGraphics extends GraphicDevice{
 
 	public static Stroke graph_stroke = new BasicStroke(3f);
-    public static int graph_point_width = 10;
-	public static Color pointColor = Color.BLUE;
-	public static Color leafColor  = Color.green;
+    public static int graph_point_width = 8;
+	public static Color pointColor = new Color(44, 102, 230);
+	public static Color leafColor  = new Color (0, 158, 115); //Color.green;
 	public static Color lineColor = Color.BLACK;
 	
 	public static boolean showLeafs = true;
@@ -45,7 +46,22 @@ public class DecisionTreeGraphics extends GraphicDevice{
 	
 	HashMap<String, HashMap<String, Integer>> internal_knot_positions;
 
+	//LayerNumber/ KnotNumber for Infos
+	public static int layerNumber;
+	public static int knotNumber;
+	public static boolean showInfoBox = false;
+	public static boolean showPieChart = true;
 	
+	//Scatter Plots
+	public static boolean showScatterPlots = false;
+	public static Color pointColor4Scatters = new Color(44, 102, 230, 180);
+	public static Color pointColor4IdxPoints = new Color(255, 0, 0, 180);
+	//Histogram Plots
+	public static boolean showHistograms = false;
+	public static Color barColor4Histograms = new Color(44, 102, 230, 180);
+	public static Color barColor4IdxPointInHistogram = new Color(255, 0, 0, 180);
+	
+	@SuppressWarnings("static-access")
 	@Override
 	protected void paintComponent(Graphics g) {
 		
@@ -61,15 +77,97 @@ public class DecisionTreeGraphics extends GraphicDevice{
 	    
 	    g2 = (Graphics2D) g;     
 	    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+	    	    
+	    int windowWidth = pref_w;
+	    int windowHeight = pref_h;
+	    
+	    int treeWidth = windowWidth;
+	    
+	    if(showScatterPlots == true || showHistograms == true || showInfoBox == true) {
+	    	
+	    	if(showScatterPlots == true || showHistograms == true) {
+	    		treeWidth = windowWidth/2;
+	    	}
+	    		    	
+	    	if(layerNumber == 0) {
+	    		System.out.println("No layer number supplied for tree informations.");
+	    		treeWidth = windowWidth;
+	    		showScatterPlots = false;
+	    		showHistograms = false;
+	    		showInfoBox = false;
+	    	}
+	    	if(knotNumber == 0) {
+	    		System.out.println("No knot number supplied for tree informations.");
+	    		treeWidth = windowWidth;
+	    		showScatterPlots = false;
+	    		showHistograms = false;
+	    		showInfoBox = false;
+	    	}
+	    	
+	    }
+	    
+	    int treeHeight = windowHeight;
+	    
+	    setGraphWidth(treeWidth);
+	    setGraphHeight(treeHeight);
+	    
+	    setUpperLeftPosition(0,0);
 	    
 	    set_rectangular();
 	   	    
 	    calc_and_set_tree_knots();
     
-	    create_and_set_info_box(2,2);
+	    if(showInfoBox == true) {
+	    	create_and_set_info_box(layerNumber,knotNumber);
+	    }
 	    
+	    String [] title = new String [1];
+	    String sampleName = cart_obj.get_CART_inputData().sampleName;
+	    
+	    if(cart_obj.isCategoricalTree() == false) {
+	    	title[0] = "Regression Tree";
+	    }
+	    
+	    if(cart_obj.isCategoricalTree() == true) {
+	    	title[0] = "Classification Tree";
+	    }
+	    
+		if(sampleName != null) {
+			if(showScatterPlots == false && showHistograms == false) {
+				String [] subTitle = {sampleName};
+				setSubTitle1(subTitle, null, "12");
+			}else {
+				title[0] += ": " + sampleName;
+			}
+			
+		}
+	    
+		textColor = Color.GRAY;
+		setTitle(title, null, "15");
+		
 	    set_title2plot();
+	    
+	    if(showScatterPlots == true || showHistograms == true) {
 	    	
+		    int scatterWidth = windowWidth-treeWidth+border_gap;
+		    int scatterHeight = windowHeight;
+		    
+		    int scatterXPos = treeWidth-border_gap;
+		    
+		    setUpperLeftPosition(0,scatterXPos);
+		    setGraphWidth(scatterWidth);
+		    setGraphHeight(scatterHeight);
+		    
+		    if(showHistograms == true) {
+		    	set_histogramPlots(layerNumber,knotNumber);
+		    }
+		    if(showScatterPlots == true) {
+		    	set_scatterPlots(layerNumber,knotNumber);
+		    }
+		    
+		    setGraphWidth(windowWidth);
+	    }
+    
 	}
 	
 	
@@ -79,8 +177,8 @@ public class DecisionTreeGraphics extends GraphicDevice{
 		g2.setColor(pointColor);
 		g2.setStroke(graph_stroke);
 		
-		int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
-		int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+		int rectangularWidth = (int) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
+		int rectangularHeight = (int) ((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
 		
 		HashMap <String, HashMap<String, HashMap<String,List<String>>>> tree = cart_obj.get_tree();
 		
@@ -120,8 +218,8 @@ public class DecisionTreeGraphics extends GraphicDevice{
 			
 			if(rotateTree == false) {
 				distBetweenKnots = (int) rectangularWidth/(maxNumberOfKnots+1);
-				x = border_gap;
-				y = border_gap+distBetweenLayers*l-graph_point_width/2;
+				x = leftPosition+border_gap;
+				y = upperPosition+border_gap+distBetweenLayers*l-graph_point_width/2;
 				startX4LayerLine = x;
 				endX4LayerLine   = x+rectangularWidth;
 				startY4LayerLine = y+graph_point_width/2;
@@ -130,8 +228,8 @@ public class DecisionTreeGraphics extends GraphicDevice{
 			
 			if(rotateTree == true) {
 				distBetweenKnots = (int) rectangularHeight/(maxNumberOfKnots+1);
-				y = border_gap;
-				x = border_gap+distBetweenLayers*l-graph_point_width/2;
+				y = upperPosition+border_gap;
+				x = leftPosition+border_gap+distBetweenLayers*l-graph_point_width/2;
 				startX4LayerLine = x+graph_point_width/2;
 				endX4LayerLine   = startX4LayerLine;
 				startY4LayerLine = y;
@@ -204,7 +302,7 @@ public class DecisionTreeGraphics extends GraphicDevice{
 					}	
 				}	
 			}
-			
+						
 			points.add(layerKnotPoints);
 					
 		}
@@ -222,10 +320,10 @@ public class DecisionTreeGraphics extends GraphicDevice{
 			}	
 			g2.setColor(pointColor);
 		}
-		
+			
 	}
 	
-	
+		
 	@SuppressWarnings("static-access")
 	public void create_and_set_info_box(int layerNumber, int knotNumber) {
 		
@@ -248,8 +346,8 @@ public class DecisionTreeGraphics extends GraphicDevice{
 		String knotLabel  = "Knot"+knotNumber;
 		int internalPos = internal_knot_positions.get(layerLabel).get(knotLabel);
 		
-		int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
-		int rectangularHeight =(int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+		int rectangularWidth = (int) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
+		int rectangularHeight =(int) ((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
 		
 		//int dummyNumberOfKnots = get_dummy_knots_4_layers(treeDepth)[(layerNumber-1)][0];
 		
@@ -264,14 +362,14 @@ public class DecisionTreeGraphics extends GraphicDevice{
 		if(rotateTree == false) {
 			distBetweenLayers = (int) ((double) rectangularHeight/((double) treeDepth-1));
 			distBetweenKnots = (int) rectangularWidth/(maxNumberOfKnots+1);
-			xKnotPos = border_gap+distBetweenKnots*internalPos;
-			yKnotPos = border_gap+distBetweenLayers*(layerNumber-1);
+			xKnotPos = leftPosition+border_gap+distBetweenKnots*internalPos;
+			yKnotPos = upperPosition+border_gap+distBetweenLayers*(layerNumber-1);
 		}
 		if(rotateTree == true) {
 			distBetweenLayers = (int) rectangularWidth/(treeDepth-1);
 			distBetweenKnots = (int) rectangularHeight/(maxNumberOfKnots+1);
-			xKnotPos = border_gap+distBetweenLayers*(layerNumber-1);
-			yKnotPos = border_gap+distBetweenKnots*internalPos;
+			xKnotPos = leftPosition+border_gap+distBetweenLayers*(layerNumber-1);
+			yKnotPos = upperPosition+border_gap+distBetweenKnots*internalPos;
 		}
 		
 		String [] infoStrings = get_info_str_4_box(layerNumber,knotNumber);
@@ -283,7 +381,7 @@ public class DecisionTreeGraphics extends GraphicDevice{
 		int vertDistFromKnot = (int) graph_point_width/2;
 		int horDistFromKnot  = (int) graph_point_width/2;
 		int xArrowWidth = (int) graph_point_width/2;
-		xArrowWidth -= 2;
+		xArrowWidth += 4;
 		int yArrowWidth = xArrowWidth; 
 		
 		//Info Box:		
@@ -293,8 +391,8 @@ public class DecisionTreeGraphics extends GraphicDevice{
 		int yPoly = y;
 		
 		//Check Distance to plot frame (leftside/ downside):
-		int leftSideDist = getWidth()-(x+boxWidth);
-		int downSideDist = getHeight()-(y+boxHeight);
+		int leftSideDist = leftPosition+pref_w-(x+boxWidth);
+		int downSideDist = upperPosition+pref_h-(y+boxHeight);
 			
 		if(leftSideDist<0) {
 			x -= boxWidth+2*horDistFromKnot;
@@ -307,7 +405,7 @@ public class DecisionTreeGraphics extends GraphicDevice{
 			yArrowWidth *= -1;
 		}
 		
-		g2.setColor(Color.WHITE);
+		g2.setColor(new Color(255,255,255,180));
 		g2.fillRect(x, y, boxWidth,boxHeight);
 		g2.setColor(lineColor);
 		g2.drawRect(x, y, boxWidth,boxHeight);
@@ -339,6 +437,27 @@ public class DecisionTreeGraphics extends GraphicDevice{
 		//Point distPlotCoordinates = new Point(x4DistributionPlot, y4DistributionPlot);
 		//createAndSetBarPlotOfClassDist(distPlotCoordinates, layerNumber, knotNumber);
 		
+		if(showPieChart == true) {
+			Color [] pieColors = new Color [2];
+			pieColors[0] = pointColor4IdxPoints;
+			pieColors[1] = pointColor4Scatters;
+			
+			double [][] pieValues = new double [2][1];
+			pieValues[0][0] = cart_obj.get_knot_number_of_elements(layerNumber, knotNumber);
+			pieValues[1][0] = cart_obj.get_explained_variable().length-pieValues[0][0]; 
+			
+			PieGraphics pieChart = new PieGraphics();
+			pieChart.setPieValues(pieValues);
+			pieChart.setPieColors(pieColors);
+			
+			Rectangle pieArea = new Rectangle();
+			pieArea.x = x+boxWidth*9/10;
+			pieArea.y = y-boxHeight*7/10;
+			pieArea.width = boxHeight;
+			pieArea.height = boxHeight;
+			pieChart.drawPie(pieArea);
+		}
+					
 	}
 	
 	
@@ -788,6 +907,181 @@ public class DecisionTreeGraphics extends GraphicDevice{
 	}
 	
 	
+	public void showScatterPlots(boolean showPlots) {
+		showScatterPlots = showPlots;
+	}
+	
+	
+	public void showHistograms(boolean showHist) {
+		showHistograms = showHist;
+	}
+	
+	
+	public void showInfoBox(boolean showBox) {
+		showInfoBox = showBox;
+	}
+	
+	
+	public void showPieChart(boolean showPie) {
+		showPieChart = showPie;
+	}
+	
+	
+	public void setLayerAndKnotNumber4PlotInfos(int layer, int knot) {
+		layerNumber = layer;
+		knotNumber = knot;
+	}
+	
+	
+	@SuppressWarnings("static-access")
+	public static void set_scatterPlots(int layerNumber, int knotNumber) {
+		
+		int width = pref_w;
+		int height = pref_h;
+		
+		GenGraphics genGraph = new GenGraphics();
+		//TODO:Set col/row numbers generically!
+		genGraph.setNumberOfPlotColums(3);
+		genGraph.setNumberOfPlotRows(5);	 	
+		genGraph.setGraphWidth(width);
+		genGraph.setGraphHeight(height);
+		genGraph.g2.setStroke(new BasicStroke(1f));
+		
+		List<Integer> knotObsIdxs = cart_obj.get_knot_idxs(layerNumber, knotNumber);
+		
+		String [] names_explaining_vars = cart_obj.get_names_of_explaining_variables();
+		String name_explained_var   = cart_obj.get_name_of_explained_variable();
+		double [][] explaining_vars = cart_obj.get_explaining_variables();
+		double [][] explained_var   = cart_obj.get_explained_variable();
+		int n_obs = explaining_vars.length;
+		int n_explaining_vars = names_explaining_vars.length;
+		
+		title = new ArrayList<String>();
+		plotInfo = new ArrayList<Integer>();
+		subTitle1 = null;
+		String [] title = new String [n_explaining_vars]; 
+		String [] yLables = new String [n_explaining_vars];
+		String [] xLables = new String [n_explaining_vars];
+		
+		for(int i=0; i<n_explaining_vars; i++) {
+			double [][] explaining_var = new double [n_obs][1];
+			List<Color> colors = new ArrayList<Color>(n_obs); 
+			for(int j=0; j<n_obs; j++) {
+				explaining_var[j][0] = explaining_vars[j][i];
+				boolean includesIdx = knotObsIdxs.contains(j);
+				if(includesIdx == true) {
+					colors.add(pointColor4IdxPoints);
+				}else {
+					colors.add(pointColor4Scatters);
+				}
+			}
+			title[i] = name_explained_var + " / " + names_explaining_vars[i];
+			yLables[i] = name_explained_var;
+			xLables[i] = names_explaining_vars[i];
+			genGraph.plotPoints(explaining_var,explained_var,true, colors);
+		}
+		
+		genGraph.set_point_width(3);
+		
+		genGraph.calc_and_set_scaled_points();
+        
+	    //Set white rectangular
+		genGraph.set_rectangular();
+	 	    
+		genGraph.setFontOfXAxisUnits("plain", 8);
+		genGraph.setFontOfYAxisUnits("plain", 8); 
+	    genGraph.setNumberOfDigits4YAxis(1);
+	    genGraph.setNumberOfDigits4XAxis(1);
+	    genGraph.setNumberOfXDivisions(5);;
+	    genGraph.set_x_axis();
+	    genGraph.set_y_axis();
+	               	        
+	    genGraph.createPointPlot();
+	    genGraph.setTitle(title, null, "8");
+	    genGraph.setXLabel(xLables, null, "6");
+	    genGraph.setYLabel(yLables, null, "6"); 
+	    
+	    genGraph.set_title2plot();
+	    genGraph.set_xLabel2plot();
+	    genGraph.set_yLabel2plot();
+	 	
+	}
+	
+	
+	@SuppressWarnings("static-access")
+	public static void set_histogramPlots(int layerNumber, int knotNumber) {
+		
+		title = new ArrayList<String>();
+		plotInfo = new ArrayList<Integer>();
+		subTitle1 = null;
+		
+		HistGraphics histGraph = new HistGraphics();
+		histGraph.setNumberOfPlotColums(3);
+		histGraph.setNumberOfPlotRows(5);
+		histGraph.set_numberOfBins(40);
+		histGraph.setNumberOfDigits4XAxis(2);
+		histGraph.setNumberOfDigits4YAxis(2);
+
+	 	//set_max_x_value(max);
+	 	//set_min_x_value(min);
+		histGraph.useDifferentColors = false;
+		histGraph.freqHist(false);	
+		histGraph.setPDFLineWidth(2);
+	 	//noLinesAroundBars();
+		
+		
+		List<Integer> knotObsIdxs = cart_obj.get_knot_idxs(layerNumber, knotNumber);
+		int nIdxs = knotObsIdxs.size();
+		
+		String [] names_explaining_vars = cart_obj.get_names_of_explaining_variables();
+		double [][] explaining_vars = cart_obj.get_explaining_variables();
+
+		int n_obs = explaining_vars.length;
+		int n_explaining_vars = names_explaining_vars.length;
+	 	
+		String [] titles = new String [n_explaining_vars];
+		String [] xLabels = new String [n_explaining_vars];
+		String [] yLabels = new String [n_explaining_vars];
+		
+		for(int i=0; i<n_explaining_vars; i++) {
+			double [][] explaining_var = new double [n_obs][1];			
+			double [][] seclected_explaining_var = new double [nIdxs][1];
+			titles[i] = names_explaining_vars[i];
+			xLabels[i] = titles[i];
+			yLabels[i] = "";
+			int counter = 0;
+			for(int j=0; j<n_obs; j++) {
+				explaining_var[j][0] = explaining_vars[j][i];
+				boolean includesIdxs = knotObsIdxs.contains(j);
+				if(includesIdxs == true) {
+					seclected_explaining_var[counter][0] = explaining_vars[j][i];
+					counter++;
+				}
+			}
+			
+			histGraph.plotHistogram(explaining_var, true, false, barColor4Histograms);
+			histGraph.plotHistogram(seclected_explaining_var, false, false, barColor4IdxPointInHistogram);
+			
+		}
+
+		histGraph.set_rectangular();
+		histGraph.g2.setStroke(new BasicStroke(1));
+		histGraph.setTitle(titles, null, "8");
+		histGraph.setFontOfXAxisUnits("plain",8);
+		histGraph.setFontOfYAxisUnits("plain",8);
+		histGraph.setYLabel(yLabels, null, null);
+		histGraph.setNumberOfXDivisions(4);
+		histGraph.setNumberOfYDivisions(2);
+		histGraph.setXLabel(xLabels, null, "6");
+		histGraph.createHistogram();
+		
+		histGraph.set_title2plot();
+		histGraph.set_xLabel2plot();
+		histGraph.set_yLabel2plot();
+		
+	}
+	
+	
 	@SuppressWarnings("static-access")
 	public static void plotFittedExplainedVariable() {
 		
@@ -798,7 +1092,7 @@ public class DecisionTreeGraphics extends GraphicDevice{
 			return;
 		}
 		
-		double [][] explained_var        = cart_obj.get_explained_variables();
+		double [][] explained_var        = cart_obj.get_explained_variable();
 		double [][] fitted_explained_var = obj_linearReg.get_fitted_values();
 		
 		int n=explained_var.length;
@@ -855,9 +1149,9 @@ public class DecisionTreeGraphics extends GraphicDevice{
 	 	
 	 	HistGraphics histPlot = new HistGraphics();
 	 	
-	 	histPlot.plotHistogram(residuals,true,true);
+	 	Color color4Hist = new Color(44, 102, 230, 180);
+	 	histPlot.plotHistogram(residuals,true,true,color4Hist);
 	 	histPlot.useDifferentColors = false;
-	 	histPlot.barColor = new Color(44, 102, 230, 180);
 	 	histPlot.setNumberOfPlotColums(1);
 	 	histPlot.setNumberOfPlotRows(1);
 	 	histPlot.set_numberOfBins(50);

@@ -23,7 +23,7 @@ import Utilities.Utilities;
 public class GenGraphics extends GraphicDevice{
 
     public static List<Color> graph_line_color = new ArrayList<Color>();
-    public static List<Color> graph_point_color = new ArrayList<Color>();
+    public static ArrayList<List<Color>> graph_point_color = new ArrayList<List<Color>>();
     public static Stroke graph_stroke = new BasicStroke(3f);
     public static int graph_point_width = 6;
    	
@@ -266,14 +266,27 @@ public class GenGraphics extends GraphicDevice{
 	    if(pointPlotIdxs[0] != -1){        	
 	        	
 	        for(int i=0; i<pointPlotIdxs.length; i++){
-	          	
-	        	g2.setColor(graph_point_color.get(i));
 	        	
-	            List<Point> graphPoints = graphPoints4Samples.get(pointPlotIdxs[i]);
+	        	List<Point> graphPoints = graphPoints4Samples.get(pointPlotIdxs[i]);
 	            int sampleLength        = graphPoints.size();
-	            	
+	        	
+	          	List<Color> color = graph_point_color.get(i);
+	          	int nColors = color.size();
+	          	
+	          	if(nColors==1) {
+	          		g2.setColor(color.get(0));
+	          	}else {
+	          		if(nColors != sampleLength) {
+	          			throw new RuntimeException("Invalid number of point colors supplied.");
+	          		}
+	          	}
+	        		
 	            for(int j=0; j<sampleLength; j++) {
 	                        
+	            	if(nColors != 1) {
+	            		g2.setColor(color.get(j));
+	            	}
+	            	
 	            	int x = graphPoints.get(j).x - graph_point_width / 2;
 	            	int y = graphPoints.get(j).y - graph_point_width / 2;;
 	            	int ovalW = graph_point_width;
@@ -312,7 +325,7 @@ public class GenGraphics extends GraphicDevice{
 			  		    g2.setStroke(graph_stroke);
 			  		    				  		    
 			  		    List<Point> pointPlotsSample = graphPoints4Samples.get(plotIdxs[pointIdx]);
-			  		    Color pointColor = graph_point_color.get(pointIdx);
+			  		    Color pointColor = graph_point_color.get(pointIdx).get(0);
 			  		    
 			  		    List<Point> GraphPoints1 = graphPoints4Samples.get(plotIdxs[0]);
 			  		    List<Point> GraphPoints2 = graphPoints4Samples.get(plotIdxs[1]);
@@ -429,7 +442,7 @@ public class GenGraphics extends GraphicDevice{
 	    
 	    double yScaleFactor = y_max-y_min;
 	        
-	    double yMaxPos = border_gap*(plotRow+1)+rectangularHeight*plotRow;	    
+	    double yMaxPos = upperPosition+border_gap*(plotRow+1)+rectangularHeight*plotRow;	    
 	    
         double yScale = (double) (((border_gap+rectangularHeight)*(plotRow+1))-yMaxPos)/yScaleFactor; //(double) ((pref_h-border_gap) - yMaxPos)/yScaleFactor;
 	    
@@ -440,8 +453,8 @@ public class GenGraphics extends GraphicDevice{
 	        double xVal = x.get(sampleNumber).get(i);
 	        double yVal = y.get(sampleNumber).get(i);
 	        	 
-	        int x1 = (int) ((xVal-x_min)*xScale + border_gap*(plotColumn+1)+rectangularWidth*plotColumn);  //(int) ((xVal-x_min)*xScale + border_gap);       			
-            int y1 = (int) ((border_gap+rectangularHeight)*(plotRow+1)+(y_min-yVal)*yScale); //((pref_h-border_gap) + (y_min-yVal)*yScale);  (y_min-yVal)*yScale)
+	        int x1 = (int) ((xVal-x_min)*xScale + leftPosition+border_gap*(plotColumn+1)+rectangularWidth*plotColumn);  //(int) ((xVal-x_min)*xScale + border_gap);       			
+            int y1 = (int) (upperPosition+(border_gap+rectangularHeight)*(plotRow+1)+(y_min-yVal)*yScale); //((pref_h-border_gap) + (y_min-yVal)*yScale);  (y_min-yVal)*yScale)
 	        		        	
 	        graphPoints.add(new Point(x1, y1));
 	             
@@ -469,7 +482,7 @@ public class GenGraphics extends GraphicDevice{
 	    double yScaleFactor = extYScaleFactor;	    	
 	    double yMaxPos = extYMaxPos; //border_gap;	    	
  
-        double yScale = (double) (((border_gap+rectangularHeight)*(plotRow+1))-yMaxPos)/yScaleFactor; //(double) ((pref_h-border_gap) - yMaxPos)/yScaleFactor;
+        double yScale = (double) (((upperPosition+border_gap+rectangularHeight)*(plotRow+1))-yMaxPos)/yScaleFactor; //(double) ((pref_h-border_gap) - yMaxPos)/yScaleFactor;
 	    
 	    List<Point> graphPoints = new ArrayList<Point>();
 	    	  
@@ -478,8 +491,8 @@ public class GenGraphics extends GraphicDevice{
 	        double xVal = x.get(sampleNumber).get(i);
 	        double yVal = y.get(sampleNumber).get(i);
 	        	 
-	        int x1 = (int) ((xVal-x_min)*xScale + border_gap*(plotColumn+1)+rectangularWidth*plotColumn);  //(int) ((xVal-x_min)*xScale + border_gap);       			
-            int y1 = (int) ((border_gap+rectangularHeight)*(plotRow+1)+(y_min-yVal)*yScale); //((pref_h-border_gap) + (y_min-yVal)*yScale);  (y_min-yVal)*yScale)
+	        int x1 = (int) ((xVal-x_min)*xScale + (leftPosition+border_gap)*(plotColumn+1)+rectangularWidth*plotColumn);  //(int) ((xVal-x_min)*xScale + border_gap);       			
+            int y1 = (int) ((upperPosition+border_gap+rectangularHeight)*(plotRow+1)+(y_min-yVal)*yScale); //((pref_h-border_gap) + (y_min-yVal)*yScale);  (y_min-yVal)*yScale)
 	        		        	
 	        graphPoints.add(new Point(x1, y1));
 	             
@@ -533,8 +546,8 @@ public class GenGraphics extends GraphicDevice{
 		
 		int counter = 0;
 			
-		int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
-	    int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+		int rectangularWidth = (int) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
+	    int rectangularHeight = (int) ((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
 		
 	    int plotInfoNumber = -1;	    	    
 	    double x_min = 0.0;
@@ -548,8 +561,8 @@ public class GenGraphics extends GraphicDevice{
 	    		break;    	    		
 	    	}
 					
-			int yUp     = border_gap*(r+1)+rectangularHeight*r;
-			int yBottom = (border_gap+rectangularHeight)*(r+1);
+			int yUp     = upperPosition+border_gap*(r+1)+rectangularHeight*r;
+			int yBottom = upperPosition+(border_gap+rectangularHeight)*(r+1);
 			
 			int c = 0;
 			
@@ -572,8 +585,8 @@ public class GenGraphics extends GraphicDevice{
 					
 				}
 				
-				int xLeft   = border_gap*(c+1)+rectangularWidth*(c);
-				int xRight  = (border_gap+rectangularWidth)*(c+1);
+				int xLeft   = leftPosition+border_gap*(c+1)+rectangularWidth*(c);
+				int xRight  = leftPosition+(border_gap+rectangularWidth)*(c+1);
 				
 				g2.setColor(Color.BLACK);
 				g2.drawLine(xLeft, yBottom, xRight, yBottom);
@@ -651,8 +664,8 @@ public class GenGraphics extends GraphicDevice{
 		
 		int counter = 0;
 			
-		int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
-	    int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+		int rectangularWidth = (int) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
+	    int rectangularHeight = (int) ((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
 		
 	    int plotInfoNumber = -1;	    
 	    double y_min = 0.0;
@@ -666,15 +679,15 @@ public class GenGraphics extends GraphicDevice{
 	    		break;	    		
 	    	}
 					
-			int yUp     = border_gap*(r+1)+rectangularHeight*r;
-			int yBottom = (border_gap+rectangularHeight)*(r+1);
+			int yUp     = upperPosition+border_gap*(r+1)+rectangularHeight*r;
+			int yBottom = upperPosition+(border_gap+rectangularHeight)*(r+1);
 			
 			int c = 0;
 			
 			while(c<numberOfPlotColumns){
 				
-				int xLeft   = border_gap*(c+1)+rectangularWidth*(c);
-				int xRight  = (border_gap+rectangularWidth)*(c+1);
+				int xLeft   = leftPosition+border_gap*(c+1)+rectangularWidth*(c);
+				int xRight  = leftPosition+(border_gap+rectangularWidth)*(c+1);
 				
 			    g2.setColor(Color.BLACK);
 			    g2.drawLine(xLeft, yBottom, xLeft, yUp);
@@ -859,7 +872,10 @@ public class GenGraphics extends GraphicDevice{
 			
 			nPlotInfos++;
 			
-			graph_point_color.add(new Color(100, 100, 100, 180));
+			List<Color> color = new ArrayList<Color>(1);
+			color.add(new Color(100, 100, 100, 180));
+			
+			graph_point_color.add(color);
 			
 		}
 		
@@ -869,6 +885,39 @@ public class GenGraphics extends GraphicDevice{
 	  
 	
 	public static void plotPoints(double [][] x_values, double [][] y_values, boolean newPlot, Color pointColor){
+		   
+	    convert_input_data(x_values, y_values, "P");
+		
+	    int nSamples = x_values[0].length;
+	    
+		int nPlotInfos = plotInfo.size();
+		
+		for(int i=0; i<nSamples; i++){
+			
+			if(nPlotInfos == 0){
+				plotInfo.add(0);
+			}else{
+				if(newPlot == true){				
+					plotInfo.add(plotInfo.get(nPlotInfos-1)+1);				
+				}else{			
+					plotInfo.add(plotInfo.get(nPlotInfos-1));			
+				}
+			}
+			
+			nPlotInfos++;
+			
+			List<Color> color = new ArrayList<Color>(1);
+			color.add(pointColor);
+			graph_point_color.add(color);
+			
+		}
+				
+		setDefaultDesign();
+		
+	}
+	
+	
+	public static void plotPoints(double [][] x_values, double [][] y_values, boolean newPlot, List<Color> pointColor){
 		   
 	    convert_input_data(x_values, y_values, "P");
 		

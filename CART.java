@@ -951,12 +951,8 @@ public class CART {
 					if(idx[0] == -1) {
 						layerLeafs.add(prevLayerKnot);
 					}
-				}
-				
-				//if(layerLeafs.isEmpty() == false) {
-				leafs.put(prevLayerLabel, layerLeafs);
-				//}
-																		
+				}				
+				leafs.put(prevLayerLabel, layerLeafs);																						
 			}
 		}
 		
@@ -1097,8 +1093,13 @@ public class CART {
 	}
 	
 	
-	public static double [][] get_explained_variables() {
+	public static double [][] get_explained_variable() {
 		return explained_variable;
+	}
+	
+	
+	public static double [][] get_explaining_variables() {
+		return explaining_variables;
 	}
 	
 	
@@ -1117,6 +1118,11 @@ public class CART {
 			System.out.println("Linear regression not done yet for fitted tree.");
 		}
 		return obj_linearReg;
+	}
+	
+	
+	public static InputDataManager get_CART_inputData() {
+		return inputData;
 	}
 	
 	
@@ -1284,6 +1290,7 @@ public class CART {
 		cart_obj.name_of_explained_variable = name_of_explained_variable;
 		cart_obj.categorical_explained_var  = categorical_explained_var;
 		cart_obj.obj_linearReg              = obj_linearReg;
+		cart_obj.inputData                  = inputData;
 		
 		return cart_obj;
 		
@@ -1301,21 +1308,21 @@ public class CART {
 		DecisionTreeGraphics obj_graph = new DecisionTreeGraphics();
 		
 		obj_graph.setCARTObject(cart_obj);
-		obj_graph.setGraphWidth(800);
+		obj_graph.setGraphWidth(900);
 		obj_graph.setGraphHeight(600);
 		obj_graph.showLeafs(showLeafs);
-		String [] title    = {"Decision Tree"};
-		obj_graph.setTitle(title, null, "15");
-		if(inputData.sampleName != null) {
-			String [] subTitle = {inputData.sampleName};
-			obj_graph.setSubTitle1(subTitle, null, "12");
-		}
+
 		obj_graph.plotLayerGrid = true;
 		obj_graph.setDecimalPlaces4InfoBox(2);
+		obj_graph.setLayerAndKnotNumber4PlotInfos(2, 2);
+		obj_graph.showInfoBox(true);
+		obj_graph.showPieChart(true);
+		obj_graph.showHistograms(false);
+		obj_graph.showScatterPlots(true);
 		obj_graph.plotDecisionTree();
-        	
+        			
 	}
-	
+		
 	
 	@SuppressWarnings("static-access")
 	public static void plotFittedExplainedVariable() {
@@ -1399,17 +1406,17 @@ public class CART {
 		obj_cart.set_CART_sampleName("Boston Housing Data");
 		obj_cart.set_CART_inputData();
 		obj_cart.set_minNumberOfElementsInKnot(2);
-		obj_cart.set_maxTreeDepth(10);
+		obj_cart.set_maxTreeDepth(8);
 		obj_cart.fit_tree();
 		
-		calc_least_square_regressor_weights();
+		//calc_least_square_regressor_weights();
 		
 		
 		//obj_cart.showLeafs(true);
-		//obj_cart.plot_tree();
+		obj_cart.plot_tree();
 		//obj_cart.plot_DistOfSplittingFeature();
 		
-		obj_cart.plotFittedExplainedVariable();
+		//obj_cart.plotFittedExplainedVariable();
 		//obj_cart.plotHistOfResiduals();
 		//obj_cart.plotLeafWeights();
 		

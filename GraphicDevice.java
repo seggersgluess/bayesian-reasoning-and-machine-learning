@@ -24,6 +24,9 @@ public class GraphicDevice extends JPanel{
     public static int pref_h = 400;
     protected static int border_gap = (int) (pref_h*0.15);
     
+    public static int upperPosition = 0;
+    public static int leftPosition = 0;
+      
     protected static ArrayList<List<Double>> x    = new ArrayList<List<Double>>();
     protected static ArrayList<List<String>> xStr = new ArrayList<List<String>>();
     protected static ArrayList<List<Double>> y    = new ArrayList<List<Double>>();
@@ -75,8 +78,8 @@ public class GraphicDevice extends JPanel{
     	
     	g2.setColor(rectColor);
     	
-    	int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
-    	int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+    	int rectangularWidth = (int) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
+    	int rectangularHeight = (int) ((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
     	
     	int counter = 0;
     	
@@ -88,11 +91,11 @@ public class GraphicDevice extends JPanel{
     			break;
     		}
     		
-    		int y0 = border_gap*(i+1)+rectangularHeight*i;
+    		int y0 = upperPosition+(border_gap)*(i+1)+rectangularHeight*i;
     		
     		for(int j=0; j<numberOfPlotColumns; j++){
     				
-    			int x0 = border_gap*(j+1)+rectangularWidth*j;
+    			int x0 = leftPosition+(border_gap)*(j+1)+rectangularWidth*j;
     			
         		g2.fillRect(x0, y0, rectangularWidth, rectangularHeight);
     		
@@ -105,6 +108,14 @@ public class GraphicDevice extends JPanel{
     		}
     			
     	}
+    	
+    }
+    
+    
+    public static void setUpperLeftPosition(int upperPos, int leftPos) {
+    	
+    	upperPosition = upperPos;
+    	leftPosition  = leftPos;
     	
     }
     
@@ -164,8 +175,8 @@ public class GraphicDevice extends JPanel{
     	
     	if(title != null){
     		
-        	int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
-        	int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+        	int rectangularWidth = (int) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
+        	int rectangularHeight = (int) ((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
     		
         	int nTitles        = title.size();
         	int nPlots         = Utilities.getMaxFromIntList(plotInfo)+1;
@@ -198,7 +209,7 @@ public class GraphicDevice extends JPanel{
 	    			break;
 	    		}
     			
-	    		int yPos = (int)((border_gap*(r)+rectangularHeight*r)+border_gap/(scale+9.0/5.5));	    		
+	    		int yPos = (int)(upperPosition+(border_gap*(r)+rectangularHeight*r)+border_gap/(scale+9.0/5.5));	    		
 	    		
     			for(int c=0; c<numberOfPlotColumns; c++){
     				
@@ -208,7 +219,7 @@ public class GraphicDevice extends JPanel{
     					title4plot = "";
     				}
     				
-    	    		int xPos = border_gap*(c+1)+rectangularWidth*c + rectangularWidth/2;
+    	    		int xPos = leftPosition+border_gap*(c+1)+rectangularWidth*c + rectangularWidth/2;
     	    			    		
     	    		int titleWidth = metrics.stringWidth(title4plot)/2;
     	    		 
@@ -284,8 +295,8 @@ public class GraphicDevice extends JPanel{
     		
     		String label       = "";
     		
-    		int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
-        	int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+    		int rectangularWidth = (int) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
+        	int rectangularHeight = (int) ((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
     		
     		int counter = 0;
     		
@@ -305,8 +316,8 @@ public class GraphicDevice extends JPanel{
 	    		
 	        		FontMetrics metrics = g2.getFontMetrics();
 	        		
-	        		int xPos = border_gap*(c+1)+rectangularWidth*c + (rectangularWidth)/2;
-	        		int yPos = ((border_gap+rectangularHeight)*(r+1)+border_gap/(scale+3));
+	        		int xPos = leftPosition+border_gap*(c+1)+rectangularWidth*c + (rectangularWidth)/2;
+	        		int yPos = (upperPosition+(border_gap+rectangularHeight)*(r+1)+border_gap/(scale+3));
 	        		
 	        		int labelWidth = metrics.stringWidth(label)/2;
 	        		
@@ -364,8 +375,8 @@ public class GraphicDevice extends JPanel{
     		int nPlots         = Utilities.getMaxFromIntList(plotInfo)+1;
     		String label       = "";
     		
-    		int rectangularWidth = (int) ((getWidth()-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
-        	int rectangularHeight = (int) ((getHeight()-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
+    		int rectangularWidth = (int) ((pref_w-(numberOfPlotColumns+1)*border_gap)/numberOfPlotColumns);
+        	int rectangularHeight = (int) ((pref_h-(numberOfPlotRows+1)*border_gap)/numberOfPlotRows);
     		
     		int counter = 0;
     		 	
@@ -375,7 +386,7 @@ public class GraphicDevice extends JPanel{
 	    			break;
 	    		}
     		
-	    		int yPos = (border_gap*(r+1) + rectangularHeight*r)+rectangularHeight/2;
+	    		int yPos = upperPosition+(border_gap*(r+1) + rectangularHeight*r)+rectangularHeight/2;
 	    		
 	    		for(int c=0; c<numberOfPlotColumns; c++){
     				
@@ -385,7 +396,7 @@ public class GraphicDevice extends JPanel{
 	    				label = "";
 	    			}
 	    			
-	    			int xPos = border_gap*(c+1)+rectangularWidth*c-labelUnitWidth;//border_gap/2;
+	    			int xPos = leftPosition+border_gap*(c+1)+rectangularWidth*c-labelUnitWidth;//border_gap/2;
 	        		        		    				
 	        		AffineTransform affineTransform = new AffineTransform();
 	        		affineTransform.rotate(Math.toRadians(-90), 0, 0);
