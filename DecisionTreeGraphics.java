@@ -51,6 +51,7 @@ public class DecisionTreeGraphics extends GraphicDevice{
 	public static int knotNumber;
 	public static boolean showInfoBox = false;
 	public static boolean showPieChart = true;
+	public static boolean showClassDist = false;
 	
 	//Scatter Plots
 	public static boolean showScatterPlots = false;
@@ -430,12 +431,16 @@ public class DecisionTreeGraphics extends GraphicDevice{
 		Point boxCoordinates = new Point(x, y);
 		set_info_str_2_box(boxCoordinates, infoStrings);
 		
-		//TODO: Scale distance between Boxes (here 5)
-		//Flag for BarPlot!
-		//int x4DistributionPlot = x+boxWidth+5;
-		//int y4DistributionPlot = y;
-		//Point distPlotCoordinates = new Point(x4DistributionPlot, y4DistributionPlot);
-		//createAndSetBarPlotOfClassDist(distPlotCoordinates, layerNumber, knotNumber);
+		boolean isCategorical = cart_obj.isCategoricalTree();
+		if(isCategorical == true) {
+			//TODO: Scale distance between Boxes (here 5)
+			if(showClassDist == true) {
+				int x4DistributionPlot = x+boxWidth+5;
+				int y4DistributionPlot = y;
+				Point distPlotCoordinates = new Point(x4DistributionPlot, y4DistributionPlot);
+				createAndSetBarPlotOfClassDist(distPlotCoordinates, layerNumber, knotNumber);
+			}			
+		}	
 		
 		if(showPieChart == true) {
 			Color [] pieColors = new Color [2];
@@ -501,19 +506,12 @@ public class DecisionTreeGraphics extends GraphicDevice{
 	    int frameWidth = 18;
 		
 		int [][] classDist = cart_obj.get_knot_class_distribution(layerNumber, knotNumber);
-	    String [] classLabels = {"A", "B", "C"};
-	    //--------------
-	    //TODO: Delete!
-	    //int n=10;
-	    //int [][] classDist = new int [n][1];
-	    //String [] classLabels = new String [n];
-	    //for(int i=0; i<n; i++) {
-	    //	classDist[i][0]=i+11;
-	    //	classLabels[i] = "A";
-	    //}
-	  //--------------
-	    
-		int nClasses = classDist.length;
+	    String [] classLabels = cart_obj.get_class_names();
+	    int nClasses = classLabels.length;
+	    for(int i=0; i<nClasses; i++) {
+	    	classLabels[i] = classLabels[i].substring(0, 3).toUpperCase();
+	    }
+
 		int maxNumber = Utilities.getMax(classDist);
 		
 		//TODO:maxNumber < 4 (see also yAxis)		
@@ -922,6 +920,11 @@ public class DecisionTreeGraphics extends GraphicDevice{
 	}
 	
 	
+	public void showClassDist(boolean showClassDistribution) {
+		showClassDist = showClassDistribution;
+	}
+	
+	
 	public void showPieChart(boolean showPie) {
 		showPieChart = showPie;
 	}
@@ -934,15 +937,39 @@ public class DecisionTreeGraphics extends GraphicDevice{
 	
 	
 	@SuppressWarnings("static-access")
+	public static HashMap<String,Integer> getNumberOfRowsAndColumns4Plots() {
+		
+		HashMap<String,Integer> nRowsAndCols = new HashMap<String,Integer>();
+		
+		int n_vars = cart_obj.get_names_of_explaining_variables().length;
+		int n = (int) Math.round(Math.sqrt(n_vars));
+		
+		int diff = n_vars-n*n;
+		
+		if(diff>0) {
+			nRowsAndCols.put("nRows",n+1);
+		}else {
+			nRowsAndCols.put("nRows",n);
+		}	
+		nRowsAndCols.put("nColumns", n);
+		
+		return nRowsAndCols;
+		
+	}
+	
+	
+	@SuppressWarnings("static-access")
 	public static void set_scatterPlots(int layerNumber, int knotNumber) {
 		
 		int width = pref_w;
 		int height = pref_h;
 		
 		GenGraphics genGraph = new GenGraphics();
-		//TODO:Set col/row numbers generically!
-		genGraph.setNumberOfPlotColums(3);
-		genGraph.setNumberOfPlotRows(5);	 	
+		
+		HashMap<String,Integer> nRowsAndCols = getNumberOfRowsAndColumns4Plots();
+		
+		genGraph.setNumberOfPlotColums(nRowsAndCols.get("nColumns"));
+		genGraph.setNumberOfPlotRows(nRowsAndCols.get("nRows"));	 	
 		genGraph.setGraphWidth(width);
 		genGraph.setGraphHeight(height);
 		genGraph.g2.setStroke(new BasicStroke(1f));
@@ -992,7 +1019,15 @@ public class DecisionTreeGraphics extends GraphicDevice{
 		genGraph.setFontOfYAxisUnits("plain", 8); 
 	    genGraph.setNumberOfDigits4YAxis(1);
 	    genGraph.setNumberOfDigits4XAxis(1);
-	    genGraph.setNumberOfXDivisions(5);;
+	    genGraph.setNumberOfXDivisions(5);
+	    
+	    boolean isCategorical = cart_obj.isCategoricalTree();
+	    if(isCategorical == true) {
+	    	int nClasses = cart_obj.get_class_names().length;
+	    	genGraph.setNumberOfYDivisions(nClasses-1);
+	    	genGraph.setNumberOfDigits4YAxis(0);
+	    }
+	    
 	    genGraph.set_x_axis();
 	    genGraph.set_y_axis();
 	               	        
@@ -1016,8 +1051,11 @@ public class DecisionTreeGraphics extends GraphicDevice{
 		subTitle1 = null;
 		
 		HistGraphics histGraph = new HistGraphics();
-		histGraph.setNumberOfPlotColums(3);
-		histGraph.setNumberOfPlotRows(5);
+		
+		HashMap<String,Integer> nRowsAndCols = getNumberOfRowsAndColumns4Plots();		
+		histGraph.setNumberOfPlotColums(nRowsAndCols.get("nColumns"));
+		histGraph.setNumberOfPlotRows(nRowsAndCols.get("nRows"));
+		
 		histGraph.set_numberOfBins(40);
 		histGraph.setNumberOfDigits4XAxis(2);
 		histGraph.setNumberOfDigits4YAxis(2);
@@ -1272,6 +1310,11 @@ public class DecisionTreeGraphics extends GraphicDevice{
 	
     private static void createAndShowGui() {
 
+		if(showScatterPlots == true && showHistograms == true) {
+			System.out.println("Showing scatter plot and histogram not possible.");
+			return;
+		}
+    	
     	DecisionTreeGraphics mainPanel = new DecisionTreeGraphics();
 
     	String frameLabel;

@@ -1,5 +1,6 @@
 package Utilities;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import Mathematics.MatrixOperations;
@@ -33,7 +34,7 @@ public class Utilities {
 		return sorted_vec;		
 		
 	}
-	
+		
 	
 	public static List<Double> get_sorted_elements_of_matrix_column(double [][] X, int colIdx){
 		
@@ -51,6 +52,35 @@ public class Utilities {
 			
 			for(int j=0; j<min_idxs.length; j++){
 				
+				sorted_vec.add(min);
+				idx = idx + 1;
+			}
+						
+			x = MatrixOperations.get_double_comp_sub_vec_4_indices(x, min_idxs);
+			
+		}
+		
+		return sorted_vec;		
+		
+	}
+	
+	
+	public static List<Double> get_unique_sorted_elements_for_matrix_column(double [][] X, int colIdx){
+		
+		double [] x = MatrixOperations.get_column_from_matrix(X, colIdx);
+		
+		int idx = 0;
+		
+		List<Double> sorted_vec = new ArrayList<Double>();	
+		x = get_unique_elements(x);
+		int n = x.length;
+		
+		for(int i=0; i<n; i++){
+			
+			double min      = getMin(x);
+			int [] min_idxs = get_idx(x, min);
+			
+			for(int j=0; j<min_idxs.length; j++){				
 				sorted_vec.add(min);
 				idx = idx + 1;
 			}
@@ -522,21 +552,44 @@ public class Utilities {
 		int nRows = X.length; 
 		int nCols = X[0].length;
 		
-		for(int i=0; i<nRows;i++){ 
-		    
-			for(int j=0; j<nCols; j++){
-				
-				if(X[i][j] < minValue){ 
-			    	  
-					minValue = X[i][j]; 
-				         
-				}
-				
-			}
-			  		      
+		for(int i=0; i<nRows;i++){ 		    
+			for(int j=0; j<nCols; j++){				
+				if(X[i][j] < minValue){ 			    	  
+					minValue = X[i][j]; 				         
+				}				
+			}			  		      
 		} 
 		    
 		return minValue; 
+		    
+	}
+	
+	
+	// returns minimum of a supplied vector/ matrix
+	public static HashMap<String,Double> getMinWithIdx(double[][] X){ 
+		    
+		double minValue = X[0][0]; 
+		double rowIdx = 0;
+		double colIdx = 0;
+		int nRows = X.length; 
+		int nCols = X[0].length;
+		
+		for(int i=0; i<nRows;i++){ 		    
+			for(int j=0; j<nCols; j++){				
+				if(X[i][j] < minValue){ 			    	  
+					minValue = X[i][j]; 	
+					rowIdx = i;
+					colIdx = j;
+				}				
+			}			  		      
+		} 
+		    
+		HashMap<String,Double> minInfos = new HashMap<String,Double>();
+		minInfos.put("min", minValue);
+		minInfos.put("rowIdx", rowIdx);
+		minInfos.put("colIdx", colIdx);
+			
+		return minInfos; 
 		    
 	}
 	
@@ -990,35 +1043,9 @@ public class Utilities {
     // test client
     public static void main(String[] args) {
     	
-    	//double [] a = {-2.0, -1.0, 8.0, -7.0};
-    	//double [] sorted_vec = get_sorted_vec(a);
-    	//double [] sorted_vec = get_unique_elements(a);
-    	//int [] idxs =  get_idxs_for_sorted_vec(a);
-    	
-    	//double [] x = MatrixOperations.get_double_sub_vec_4_indices(a, idxs);
-    	
-    	//double [] dbl_idxs = convert_int_to_double_array(idxs);
-    	
-    	//System.out.print(sorted_vec.length);
-    	
-    	//String [] b= {"Hallo", "Bla", "Hallo"};
-    	//int [] idxs = get_idx(b, "H");
-    	
-    	//int [] a = getRandomIntNumbers(1,5,10);
-    	
-       	//MatrixOperations.print_vector(reverse_array(a));
-    	//System.out.print(sorted_vec[1]);
-    	
-    	//String str = " No     id female    ses  schtyp     prog read write math science socst       honors awards cid ";
-    	
-    	//String [] a = {"a", "a", "b", "a", "c", "d", "c"};
-    	
-    	//String [] b = get_unique_elements(a);
-    	  	
-    	@SuppressWarnings("unused")
-		List<Integer> a = get_idx_of_char_in_str("2,3,", ",");
-    	
-    	
+    	double [] a = {-2.0, -1.0, 8.0, -7.0, -2.0, -7.0, 8.0};
+    	MatrixOperations.print_vector(get_unique_elements(a));
+    	    	
     }
 	
 }
