@@ -14,18 +14,18 @@ public class CART {
 	static InputDataManager inputData;
 	static String [] selectedRows;
 	
-	static double [][] explained_variable;
-	static double [][] explaining_variables;	
-	static String name_of_explained_variable;
-	static String [] names_of_explaining_variables;
+	protected static double [][] explained_variable;
+	protected static double [][] explaining_variables;	
+	protected static String name_of_explained_variable;
+	protected static String [] names_of_explaining_variables;
 	
-	static int n_observations;
-	static int n_explaining_variables;
+	protected static int n_observations;
+	protected static int n_explaining_variables;
 	
 	static boolean categorical_explained_var;
-	static double [] classes;
+	protected static double [] classes;
 	static String [] classNames;
-	static int nClasses;
+	protected static int nClasses;
 	
 	//User specified values to control tree growing
 	static double minCostReduction = 0.0;
@@ -303,7 +303,7 @@ public class CART {
 				double t = sorted_knot_sample.get(j).get(k);
 	            for(int i=0; i<knotSampleLength; i++) {	
 	            	int sampleIdx = knotIdxs.get(i);
-	            	if(explaining_variables[sampleIdx][j]<=t) {
+	            	if(getExplaining_variables()[sampleIdx][j]<=t) {
 	            		leftIdxs.add(sampleIdx);
 	            	}else {
 	            		rightIdxs.add(sampleIdx);
@@ -408,7 +408,7 @@ public class CART {
 				double t = sorted_knot_sample.get(j).get(k);
 	            for(int i=0; i<knotSampleLength; i++) {	
 	            	int sampleIdx = knotIdxs.get(i);
-	            	if(explaining_variables[sampleIdx][j]<=t) {
+	            	if(getExplaining_variables()[sampleIdx][j]<=t) {
 	            		leftIdxs.add(Integer.toString(sampleIdx));
 	            	}else {
 	            		rightIdxs.add(Integer.toString(sampleIdx));
@@ -518,7 +518,7 @@ public class CART {
 		for(int i=0; i<n_explaining_variables; i++) {
 			for(int j=0; j<n_idxs; j++) {
 				int idx = knotIdxs.get(j);
-				knotSample[j][i] = explaining_variables[idx][i];
+				knotSample[j][i] = getExplaining_variables()[idx][i];
 			}
 		}
 		
@@ -825,12 +825,12 @@ public class CART {
 		for(int i=0; i<n; i++) {
 			int idx = Integer.parseInt(strIdxs.get(i));
 			for(int j=0; j<n_explaining_variables; j++) {
-				explaining_vars[i][j] = explaining_variables[idx][j];
+				explaining_vars[i][j] = getExplaining_variables()[idx][j];
 			}
 			
 		}
 		
-		return explaining_variables;
+		return getExplaining_variables();
 		
 	}
 	
@@ -947,7 +947,7 @@ public class CART {
 				int [] idx = Utilities.Utilities.get_idx(classNames, inputData.selectedStrFileData[i][0]);
 				explained_variable[i][0] = classes[idx[0]];
 				for(int j=0; j<n_explaining_variables; j++) {
-					explaining_variables[i][j] = Double.parseDouble(inputData.selectedStrFileData[i][j+1]);
+					getExplaining_variables()[i][j] = Double.parseDouble(inputData.selectedStrFileData[i][j+1]);
 				}
 			}
 
@@ -956,7 +956,7 @@ public class CART {
 			for(int i=0; i<n_observations; i++) {
 				explained_variable[i][0] = inputData.selectedDblFileData[i][0];
 				for(int j=0; j<n_explaining_variables; j++) {
-					explaining_variables[i][j] = inputData.selectedDblFileData[i][j+1];
+					getExplaining_variables()[i][j] = inputData.selectedDblFileData[i][j+1];
 				}
 			}					
 		}
@@ -1166,7 +1166,7 @@ public class CART {
 	
 	
 	public static double [][] get_explaining_variables() {
-		return explaining_variables;
+		return getExplaining_variables();
 	}
 	
 	
@@ -1391,5 +1391,11 @@ public class CART {
 		exampleClassificationTree();
 		
 	}
+
+
+	public static double [][] getExplaining_variables() {
+		return explaining_variables;
+	}
+
 	
 }
