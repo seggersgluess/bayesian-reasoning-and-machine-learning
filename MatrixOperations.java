@@ -965,6 +965,31 @@ public class MatrixOperations {
 	}
 	
 	
+	// returns (complementary) sub vector as list with elements not in index set idxs
+	public static List<Double> get_double_comp_sub_vec_4_indices(List<Double> x, int [] idxs){
+		
+		int n = x.size();
+		int n_comps = n-idxs.length;
+		List<Double> comp_sub_vec = new ArrayList<Double>(n_comps);
+		int idx = 0;
+		
+		double [] dbl_idxs = Utilities.convert_int_to_double_array(idxs);
+		
+		for(int i=0; i<n; i++){
+			
+			int [] valid_idxs = Utilities.get_idx(dbl_idxs, (double) i);
+				
+			if(valid_idxs[0] == -1){					
+				comp_sub_vec.add(x.get(i));
+				idx = idx + 1;	
+			}				 			
+		}
+				
+		return comp_sub_vec;
+		
+	}
+	
+	
 	// returns a integer sub vector between start and end index of a supplied vector
 	public static int [] get_int_sub_vec(int [] x, int start_idx, int end_idx){
 		
@@ -982,12 +1007,9 @@ public class MatrixOperations {
 		
 		int idx = 0	;	
 				
-		for(int i=start_idx; i<(end_idx+1); i++){
-			
-			sub_vec[idx] = x[i];
-			
-			idx  =  idx + 1;
-					
+		for(int i=start_idx; i<(end_idx+1); i++){			
+			sub_vec[idx] = x[i];			
+			idx++;					
 		}
 		
 		return sub_vec;
@@ -1002,10 +1024,8 @@ public class MatrixOperations {
 		
 		double [][] reverse_x = new double [1][n_cols];
 		
-		for(int i=0; i<n_cols; i++){
-			
-			reverse_x[0][i] = x[0][n_cols-(i+1)];
-			
+		for(int i=0; i<n_cols; i++){			
+			reverse_x[0][i] = x[0][n_cols-(i+1)];			
 		}
 				
 		return reverse_x;
@@ -1016,14 +1036,10 @@ public class MatrixOperations {
 	// prints supplied double matrix A
 	public static void print_matrix(double [][] A){
 		
-		for (int i = 0; i < A.length; i++) {
-			
-		    for (int j = 0; j < A[i].length; j++) {
-		    	
-		        System.out.print(A[i][j] + " ");
-		        
-		    }
-		    
+		for (int i = 0; i < A.length; i++) {			
+		    for (int j = 0; j < A[i].length; j++) {		    	
+		        System.out.print(A[i][j] + " ");		        
+		    }		    
 		    System.out.println();
 		}
 		
@@ -1033,14 +1049,10 @@ public class MatrixOperations {
 	// prints supplied string matrix A
 	public static void print_matrix(String [][] A){
 		
-		for (int i = 0; i < A.length; i++) {
-			
-		    for (int j = 0; j < A[i].length; j++) {
-		    	
-		        System.out.print(A[i][j] + " ");
-		        
-		    }
-		    
+		for (int i = 0; i < A.length; i++) {			
+		    for (int j = 0; j < A[i].length; j++) {		    	
+		        System.out.print(A[i][j] + " ");		        
+		    }		    
 		    System.out.println();
 		}
 		
@@ -1050,12 +1062,9 @@ public class MatrixOperations {
 	// prints supplied vector x
 	public static void print_vector(double [] x){
 		
-		for (int i = 0; i < x.length; i++) {
-					    	
-		    System.out.print(x[i] + " ");
-		         		    
-		}
-		
+		for (int i = 0; i < x.length; i++) {					    	
+		    System.out.print(x[i] + " ");		         		    
+		}		
 		System.out.println();
 		
 	}
@@ -1072,18 +1081,13 @@ public class MatrixOperations {
 		
 		double [] c = new double [n_elements];
 		
-		for(int i = 0; i < n_a; i++){
-			
-			c[i] = a[i];
-			
+		for(int i = 0; i < n_a; i++){			
+			c[i] = a[i];			
 		}
 				
-		for(int i = n_a; i < n_elements; i++){
-			
-			c[i] = b[b_idx];
-			
-			b_idx = b_idx + 1;
-			
+		for(int i = n_a; i < n_elements; i++){			
+			c[i] = b[b_idx];			
+			b_idx++;			
 		}
 		
 		return c;
@@ -1322,6 +1326,25 @@ public class MatrixOperations {
 		for(int i=0; i<n_cols; i++){			
 			for(int j=0; j<n_rows; j++){				
 				A[j][i] = x[idx][0];				
+				idx++;						
+			}			
+		}
+		
+		return A;
+		
+	}
+	
+	
+	// returns matrix A from column vector x
+	public static double [][] get_matrix_from_vec(List<Double> x, int n_rows, int n_cols){
+		
+		double [][] A = new double [n_rows][n_cols];
+		
+		int idx = 0;
+		
+		for(int i=0; i<n_cols; i++){			
+			for(int j=0; j<n_rows; j++){				
+				A[j][i] = x.get(idx);				
 				idx++;						
 			}			
 		}

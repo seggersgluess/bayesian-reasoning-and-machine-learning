@@ -303,7 +303,7 @@ public class CART {
 				double t = sorted_knot_sample.get(j).get(k);
 	            for(int i=0; i<knotSampleLength; i++) {	
 	            	int sampleIdx = knotIdxs.get(i);
-	            	if(getExplaining_variables()[sampleIdx][j]<=t) {
+	            	if(explaining_variables[sampleIdx][j]<=t) {
 	            		leftIdxs.add(sampleIdx);
 	            	}else {
 	            		rightIdxs.add(sampleIdx);
@@ -408,7 +408,7 @@ public class CART {
 				double t = sorted_knot_sample.get(j).get(k);
 	            for(int i=0; i<knotSampleLength; i++) {	
 	            	int sampleIdx = knotIdxs.get(i);
-	            	if(getExplaining_variables()[sampleIdx][j]<=t) {
+	            	if(explaining_variables[sampleIdx][j]<=t) {
 	            		leftIdxs.add(Integer.toString(sampleIdx));
 	            	}else {
 	            		rightIdxs.add(Integer.toString(sampleIdx));
@@ -418,6 +418,61 @@ public class CART {
 	            List<String> splitFeat = new ArrayList<String>(1);
 	            List<String> threshold = new ArrayList<String>(1);
 	            splitFeat.add(names_of_explaining_variables[j]);
+	            threshold.add(Double.toString(t));
+	            
+	            if(returnKnotIdxs == true) {
+	            	splittingInfos.put("LeftIdxs",leftIdxs);
+		            splittingInfos.put("RightIdxs",rightIdxs);
+	            }
+	                        
+	            splittingInfos.put("SplittingFeature", splitFeat);   
+	            splittingInfos.put("Threshold", threshold);
+	               
+	            stump_infos.add(splittingInfos);
+	            
+			}
+			
+		}
+		
+		return stump_infos;
+		
+	}
+	
+	
+	//Method for Viola-Jones-AdaBoost
+	public static ArrayList<HashMap<String,List<String>>> get_decision_stump(ArrayList<List<Double>> explainingFeatures, boolean returnKnotIdxs){
+		
+		ArrayList<HashMap<String,List<String>>> stump_infos = new ArrayList<HashMap<String,List<String>>>();
+
+		int nSamples = explainingFeatures.size();
+		int nExpFeatures = explainingFeatures.get(0).size();
+		
+		ArrayList<List<Double>> sorted_samples = new ArrayList<List<Double>>();
+		
+		for(int i=0; i<nExpFeatures; i++) {
+			List<Double> sample = explainingFeatures.get(i);
+			List<Double> sorted_sample = Utilities.Utilities.get_unique_elements_from_double_list(sample);
+			sorted_samples.add(sorted_sample);
+		}
+		
+		for(int j=0; j<nExpFeatures; j++) {
+			HashMap<String,List<String>> splittingInfos = new HashMap<String,List<String>>();
+			int n_sorted_elements = sorted_samples.get(j).size();
+			for(int k=0; k<n_sorted_elements; k++) {
+				List<String> leftIdxs = new ArrayList<String>();
+				List<String> rightIdxs = new ArrayList<String>();
+				double t = sorted_samples.get(j).get(k);
+	            for(int i=0; i<nSamples; i++) {	
+	            	if(explainingFeatures.get(i).get(j)<=t) {
+	            		leftIdxs.add(Integer.toString(i));
+	            	}else {
+	            		rightIdxs.add(Integer.toString(i));
+	            	}
+	            }
+	           
+	            List<String> splitFeat = new ArrayList<String>(1);
+	            List<String> threshold = new ArrayList<String>(1);
+	            splitFeat.add(Integer.toString(j));
 	            threshold.add(Double.toString(t));
 	            
 	            if(returnKnotIdxs == true) {
@@ -518,7 +573,7 @@ public class CART {
 		for(int i=0; i<n_explaining_variables; i++) {
 			for(int j=0; j<n_idxs; j++) {
 				int idx = knotIdxs.get(j);
-				knotSample[j][i] = getExplaining_variables()[idx][i];
+				knotSample[j][i] = explaining_variables[idx][i];
 			}
 		}
 		
@@ -825,12 +880,12 @@ public class CART {
 		for(int i=0; i<n; i++) {
 			int idx = Integer.parseInt(strIdxs.get(i));
 			for(int j=0; j<n_explaining_variables; j++) {
-				explaining_vars[i][j] = getExplaining_variables()[idx][j];
+				explaining_vars[i][j] = explaining_variables[idx][j];
 			}
 			
 		}
 		
-		return getExplaining_variables();
+		return explaining_variables;
 		
 	}
 	
@@ -947,7 +1002,7 @@ public class CART {
 				int [] idx = Utilities.Utilities.get_idx(classNames, inputData.selectedStrFileData[i][0]);
 				explained_variable[i][0] = classes[idx[0]];
 				for(int j=0; j<n_explaining_variables; j++) {
-					getExplaining_variables()[i][j] = Double.parseDouble(inputData.selectedStrFileData[i][j+1]);
+					explaining_variables[i][j] = Double.parseDouble(inputData.selectedStrFileData[i][j+1]);
 				}
 			}
 
@@ -956,7 +1011,7 @@ public class CART {
 			for(int i=0; i<n_observations; i++) {
 				explained_variable[i][0] = inputData.selectedDblFileData[i][0];
 				for(int j=0; j<n_explaining_variables; j++) {
-					getExplaining_variables()[i][j] = inputData.selectedDblFileData[i][j+1];
+					explaining_variables[i][j] = inputData.selectedDblFileData[i][j+1];
 				}
 			}					
 		}
@@ -1166,7 +1221,7 @@ public class CART {
 	
 	
 	public static double [][] get_explaining_variables() {
-		return getExplaining_variables();
+		return explaining_variables;
 	}
 	
 	
@@ -1235,7 +1290,7 @@ public class CART {
 		//Graph configuration
 		//TODO: Modification of config. handling for GUIs
 		obj_graph.setCARTObject(cart_obj);
-		obj_graph.setGraphWidth(1000);
+		obj_graph.setGraphWidth(900);
 		obj_graph.setGraphHeight(600);
 		obj_graph.showLeafs(showLeafs);
 
@@ -1386,15 +1441,10 @@ public class CART {
 	
 	public static void main(String[] args) throws Exception {
 		
-		//exampleRegressionTree();
+		exampleRegressionTree();
 
-		exampleClassificationTree();
+		//exampleClassificationTree();
 		
-	}
-
-
-	public static double [][] getExplaining_variables() {
-		return explaining_variables;
 	}
 
 	

@@ -1,6 +1,7 @@
 package ObjectDetection;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import Mathematics.MatrixOperations;
@@ -17,7 +18,7 @@ public class ViolaJonesCascadeClassifier {
 	int [] layers;
 	
 	
-	public void cascadeClassifier() {
+	public void trainCascadeClassifier() {
 		
 		int nLayers = layers.length;
 		vjClassifiers = new ArrayList<ViolaJones>(nLayers);
@@ -35,7 +36,9 @@ public class ViolaJonesCascadeClassifier {
 		}
 		
 		int n_posIdxs = posIdxs.size();
-
+		
+		ArrayList<HashMap<String,List<String>>> overallWeakClassifierResults = new ArrayList<HashMap<String,List<String>>> ();;
+		
 		for(int l=0; l<nLayers; l++) {
 			
 			List<Integer> falsePositives = new ArrayList<Integer>();
@@ -46,25 +49,45 @@ public class ViolaJonesCascadeClassifier {
 			}
 			
 			ViolaJones vj = new ViolaJones();
-			vj.set_imageHeigth(imageHeight);
-			vj.set_imageWidth(imageWidth);
 			vj.set_numberOfIterations(layers[l]);
 			
-			for(int i=0; i<n_posIdxs; i++) {
-				int idx = posIdxs.get(i);
-				vj.setImageAndLabel(images.get(idx),labels.get(idx));
+			ArrayList<List<Double>> imageSelection = new ArrayList<List<Double>>();
+			List<Double> labelSelection = new ArrayList<Double>();
+			ArrayList<HashMap<String,List<String>>> weakClassifierResSelection = new ArrayList<HashMap<String,List<String>>> ();
+			
+			if(l==1) {
+				//Get all weak classifier results from first iteration for usage in next iterations
+				overallWeakClassifierResults = vj.get_weakClassifierResults();
 			}
 			
-			for(int i=0; i<n_negIdxs; i++) {
-				int idx = negIdxs.get(i);
-				vj.setImageAndLabel(images.get(idx),labels.get(idx));
+			if(l>0) {
+				for(int i=0; i<n_posIdxs; i++) {
+					int idx = posIdxs.get(i);
+					imageSelection.add(images.get(idx));
+					labelSelection.add(labels.get(idx));
+					if(overallWeakClassifierResults != null) {
+						weakClassifierResSelection.add(overallWeakClassifierResults.get(idx));
+					}
+					
+				}
+				
+				for(int i=0; i<n_negIdxs; i++) {
+					int idx = negIdxs.get(i);
+					imageSelection.add(images.get(idx));
+					labelSelection.add(labels.get(idx));
+					if(overallWeakClassifierResults != null) {
+						weakClassifierResSelection.add(overallWeakClassifierResults.get(idx));
+					}
+				}
 			}
 				
-			//TODO: features of images do not change-> not calculating for every layer!
-			//Has to be calculated one time!
-			//Then idx selection!
-			vj.set_features4Images();
-			vj.calc_ViolaJonesObjectDetection();
+			if(l==0) {
+				vj.setImageAndLabel(images, imageWidth, imageHeight, labels);
+			} else {			
+				vj.set_pre_calculated_features(imageSelection, imageWidth, imageHeight, weakClassifierResSelection, labelSelection);
+			}
+			
+			vj.trainViolaJonesObjectDetection();
 			
 			vjClassifiers.add(vj);
 			
@@ -73,7 +96,7 @@ public class ViolaJonesCascadeClassifier {
 				int idx = negIdxs.get(i);
 				List<Double> vecImage = images.get(idx);
 				double [][] image = MatrixOperations.get_matrix_from_vec(vecImage, imageHeight, imageWidth);
-				double classification = classify(image);
+				double classification = cascadeClassify(image);
 				if(classification == 1.0) {
 					falsePositives.add(idx);
 				}
@@ -84,7 +107,7 @@ public class ViolaJonesCascadeClassifier {
 	}
 	
 	
-	public double classify(double [][] newImage) {
+	public double cascadeClassify(double [][] newImage) {
 		
 		int nClassifiers = vjClassifiers.size();
 				
@@ -95,8 +118,7 @@ public class ViolaJonesCascadeClassifier {
 			}
 		}
 		
-		return 1.0;
-		
+		return 1.0;		
 	}
 	
 	

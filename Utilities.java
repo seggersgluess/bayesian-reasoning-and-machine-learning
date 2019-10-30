@@ -94,6 +94,33 @@ public class Utilities {
 	}
 	
 	
+	public static List<Double> get_unique_sorted_elements_of_double_list(List<Double> x){
+		
+		int idx = 0;
+		
+		List<Double> sorted_vec = new ArrayList<Double>();	
+		x = get_unique_elements_from_double_list(x);
+		int n = x.size();
+		
+		for(int i=0; i<n; i++){
+			
+			double min      = getMin(x);
+			int [] min_idxs = get_idx(x, min);
+			
+			for(int j=0; j<min_idxs.length; j++){				
+				sorted_vec.add(min);
+				idx = idx + 1;
+			}
+						
+			x = MatrixOperations.get_double_comp_sub_vec_4_indices(x, min_idxs);
+			
+		}
+		
+		return sorted_vec;		
+		
+	}
+	
+	
 	// returns indices of sorted elements in unsorted vector
 	public static int [] get_idxs_for_sorted_vec(double [] x){
 		
@@ -178,6 +205,28 @@ public class Utilities {
 		}
 		
 		return unique_vec;		
+		
+	}
+	
+	
+	public static List<Double> get_unique_elements_from_double_list(List<Double> x){
+		
+		int n = x.size();
+		
+		List<Double> unique_elements = new ArrayList<Double>();
+		unique_elements.add(x.get(0));
+		
+		for(int i=1; i<n; i++){
+			
+			int [] idx = get_idx(unique_elements,x.get(i));
+			
+			if(idx[0] == -1){
+				unique_elements.add(x.get(i));
+			}
+			
+		}
+		
+		return unique_elements;
 		
 	}
 	
@@ -702,6 +751,40 @@ public class Utilities {
 	
 	
 	// returns position index of an element in supplied vector
+	public static int [] get_idx(double [][] x, double search_element){
+		
+		int [] search_idxs = new int [x.length];
+		
+		int idx = 0;		
+				
+		for(int i=0; i<x.length; i++){
+			
+			if(x[i][0] == search_element){
+				
+				search_idxs[idx] = i;
+				idx = idx+1;
+				
+			}
+			
+		}
+		
+		if(idx == 0){
+			
+			int [] idxs = new int [1];
+			idxs[0] = -1;
+			return idxs;
+			
+		}else{
+			
+			int [] idxs = MatrixOperations.get_int_sub_vec(search_idxs, 0, (idx-1));
+			return idxs;
+			
+		}
+	   	
+	}
+	
+	
+	// returns position index of an element in supplied vector
 	public static int [] get_idx(String [] x, String search_element){
 		
 		int [] search_idxs = new int [x.length];
@@ -762,6 +845,39 @@ public class Utilities {
 	
 	
 	// returns position index of an element in supplied vector
+	public static int [] get_idx(List<Double> x, double search_element){
+		
+		int [] search_idxs = new int [x.size()];
+		
+		int idx = 0;		
+				
+		for(int i=0; i<x.size(); i++){
+						
+			if(x.get(i) == search_element){
+				
+				search_idxs[idx] = i;
+				idx = idx+1;
+				
+			}
+			
+		}
+		
+		if(idx == 0){
+			
+			int [] idxs = new int [1];
+			idxs[0] = -1;
+			return idxs;
+			
+		}else{
+			
+			int [] idxs = MatrixOperations.get_int_sub_vec(search_idxs, 0, (idx-1));
+			return idxs;
+			
+		}
+	   	
+	}
+	
+	
 	public static int [] get_idx(List<Integer> x, int search_element){
 		
 		int [] search_idxs = new int [x.size()];
@@ -1043,9 +1159,34 @@ public class Utilities {
     // test client
     public static void main(String[] args) {
     	
-    	double [] a = {-2.0, -1.0, 8.0, -7.0, -2.0, -7.0, 8.0};
-    	MatrixOperations.print_vector(get_unique_elements(a));
-    	    	
+    	//double [] a = {-2.0, -1.0, 8.0, -7.0, -2.0, -7.0, 8.0};
+    	//MatrixOperations.print_vector(get_unique_elements(a));
+    	  
+    	List<Double> a = new ArrayList<Double>();
+    	
+    	for(int i=0; i<5; i++) {
+    		a.add(8.0);
+    	}
+    	
+    	for(int i=0; i<5; i++) {
+    		a.add(2.5);
+    	}
+    	
+    	for(int i=0; i<5; i++) {
+    		a.add(3.0);
+    	}
+    	
+    	for(int i=0; i<5; i++) {
+    		a.add(-3.0);
+    	}
+    	
+    	List<Double> b = get_unique_sorted_elements_of_double_list(a);
+
+    	for(int i=0; i<b.size(); i++) {
+    		System.out.println(b.get(i));
+    	}
+    	
+    	
     }
 	
 }
