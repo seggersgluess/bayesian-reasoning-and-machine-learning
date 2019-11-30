@@ -7,7 +7,7 @@ import Distributions.NormalDistribution;
 public class QQ_Plot {
 
 	public static int width = 1000;
-	public static int heigth = 600;
+	public static int height = 600;
 	
 	@SuppressWarnings("static-access")
 	public static void create_qq_plot(double [][] series_4_qq_plot){
@@ -44,7 +44,7 @@ public class QQ_Plot {
         obj_graph.setNumberOfPlotRows(1);
 	 	
         obj_graph.setGraphWidth(width);
-        obj_graph.setGraphHeight(heigth);
+        obj_graph.setGraphHeight(height);
 
 	 	obj_graph.plotPoints(normalQuantiles, series_4_qq_plot, true, Color.BLUE);	
 	 	obj_graph.plotLines(normalQuantiles, normalQuantiles, false, Color.RED);
@@ -73,8 +73,8 @@ public class QQ_Plot {
 	}
 	
 	
-	public static void set_heigth(int used_heigth){
-		heigth = used_heigth;
+	public static void set_heigth(int used_height){
+		height = used_height;
 	}
 	
 }
