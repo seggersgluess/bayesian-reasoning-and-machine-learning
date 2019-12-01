@@ -51,8 +51,16 @@ public class CART {
 	static DecisionTreeGraphics obj_graph;
 	static boolean showLeafs = true;
 	
-
+	//Weights (for AdaBoost)
+	static List<Double> weights;
+	
+	
 	public static void fit_tree() {
+		fit_tree(true);
+	}
+	
+
+	public static void fit_tree(boolean returnKnotIdxs) {
 		
 		if(categorical_explained_var == false) {
 			costMeasure = "Regression";
@@ -136,7 +144,7 @@ public class CART {
 				
 				if(doSplit == true) {
 							
-					splitInfos = get_split_infos_for_knot(knotIdxs);
+					splitInfos = get_split_infos_for_knot(knotIdxs, returnKnotIdxs);
 					
 					leftIdxs = splitInfos.get("IndicesLeftKnot");
 					rightIdxs = splitInfos.get("IndicesRightKnot");
@@ -187,10 +195,12 @@ public class CART {
 					leftKnot.get("Threshold").add(splitInfos.get("Threshold").get(0));
 					rightKnot.get("Threshold").add(splitInfos.get("Threshold").get(0));
 					
-					//IdxsOfElements
-					leftKnot.put("IdxsOfElements",leftIdxs);
-					rightKnot.put("IdxsOfElements",rightIdxs);
-
+					if(returnKnotIdxs = true) {
+						//IdxsOfElements
+						leftKnot.put("IdxsOfElements",leftIdxs);
+						rightKnot.put("IdxsOfElements",rightIdxs);
+					}
+					
 					//NumberOfElements
 					leftKnot.get("NumberOfElements").add(Integer.toString(nLeftIdxs));
 					rightKnot.get("NumberOfElements").add(Integer.toString(nRightIdxs));
@@ -278,7 +288,7 @@ public class CART {
      * 4. IndicesLeftKnot,
      * 5. IndicesRightKnot)
      */
-	public static HashMap<String,List<String>> get_split_infos_for_knot(List<Integer> knotIdxs) {
+	public static HashMap<String,List<String>> get_split_infos_for_knot(List<Integer> knotIdxs, boolean returnKnotIdxs) {
 		
 		double minCost      = Double.MAX_VALUE;
 		double minLeftCost  = Double.MAX_VALUE;
@@ -370,126 +380,229 @@ public class CART {
     	info.add(selectedExplainingVariable);
     	split_infos.put("SplittingFeature",info);
     	
-    	//IndicesOfElementsInLeftKnot
-    	int nIdxs = optLeftIdxs.size();
-    	info = new ArrayList<String>(nIdxs);
-    	for(int i=0; i<nIdxs; i++) {
-    		info.add(Integer.toString(optLeftIdxs.get(i)));
+    	if(returnKnotIdxs == true) {
+    		//IndicesOfElementsInLeftKnot
+        	int nIdxs = optLeftIdxs.size();
+        	info = new ArrayList<String>(nIdxs);
+        	for(int i=0; i<nIdxs; i++) {
+        		info.add(Integer.toString(optLeftIdxs.get(i)));
+        	}
+        	split_infos.put("IndicesLeftKnot",info);
+        	
+        	//IndicesOfElementsInRightKnot
+        	nIdxs = optRightIdxs.size();
+        	info = new ArrayList<String>(nIdxs);
+        	for(int i=0; i<nIdxs; i++) {
+        		info.add(Integer.toString(optRightIdxs.get(i)));
+        	}
+        	split_infos.put("IndicesRightKnot",info);
     	}
-    	split_infos.put("IndicesLeftKnot",info);
-    	
-    	//IndicesOfElementsInRightKnot
-    	nIdxs = optRightIdxs.size();
-    	info = new ArrayList<String>(nIdxs);
-    	for(int i=0; i<nIdxs; i++) {
-    		info.add(Integer.toString(optRightIdxs.get(i)));
-    	}
-    	split_infos.put("IndicesRightKnot",info);
     				
 		return split_infos;
 		
 	}
 	
 	
-	public static ArrayList<HashMap<String,List<String>>> get_decision_stump(List<Integer> knotIdxs, boolean returnKnotIdxs){
+	public HashMap<String, String> identifyLeafPos4Prediction(double [][] x) {
 		
-		ArrayList<HashMap<String,List<String>>> stump_infos = new ArrayList<HashMap<String,List<String>>>();
-
-		int knotSampleLength = knotIdxs.size();
+		if(tree == null) {
+			throw new RuntimeException("No tree calculated yet");
+		}
 		
-		ArrayList<List<Double>> sorted_knot_sample = sort_sample_data(knotIdxs);
+		if(obj_linearReg == null) {
+			throw new RuntimeException("No regression coefficients estimated yet for tree.");
+		}
 		
-		for(int j=0; j<n_explaining_variables; j++) {
-			HashMap<String,List<String>> splittingInfos = new HashMap<String,List<String>>();
-			int n_sorted_elements = sorted_knot_sample.get(j).size();
-			for(int k=0; k<n_sorted_elements; k++) {
-				List<String> leftIdxs = new ArrayList<String>();
-				List<String> rightIdxs = new ArrayList<String>();
-				double t = sorted_knot_sample.get(j).get(k);
-	            for(int i=0; i<knotSampleLength; i++) {	
-	            	int sampleIdx = knotIdxs.get(i);
-	            	if(explaining_variables[sampleIdx][j]<=t) {
-	            		leftIdxs.add(Integer.toString(sampleIdx));
-	            	}else {
-	            		rightIdxs.add(Integer.toString(sampleIdx));
-	            	}
-	            }
-	           
-	            List<String> splitFeat = new ArrayList<String>(1);
-	            List<String> threshold = new ArrayList<String>(1);
-	            splitFeat.add(names_of_explaining_variables[j]);
-	            threshold.add(Double.toString(t));
-	            
-	            if(returnKnotIdxs == true) {
-	            	splittingInfos.put("LeftIdxs",leftIdxs);
-		            splittingInfos.put("RightIdxs",rightIdxs);
-	            }
-	                        
-	            splittingInfos.put("SplittingFeature", splitFeat);   
-	            splittingInfos.put("Threshold", threshold);
-	               
-	            stump_infos.add(splittingInfos);
-	            
+		HashMap<String, String> posInfosOfLeaf = new HashMap<String, String>();
+			
+		String curKnot = "Knot1";
+		String relevantLayer = "";
+		for(int i=1; i<treeDepth; i++) {
+			
+			int curKnotNumber = Integer.parseInt(curKnot.substring(4));
+			int nextLayer = i+1;
+			String splitFeature = get_knot_splitFeature(nextLayer,curKnotNumber);
+			int [] featureIdxs = Utilities.Utilities.get_idx(names_of_explaining_variables, splitFeature);
+			int featureIdx = 0;
+			if(featureIdxs[0] != -1) {
+				featureIdx = featureIdxs[0];
+			}else {
+				throw new RuntimeException("Invalid splitting feature in tree.");
+			}
+			
+			double threshold = get_knot_threshold(nextLayer,curKnotNumber);
+			double value = x[0][featureIdx];
+						
+			String layerLabel = "Layer"+nextLayer;
+			int nKnots = tree.get(layerLabel).size();
+			
+			int [] nextKnots = new int [2];
+			int c = 0;
+			
+			for(int j=0; j<nKnots; j++) {
+				String nextLayerKnot = get_parent_knot(nextLayer, j);
+				if(nextLayerKnot.contentEquals(curKnot)==true) {
+					relevantLayer = "Layer"+nextLayer;
+					nextKnots[c] = j;
+					c++;
+				}else {
+					relevantLayer = "Layer"+i;
+					break;
+				}
+			}
+			
+			int stopCriteria = nextKnots[0]+nextKnots[1];
+			
+			if(stopCriteria != 0) {
+				if(value <= threshold) {
+					curKnot = "Knot"+(nextKnots[0]+1);
+				}else {
+					curKnot = "Knot"+(nextKnots[1]+1);
+				}
+			}else {
+				break;
 			}
 			
 		}
 		
-		return stump_infos;
+		String relevantKnot = curKnot;
+		
+		posInfosOfLeaf.put("Layer", relevantLayer);
+		posInfosOfLeaf.put("Knot", relevantKnot);
+		
+		return posInfosOfLeaf;
 		
 	}
 	
 	
-	//Method for Viola-Jones-AdaBoost
-	public static ArrayList<HashMap<String,List<String>>> get_decision_stump(ArrayList<List<Double>> explainingFeatures, boolean returnKnotIdxs){
+	//Prediction of label y (discrete -class- or continuous) for 1xn vector of features x
+	@SuppressWarnings("static-access")
+	public double makePrediction(double [][] x) {
 		
-		ArrayList<HashMap<String,List<String>>> stump_infos = new ArrayList<HashMap<String,List<String>>>();
-
-		int nSamples = explainingFeatures.size();
-		int nExpFeatures = explainingFeatures.get(0).size();
+		HashMap<String, String> posInfosOfLeaf = identifyLeafPos4Prediction(x);
 		
-		ArrayList<List<Double>> sorted_samples = new ArrayList<List<Double>>();
+		String relevantLayer = posInfosOfLeaf.get("Layer");
+	    String relevantKnot  = posInfosOfLeaf.get("Knot");
 		
-		for(int i=0; i<nExpFeatures; i++) {
-			List<Double> sample = explainingFeatures.get(i);
-			List<Double> sorted_sample = Utilities.Utilities.get_unique_elements_from_double_list(sample);
-			sorted_samples.add(sorted_sample);
+		int posInRegMatrix = get_colPosOfLeafInRegressionMatrix(relevantLayer, relevantKnot);
+		
+		double prediction = 0.0;
+		double regConst = 0.0;
+		double regWeight = 0.0;
+		
+		if(useConstant == true) {
+			regConst = obj_linearReg.get_est_constant();
 		}
 		
-		for(int j=0; j<nExpFeatures; j++) {
-			HashMap<String,List<String>> splittingInfos = new HashMap<String,List<String>>();
-			int n_sorted_elements = sorted_samples.get(j).size();
-			for(int k=0; k<n_sorted_elements; k++) {
-				List<String> leftIdxs = new ArrayList<String>();
-				List<String> rightIdxs = new ArrayList<String>();
-				double t = sorted_samples.get(j).get(k);
-	            for(int i=0; i<nSamples; i++) {	
-	            	if(explainingFeatures.get(i).get(j)<=t) {
-	            		leftIdxs.add(Integer.toString(i));
-	            	}else {
-	            		rightIdxs.add(Integer.toString(i));
-	            	}
-	            }
-	           
-	            List<String> splitFeat = new ArrayList<String>(1);
-	            List<String> threshold = new ArrayList<String>(1);
-	            splitFeat.add(Integer.toString(j));
-	            threshold.add(Double.toString(t));
-	            
-	            if(returnKnotIdxs == true) {
-	            	splittingInfos.put("LeftIdxs",leftIdxs);
-		            splittingInfos.put("RightIdxs",rightIdxs);
-	            }
-	                        
-	            splittingInfos.put("SplittingFeature", splitFeat);   
-	            splittingInfos.put("Threshold", threshold);
-	               
-	            stump_infos.add(splittingInfos);
-	            
-			}
+		regWeight = obj_linearReg.get_est_parameters()[posInRegMatrix][0];
+		
+		prediction = regConst + regWeight;
+		
+		return prediction;
+		
+	}
+	
+	
+	public double[][] makeProbabilityPrediction(double [][] x) {
+		
+		HashMap<String, String> posInfosOfLeaf = identifyLeafPos4Prediction(x);
+		
+		int layerNumber = Integer.parseInt(posInfosOfLeaf.get("Layer").substring(5));
+	    int knotNumber  = Integer.parseInt(posInfosOfLeaf.get("Knot").substring(4));
+		
+	    int [][] leafClassDist = get_knot_class_distribution(layerNumber, knotNumber);
+	    
+	    double [][] probs = new double [nClasses][1];
+	    double nElements = 0;
+	    
+	    for(int i=0; i<nClasses; i++) {
+	    	nElements += leafClassDist[i][0];
+	    }
+	    
+	    for(int i=0; i<nClasses; i++) {
+	    	probs[i][0] = (double) (leafClassDist[i][0]/nElements);
+	    }
+	    
+	    return probs;
+	    
+	}
+	
+	
+	public HashMap<String,List<String>> get_decision_stump(List<Double> weights, double sumOfWeights){
+		
+		HashMap<String,List<String>> splittingInfos = new HashMap<String,List<String>>();
+				
+		double minError = Double.MAX_VALUE;
+		int optSplitFeature = 0;
+    	double optThreshold = 0.0;
+    	int numberOfErrors  = 0;
+		
+    	List<Integer> knotIdxs = new ArrayList<Integer>();
+    	for(int i=0; i<n_observations; i++) {
+    		knotIdxs.add(i);
+    	}
+    	
+    	ArrayList<List<Double>> sorted_knot_sample = sort_sample_data(knotIdxs);
+    	
+		for(int j=0; j<n_explaining_variables; j++) {
 			
+			int n_sorted_elements = sorted_knot_sample.get(j).size();
+			
+			for(int k=0; k<n_sorted_elements; k++) {
+				
+				double t = sorted_knot_sample.get(j).get(k);
+								
+				double error = 0.0;
+				int nErrors = 0;
+				
+	            for(int s=0; s<n_observations; s++) {	
+	            	
+	            	double y_pred = 0.0;	            	
+	            	double feature = explaining_variables[s][j];
+
+	            	if(feature<=t) {
+	            		y_pred = 1.0;
+	            		
+	            	}else {
+	            		y_pred = 0.0;
+	            		
+	            	}
+	           	            	
+	            	double label = explained_variable[s][0];
+	            	
+	            	if(y_pred != label) {
+	            		error += weights.get(s)/sumOfWeights;
+	            		nErrors++;
+	            	}
+
+	            }
+	           	  
+	            if(error<minError) {	            	
+	            	minError = error;
+	            	optSplitFeature = j;
+	            	optThreshold = t;
+	                numberOfErrors = nErrors;
+	            }
+   	               
+			}
+					
 		}
 		
-		return stump_infos;
+        List<String> splitFeat  = new ArrayList<String>(1);
+        List<String> threshold  = new ArrayList<String>(1);
+        List<String> splitError = new ArrayList<String>(1);
+        List<String> nErr       = new ArrayList<String>(1);
+        splitFeat.add(Integer.toString(optSplitFeature));			        
+        threshold.add(Double.toString(optThreshold));
+        splitError.add(Double.toString(minError));
+        nErr.add(Integer.toString(numberOfErrors));    
+        
+        splittingInfos.put("SplittingFeature", splitFeat);   
+        splittingInfos.put("Threshold", threshold);
+    	splittingInfos.put("MinError", splitError);
+    	splittingInfos.put("NumberOfErrors", nErr);
+		
+		return splittingInfos;
 		
 	}
 	
@@ -595,13 +708,31 @@ public class CART {
 		
 		double [][] probs = new double [nClasses][1];
 		
-		for(int c=0; c<nClasses; c++) {
-			for(int i=0; i<n; i++) {
-				if(explained_variable[idxs.get(i)][0] == classes[c]) {
-					probs[c][0]++;
+		if(weights == null) {
+			for(int c=0; c<nClasses; c++) {
+				for(int i=0; i<n; i++) {
+					if(explained_variable[idxs.get(i)][0] == classes[c]) {
+						probs[c][0]++;
+					}
 				}
+				probs[c][0] /= n;
 			}
-			probs[c][0] /= n;
+		}
+		
+		if(weights != null) {
+			double summed_weights = 0.0;
+			for(int i=0; i<n; i++) {
+				summed_weights += weights.get(idxs.get(i));
+			}
+			
+			for(int c=0; c<nClasses; c++) {				
+				for(int i=0; i<n; i++) {
+					if(explained_variable[idxs.get(i)][0] == classes[c]) {
+						probs[c][0] += weights.get(idxs.get(i));
+					}
+				}
+				probs[c][0] /= summed_weights;
+			}
 		}
 		
 		return probs;
@@ -1029,6 +1160,11 @@ public class CART {
 	}
 	
 	
+	public static void useCategoricalTree() {
+		categorical_explained_var = true;
+	}
+	
+	
 	public static HashMap<String,List<String>> get_leafs_4_layers(){
 		
 		HashMap<String,List<String>> leafs = new HashMap<String,List<String>>();
@@ -1153,6 +1289,33 @@ public class CART {
 			}
 		}
 		
+		return colPosInRegMatrix;
+		
+	}
+	
+	
+	public static int get_colPosOfLeafInRegressionMatrix(String leafLayerLabel, String leafKnotLabel) {
+		
+		HashMap<String,List<String>> leafs = get_leafs_4_layers();
+		int nLayers = leafs.size();		
+		int colPosInRegMatrix = -1;
+	    int idx = 0;
+		for(int l=0; l<nLayers; l++) {
+			String layerLabel = "Layer"+(l+1);
+			int nLeafsInLayer = leafs.get(layerLabel).size();
+			if(nLeafsInLayer != 0) {
+				for(int i=0; i<nLeafsInLayer; i++) {
+					String knotLabel = leafs.get(layerLabel).get(i);
+					if(layerLabel.contentEquals(leafLayerLabel) == true && knotLabel.contentEquals(leafKnotLabel)) {
+						colPosInRegMatrix = idx;
+						return colPosInRegMatrix;
+					}
+					idx++;
+				}
+			}
+		}
+		
+		//returns -1 if not successful
 		return colPosInRegMatrix;
 		
 	}
@@ -1400,7 +1563,6 @@ public class CART {
 		
 		//calc_least_square_regressor_weights();
 		
-		
 		//obj_cart.showLeafs(true);
 		obj_cart.plot_tree();
 		//obj_cart.plot_DistOfSplittingFeature();
@@ -1447,5 +1609,4 @@ public class CART {
 		
 	}
 
-	
 }

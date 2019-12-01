@@ -1,7 +1,7 @@
 package ObjectDetection;
 
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import Mathematics.MatrixOperations;
@@ -18,7 +18,7 @@ public class ViolaJonesCascadeClassifier {
 	int [] layers;
 	
 	
-	public void trainCascadeClassifier() {
+	public void trainCascadeClassifier() throws IOException {
 		
 		int nLayers = layers.length;
 		vjClassifiers = new ArrayList<ViolaJones>(nLayers);
@@ -37,8 +37,6 @@ public class ViolaJonesCascadeClassifier {
 		
 		int n_posIdxs = posIdxs.size();
 		
-		ArrayList<HashMap<String,List<String>>> overallWeakClassifierResults = new ArrayList<HashMap<String,List<String>>> ();;
-		
 		for(int l=0; l<nLayers; l++) {
 			
 			List<Integer> falsePositives = new ArrayList<Integer>();
@@ -53,41 +51,24 @@ public class ViolaJonesCascadeClassifier {
 			
 			ArrayList<List<Double>> imageSelection = new ArrayList<List<Double>>();
 			List<Double> labelSelection = new ArrayList<Double>();
-			ArrayList<HashMap<String,List<String>>> weakClassifierResSelection = new ArrayList<HashMap<String,List<String>>> ();
-			
-			if(l==1) {
-				//Get all weak classifier results from first iteration for usage in next iterations
-				overallWeakClassifierResults = vj.get_weakClassifierResults();
+
+			for(int i=0; i<n_posIdxs; i++) {
+				int idx = posIdxs.get(i);
+				imageSelection.add(images.get(idx));
+				labelSelection.add(labels.get(idx));
 			}
-			
-			if(l>0) {
-				for(int i=0; i<n_posIdxs; i++) {
-					int idx = posIdxs.get(i);
-					imageSelection.add(images.get(idx));
-					labelSelection.add(labels.get(idx));
-					if(overallWeakClassifierResults != null) {
-						weakClassifierResSelection.add(overallWeakClassifierResults.get(idx));
-					}
 					
-				}
-				
-				for(int i=0; i<n_negIdxs; i++) {
-					int idx = negIdxs.get(i);
-					imageSelection.add(images.get(idx));
-					labelSelection.add(labels.get(idx));
-					if(overallWeakClassifierResults != null) {
-						weakClassifierResSelection.add(overallWeakClassifierResults.get(idx));
-					}
-				}
+
+			for(int i=0; i<n_negIdxs; i++) {
+				int idx = negIdxs.get(i);
+				imageSelection.add(images.get(idx));
+				labelSelection.add(labels.get(idx));
 			}
 				
-			if(l==0) {
-				vj.setImageAndLabel(images, imageWidth, imageHeight, labels);
-			} else {			
-				vj.set_pre_calculated_features(imageSelection, imageWidth, imageHeight, weakClassifierResSelection, labelSelection);
-			}
-			
-			vj.trainViolaJonesObjectDetection();
+			vj.setImageAndLabel(imageSelection, imageWidth, imageHeight, labelSelection);
+				
+			//TODO: Check preselection! false/true!
+			vj.trainViolaJonesObjectDetection(false, false, false);
 			
 			vjClassifiers.add(vj);
 			
@@ -116,8 +97,7 @@ public class ViolaJonesCascadeClassifier {
 			if(c==0) {
 				return 0.0;
 			}
-		}
-		
+		}		
 		return 1.0;		
 	}
 	
@@ -129,6 +109,5 @@ public class ViolaJonesCascadeClassifier {
 		layers[2] = 10;
 		layers[3] = 50;
 	}
-	
 	
 }

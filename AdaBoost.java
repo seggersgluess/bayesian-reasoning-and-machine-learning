@@ -3,151 +3,456 @@ package AdaptiveBasisModels;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
-import Mathematics.MatrixOperations;
-import Utilities.Utilities;
+import Regression.LinearRegression;
 
 public class AdaBoost extends CART {
 
 	public static int iterations = 1;
 	
-	public static ArrayList<HashMap<String,List<String>>> classifierInfos;
+	public static ArrayList<CART> treeClassifierInfos;
 	public static List<Double> alphas;
 	
-	public static double [][] classifierValues;
+	public static String algorithm;
+	
+	//InSample predictions of y_i
 	public static double [][] predicted_var;
 	
-	public static double [][] initialWeights;
 	
-	public static void doAdaBoost() {
+	public static void doAdaBoost(int treeDepth, String usedAlgorithm, int n_weakEstimators) {
 		
-		classes = new double [2];
-		classes[0] = -1.0;
-		classes[1] = 1.0;
-		
-		classifierValues = new double [n_observations][iterations];
-		predicted_var = new double [n_observations][1];
-		alphas = new ArrayList<Double>();
-		
-		List<Integer> rootIdxs = new ArrayList<Integer>(n_observations);
-		double [][] weights = new double [1][n_observations];
-		
-		if(initialWeights != null) {
-			if(initialWeights.length != n_observations) {
-				throw new RuntimeException("Invalid length of initial weights.");
-			}
-			weights = initialWeights;
+		if(treeDepth <= 0) {
+			System.out.println("Invalid tree depth supplied.");
+			return;
 		}
 		
-		for(int i=0; i<n_observations; i++) {
-			rootIdxs.add(i);
-			if(initialWeights == null) {
-				weights[0][i] = 1.0/n_observations;
-			}
+		String [] validAlgorithms = getValidAlgorithms4AdaBoost();
+		int [] idxs = Utilities.Utilities.get_idx(validAlgorithms, usedAlgorithm);
+		if(idxs[0] == -1) {
+			System.out.println(usedAlgorithm + " is not a valid algorithm for AdaBoost.");
+			return;
 		}
 		
-		ArrayList<HashMap<String,List<String>>> stump_infos = get_decision_stump(rootIdxs, true);
-		int nSplits = stump_infos.size();
-		
-		double [][] errorMatrix = new double [n_observations][nSplits];
-		double [][] weightedErrorMatrix = new double [n_observations][nSplits]; 
-		
-		//if left then -1, else 1		
-		for(int s=0; s<nSplits; s++) {			
-			List<String> leftIdxs = stump_infos.get(s).get("LeftIdxs");
-			for(int i=0; i<n_observations; i++) {
-				double y_pred = classes[0];
-				boolean isLeft = leftIdxs.contains(Integer.toString(i));
-				
-				if(isLeft == false) {
-					y_pred = classes[1];
-				}
-				
-				if(explained_variable[i][0] != y_pred) {
-					errorMatrix[i][s] = 1.0;
-				}				
-			}
+		if(n_weakEstimators <= 0) {
+			System.out.println("Invalid number of weak estimators supplied.");
+			return;
 		}
 		
-		for(int i=0; i<iterations; i++) {
-			
-			weightedErrorMatrix = MatrixOperations.multiplication(weights, errorMatrix);
-			
-			double minIdx = Utilities.getMinWithIdx(weightedErrorMatrix).get("colIdx");
-			
-			classifierInfos.add(stump_infos.get((int) minIdx));
-			
-			double summedWeights = 0.0;
-			
-			for(int j=0; j<n_observations; j++) {
-				summedWeights += weights[0][j];
-			}
-			
-			double error = weightedErrorMatrix[0][(int) minIdx]/summedWeights;			
-			double alpha = Math.log((1.0-error)/error);
-			
-			List<String> leftIdxs = stump_infos.get((int) minIdx).get("LeftIdxs");
-			List<String> rightIdxs = stump_infos.get((int) minIdx).get("RightIdxs");
-			
-			int nLeftIdxs = leftIdxs.size();
-			int nRightIdxs = rightIdxs.size();
-			
-			for(int j=0; j<nLeftIdxs; j++) {
-				classifierValues[Integer.parseInt(leftIdxs.get(j))][i] = classes[0];
-			}
-			
-			for(int j=0; j<nRightIdxs; j++) {
-				classifierValues[Integer.parseInt(rightIdxs.get(j))][i] = classes[1];
-			}
-			
-			for(int j=0; j<n_observations; j++) {
-				weights[0][j] *= Math.exp(alpha*errorMatrix[j][(int) minIdx]);
-				predicted_var[j][0] += alpha*classifierValues[j][i];
-			}
-			
-			alphas.add(alpha);
-			
+		if(usedAlgorithm.contentEquals("SAMME") == true) {
+			doSAMME(treeDepth);
 		}
 		
-		//Sign function
-		for(int i=0; i<n_observations; i++) {
-			if(predicted_var[i][0] < 0.0) {
-				predicted_var[i][0] = -1.0;
-			}else {
-				predicted_var[i][0] = 1.0;
-			}
-			
+		if(usedAlgorithm.contentEquals("SAMME.R") == true) {
+			doSAMME_R(treeDepth);
 		}
 		
 	}
 	
 	
-	//Make prediction for y with new_X (has to be a 1xn_explaining_vars vector)
-	public static double make_predictionWithDecisionStumpInfos(double [][] new_X) {
+	//Conventional AdaBoost with decision stump
+	public static void doSamme() {
+		doSAMME(1);
+	}
+	
+	
+	//Stagewise Additive Modeling using Multi-class Exponential loss function (SAMME)
+	@SuppressWarnings("static-access")
+	public static void doSAMME(int treeDepth) {
 		
-		if(classifierInfos == null) {
-			System.out.println("AdaBoost not trained yet. Can´t make prediction from new input.");
+		if(n_observations == 0) {
+			System.out.println("No data for SAMME uploaded yet.");
+			return;
 		}
 		
-		double prediction = 0.0;
+		algorithm = "SAMME";
 		
-		for(int i=0; i<iterations; i++) {
+		treeClassifierInfos = new ArrayList<CART>();
+		
+		weights = new ArrayList<Double>();
+		
+		double initWeight = 1.0/n_observations;
+		
+		for(int i=0; i<n_observations; i++) {
+			weights.add(initWeight);
+		}
+		
+		for(int i=0; i<iterations; i++) {			
 			
-			String splitFeat = get_splittingFeature4Iteration(i);
-			double threshold = get_threshold4Iteration(i);
+			List<Double> updated_weights = new ArrayList<Double>();
 			
-			int idx = Utilities.get_idx(names_of_explaining_variables, splitFeat)[0];
-			double inputValue4Feature = new_X[0][idx];
+			CART obj_CART = new CART();
+			obj_CART.useCategoricalTree();
+			obj_CART.set_CART_explained_variable(name_of_explained_variable);
+			obj_CART.set_CART_inputData();
 			
-			if(inputValue4Feature <= threshold) {
-				prediction = classes[0]*alphas.get(i);
-			}else {
-				prediction = classes[1]*alphas.get(i);
+			obj_CART.set_minNumberOfElementsInKnot(1);
+			obj_CART.set_maxNumberOfClassesInKnot(1);
+			obj_CART.set_maxTreeDepth(treeDepth);
+			
+			obj_CART.fit_tree(false);			
+			obj_CART.calc_least_square_regressor_weights();
+			
+			LinearRegression obj_linearReg = obj_CART.get_linearRegObject();
+			double [][] fitted_explained_var = obj_linearReg.get_fitted_values();
+			
+			double error = 0.0;
+			
+			for(int j=0; j<n_observations; j++) {
+				if(fitted_explained_var[j][0] != explained_variable[j][0]) {
+					error += weights.get(j);
+				}
 			}
-						
+			
+			double alpha = Math.log((1.0-error)/error) + Math.log(nClasses-1);
+		    alphas.add(alpha);
+		    double summed_weights = 0.0;
+		    
+		    for(int j=0; j<n_observations; j++) {
+		    	double updated_weight = weights.get(j);
+		    	if(fitted_explained_var[j][0] != explained_variable[j][0]) {
+					updated_weight *= Math.exp(alpha);
+				}	
+		    	updated_weights.add(updated_weight);
+		    	summed_weights += updated_weight;
+		    }
+		    
+		    weights = new ArrayList<Double>();
+		    for(int j=0; j<n_observations; j++) {
+		    	weights.add(updated_weights.get(j)/summed_weights);
+		    }
+		    	
+		    //TODO: Check if tree´s for different iterations are not the same
+		    treeClassifierInfos.add(obj_CART);
+		    
+		}	
+				
+	}
+	
+	
+	@SuppressWarnings("static-access")
+	public static void doSAMME_R(int treeDepth) {
+		
+		if(n_observations == 0) {
+			System.out.println("No data for SAMME.R uploaded yet.");
+			return;
+		}
+		
+		algorithm = "SAMME.R";
+		
+		treeClassifierInfos = new ArrayList<CART>();
+		
+		weights = new ArrayList<Double>();
+		
+		double initWeight = 1.0/n_observations;
+		
+		for(int i=0; i<n_observations; i++) {
+			weights.add(initWeight);
+		}
+		
+		for(int i=0; i<iterations; i++) {			
+			
+			List<Double> updated_weights = new ArrayList<Double>();
+			double summed_weights = 0.0;
+			
+			CART obj_CART = new CART();
+			obj_CART.useCategoricalTree();
+			obj_CART.set_CART_explained_variable(name_of_explained_variable);
+			obj_CART.set_CART_inputData();
+			
+			obj_CART.set_minNumberOfElementsInKnot(1);
+			obj_CART.set_maxNumberOfClassesInKnot(1);
+			obj_CART.set_maxTreeDepth(treeDepth);
+			
+			obj_CART.fit_tree(false);			
+			
+			double [] y = new double [nClasses];
+			
+			for(int c=0; c<nClasses; c++) {
+				y[c] = -nClasses/(nClasses-1.0);
+			}
+			
+			for(int j=0; j<n_observations; j++) {
+				double [] y_i = y;
+				int curClass = (int)explained_variable[j][0];
+				y_i[curClass] = 1.0;
+				
+				double [][] x_i = new double [1][n_explaining_variables];
+				for(int k=0; k<n_explaining_variables; k++) {
+					x_i[0][k] = explaining_variables[j][k];
+				}
+				
+				double [][] probPred = obj_CART.makeProbabilityPrediction(x_i);
+				
+				double scalarProd = 0.0;
+				for(int k=0; k<nClasses; k++) {
+					double prob = probPred[k][0];
+					if(prob == 0.0) {
+						prob = Double.MIN_NORMAL;
+					}else {
+						prob = Math.log(prob);
+					}
+					scalarProd += y_i[k]*prob;
+				}
+				
+				scalarProd *= -(nClasses-1.0)/nClasses;
+				scalarProd = Math.exp(scalarProd);
+				
+				double updated_weight = weights.get(i)*scalarProd;
+				updated_weights.add(updated_weight);
+				summed_weights += updated_weight;
+				
+			}
+
+			weights = new ArrayList<Double>();
+		    for(int j=0; j<n_observations; j++) {
+		    	weights.add(updated_weights.get(j)/summed_weights);
+		    }
+		    	
+		    //TODO: Check if tree´s for different iterations are not the same
+		    treeClassifierInfos.add(obj_CART);
+		    
+		}	
+			
+	}
+	
+	
+	public static void makeInSamplePredictionFromAdaBoost() {
+		
+		predicted_var = new double [n_observations][1];
+		
+		for(int i=0; i<n_observations; i++) {
+			double [][] x = new double [1][n_explaining_variables];
+			for(int j=0; j<n_explaining_variables; j++) {
+				x[0][j] = explaining_variables[i][j];
+			}
+			if(algorithm.contentEquals("SAMME") == true) {
+				predicted_var[i][0] = make_predictionFromSAMME(x).get("ClassPrediction")[0][0];
+			}
+			if(algorithm.contentEquals("SAMME.R") == true) {
+				predicted_var[i][0] = make_predictionFromSAMME_R(x).get("ClassPrediction")[0][0];
+			}
+		}
+		
+	}
+	
+	
+	public static double getAccuracyRate4AdaBoost() {
+		
+		if(predicted_var == null) {
+			System.out.println("No insample prediction done yet. Make insamle prediction from AdaBoost now.");
+			makeInSamplePredictionFromAdaBoost();
+		}
+		
+		double accuracyRate = 0.0;
+		double validClassCount = 0.0;
+		
+		for(int i=0; i<n_observations; i++) {
+			if(predicted_var[i][0] == explained_variable[i][0]) {
+				validClassCount++;
+			}
+		}
+		
+		accuracyRate = validClassCount/n_observations;
+		
+		return accuracyRate;
+		
+	}
+	
+	
+	//Make prediction for y with new_x (has to be a 1xn_explaining_vars vector) from strong classifier for SAMME
+	public static HashMap<String, double [][]> make_predictionFromSAMME(double [][] new_x) {
+		
+		if(treeClassifierInfos == null) {
+			System.out.println("AdaBoost not trained yet. Can´t make prediction from new input.");
+			return null;
+		}
+		
+		if(algorithm.contentEquals("SAMME") == false) {
+			System.out.println("Selected algorithm of AdaBoost is not SAMME. Cannot make prediction based on SAMME.");
+			return null;
+		}
+		
+		HashMap<String, double [][]> predResults = new HashMap<String, double [][]>();
+		
+		double prediction = Double.MIN_VALUE;
+		int nIterations = alphas.size();
+		
+		double [][] predWeakClassifier = new double [nIterations][1];
+		double [][] summedProbPredictions = new double [nClasses][1];
+		
+		for(int i=0; i<nIterations; i++) {
+			predWeakClassifier[i][0] = treeClassifierInfos.get(i).makePrediction(new_x);	
+			double [][] probPredictions = treeClassifierInfos.get(i).makeProbabilityPrediction(new_x);
+			for(int c=0; c<nClasses; c++) {
+				summedProbPredictions[c][0] += alphas.get(i)*probPredictions[c][0];
+			}
+		}
+			
+		double sumOfProbPreds = 0.0;
+		for(int c=0; c<nClasses; c++) {
+			double newPred = 0.0;
+			for(int i=0; i<nIterations; i++) {
+				if(predWeakClassifier[i][0] == c) {
+					newPred += alphas.get(i);
+				}	
+			}
+			if(newPred>prediction) {
+				prediction = newPred;
+			}
+			sumOfProbPreds += summedProbPredictions[c][0];
+		}
+		
+		for(int c=0; c<nClasses; c++) {
+			summedProbPredictions[c][0] /= sumOfProbPreds;
+		}
+		
+		double [][] classPred = new double [1][1];
+		classPred[0][0] = prediction;
+	
+		predResults.put("ClassPrediction", classPred);
+		predResults.put("ProbabilityPrediction", summedProbPredictions);
+		
+		return predResults;
+		
+	}
+	
+	
+	//Make prediction for y with new_x (has to be a 1xn_explaining_vars vector) from strong classifier for SAMME.R
+	public static HashMap<String, double [][]> make_predictionFromSAMME_R(double [][] new_x) {
+			
+		if(treeClassifierInfos == null) {
+			System.out.println("AdaBoost not trained yet. Can´t make prediction from new input.");
+			return null;
+		}
+		
+		if(algorithm.contentEquals("SAMME.R") == false) {
+			System.out.println("Selected algorithm of AdaBoost is not SAMME. Cannot make prediction based on SAMME.");
+			return null;
+		}
+				
+		HashMap<String, double [][]> predResults = new HashMap<String, double [][]>();
+		
+		double prediction = Double.MIN_VALUE;
+		int nIterations = treeClassifierInfos.size();
+		
+		ArrayList<double [][]> probPredictions = new ArrayList<double [][]>();
+		double [][] summedProbPredictions = new double [nClasses][1];
+		ArrayList<Double> logSumsOfProbPredictions = new ArrayList<Double>();
+		
+		for(int i=0; i<nIterations; i++) {
+			probPredictions.add(treeClassifierInfos.get(i).makeProbabilityPrediction(new_x));
+			double logProbSum = 0.0;
+			for(int c=0; c<nClasses; c++) {
+				double prob = probPredictions.get(i)[c][0];
+				summedProbPredictions[c][0] += prob;
+				if(prob == 0.0) {
+					logProbSum += Double.MIN_VALUE;
+				}else {
+					logProbSum += Math.log(prob);
+				}
+			}
+			logSumsOfProbPredictions.add(logProbSum);
+		}
+		
+		double sumOfProbPreds = 0.0;
+		for(int c=0; c<nClasses; c++) {
+			double newPred = 0.0;
+			for(int i=0; i<nIterations; i++) {
+				double prob = probPredictions.get(i)[c][0];
+				if(prob == 0.0) {
+					prob = Double.MIN_VALUE;
+				}else {
+					prob = Math.log(prob);
+				}
+				newPred += (nClasses-1.0)*(prob-1.0/nClasses*logSumsOfProbPredictions.get(i));
+			}
+			if(newPred>prediction) {
+				prediction = newPred;
+			}
+			sumOfProbPreds += summedProbPredictions[c][0];
+		}
+		
+		for(int c=0; c<nClasses; c++) {
+			summedProbPredictions[c][0] /= sumOfProbPreds;
+		}
+		
+		double [][] classPred = new double [1][1];
+		classPred[0][0] = prediction;
+	
+		predResults.put("ClassPrediction", classPred);
+		predResults.put("ProbabilityPrediction", summedProbPredictions);
+		
+		return predResults;
+		
+	}
+	
+	
+	//Make prediction for y with new_x (has to be a 1xn_explaining_vars vector) from strong classifier of AdaBoost algorithms
+	public static double makeAdaBoostPrediction(double [][] new_x) {
+		
+		String [] validAlgorithms = getValidAlgorithms4AdaBoost();
+		int [] idxs = Utilities.Utilities.get_idx(validAlgorithms, algorithm);
+		if(idxs[0] == -1) {
+			System.out.println("No a valid algorithm set for AdaBoost. Cannot make a prediction.");
+			return -1.0;
+		}
+		
+		double prediction = -1.0;
+		
+		if(algorithm.contentEquals("SAMME") == true) {
+			prediction = make_predictionFromSAMME(new_x).get("ClassPrediction")[0][0];
+		}
+		
+		if(algorithm.contentEquals("SAMME.R") == true) {
+			prediction = make_predictionFromSAMME_R(new_x).get("ClassPrediction")[0][0];
 		}
 		
 		return prediction;
+		
+	}
+	
+	
+	public static double [][] getAdaBoostPredictedClassProbabilities(double [][] new_x, boolean log) {
+		
+		double [][] predProbs = new double [nClasses][1];
+		
+		String [] validAlgorithms = getValidAlgorithms4AdaBoost();
+		int [] idxs = Utilities.Utilities.get_idx(validAlgorithms, algorithm);
+		if(idxs[0] == -1) {
+			System.out.println("No a valid algorithm set for AdaBoost. Cannot make a prediction.");
+			return null;
+		}
+		
+		if(algorithm.contentEquals("SAMME") == true) {
+			predProbs = make_predictionFromSAMME(new_x).get("ProbabilityPrediction");
+		}
+		
+		if(algorithm.contentEquals("SAMME.R") == true) {
+			predProbs = make_predictionFromSAMME_R(new_x).get("ProbabilityPrediction");
+		}
+		
+		if(log == true) {
+			for(int c=0; c<nClasses; c++) {
+				double prob = predProbs[c][0];
+				if(prob == 0.0) {
+					prob = Double.MIN_VALUE;
+				}else {
+					prob = Math.log(prob);
+				}
+				predProbs[c][0] = prob;
+			}
+		}
+		
+		return predProbs;
+		
+	}
+	
+	
+	public static String [] getValidAlgorithms4AdaBoost() {
+		
+		String [] validAlgorithms = {"SAMME",
+				                     "SAMME.R"};
+		
+		return validAlgorithms;
 		
 	}
 	
@@ -167,19 +472,11 @@ public class AdaBoost extends CART {
 	}
 	
 	
-	public static String get_splittingFeature4Iteration(int iteration) {
-		String feature = classifierInfos.get(iteration).get("SplittingFeature").get(0);
-		return feature;
-	}
-	
-	
-	public static double get_threshold4Iteration(int iteration) {
-		double threshold = Double.parseDouble(classifierInfos.get(iteration).get("Threshold").get(0));
-		return threshold;
-	}
-	
-	
 	public static double [][] get_predicted_var() {
+		if(predicted_var == null) {
+			System.out.println("No insample prediction found yet.");
+			return null;
+		}
 		return predicted_var;
 	}
 	
@@ -191,10 +488,5 @@ public class AdaBoost extends CART {
 		}
 		iterations = nIterations;
 	}
-	
-	
-	public static void set_initialWeights(double [][] initWeights) {
-		initialWeights = initWeights;
-	}
-	
+		
 }
