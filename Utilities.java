@@ -1,5 +1,6 @@
 package Utilities;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -96,8 +97,6 @@ public class Utilities {
 	
 	public static List<Double> get_unique_sorted_elements_of_double_list(List<Double> x){
 		
-		int idx = 0;
-		
 		List<Double> sorted_vec = new ArrayList<Double>();	
 		x = get_unique_elements_from_double_list(x);
 		int n = x.size();
@@ -109,7 +108,6 @@ public class Utilities {
 			
 			for(int j=0; j<min_idxs.length; j++){				
 				sorted_vec.add(min);
-				idx = idx + 1;
 			}
 						
 			x = MatrixOperations.get_double_comp_sub_vec_4_indices(x, min_idxs);
@@ -117,6 +115,45 @@ public class Utilities {
 		}
 		
 		return sorted_vec;		
+		
+	}
+	
+	
+	public static HashMap<String, List<Double>> get_sorted_elements_and_idxs_of_double_list(List<Double> x){
+		
+		HashMap<String, List<Double>> sorted_elements_and_idxs = new HashMap<String, List<Double>>();
+		
+		List<Double> sorted_vec = new ArrayList<Double>();
+		List<Double> idxs = new ArrayList<Double>();
+		
+		int n=x.size();
+		
+		for(int i=0; i<n; i++) {
+			sorted_vec.add(x.get(i));
+		}
+		
+		Collections.sort(sorted_vec);
+		
+		sorted_elements_and_idxs.put("SortedValues", sorted_vec);
+		
+		int idx = 0;
+		
+		while(n>0) {
+			
+			int [] org_min_idxs = get_idx(x, sorted_vec.get(idx));
+			int nIdxs = org_min_idxs.length;
+				
+			for(int j=0; j<nIdxs; j++){				
+				idxs.add((double) org_min_idxs[j]);
+			}
+						
+			idx += nIdxs;			
+			n -= nIdxs;
+		}
+		
+		sorted_elements_and_idxs.put("Idxs", idxs);
+		
+		return sorted_elements_and_idxs;		
 		
 	}
 	
@@ -216,20 +253,17 @@ public class Utilities {
 		List<Double> unique_elements = new ArrayList<Double>();
 		unique_elements.add(x.get(0));
 		
-		for(int i=1; i<n; i++){
+		for(int i=1; i<n; i++){			
+			double element = x.get(i);
+			boolean isElement = unique_elements.contains(element);
 			
-			int [] idx = get_idx(unique_elements,x.get(i));
-			
-			if(idx[0] == -1){
-				unique_elements.add(x.get(i));
-			}
-			
-		}
-		
-		return unique_elements;
-		
+			if(isElement == false){
+				unique_elements.add(element);
+			}			
+		}		
+		return unique_elements;		
 	}
-	
+		
 	
 	// returns unique elements of a supplied array
 	public static String [] get_unique_elements(String [] x){
@@ -810,6 +844,32 @@ public class Utilities {
 	}
 	
 	
+	// returns position index of an element in supplied n x 1 vector
+	public static int [] get_idx(String [][] x, String search_element){
+		
+		int [] search_idxs = new int [x.length];
+		
+		int idx = 0;		
+				
+		for(int i=0; i<x.length; i++){						
+			if(x[i][0].contentEquals(search_element) == true){				
+				search_idxs[idx] = i;
+				idx = idx+1;				
+			}			
+		}
+		
+		if(idx == 0){			
+			int [] idxs = new int [1];
+			idxs[0] = -1;
+			return idxs;			
+		}else{			
+			int [] idxs = MatrixOperations.get_int_sub_vec(search_idxs, 0, (idx-1));
+			return idxs;			
+		}
+	   	
+	}
+	
+	
 	// returns position index of an element in supplied vector
 	public static int [] get_idx(List<String> x, String search_element){
 		
@@ -997,12 +1057,9 @@ public class Utilities {
 	//returns n integer number between 0 and n-1
 	public static int [] intGenerator(int n){
 		
-		int[] a = new int[n];
-		
-	    for (int i = 0; i < n; ++i) {
-	    	
-	        a[i] = i;
-	        
+		int[] a = new int[n];		
+	    for (int i = 0; i < n; ++i) {	    	
+	        a[i] = i;        
 	    }
 	    
 	    return a;
@@ -1024,24 +1081,42 @@ public class Utilities {
 			double rand_number = Math.random();
 			int idx = 0;
 			
-			for(int j = 0; j < n_ints; j++){
-				
-				idx = idx + 1;
-				
-				if(rand_number <= idx*int_length){
-					
+			for(int j = 0; j < n_ints; j++){				
+				idx++;				
+				if(rand_number <= idx*int_length){					
 					random_int_numbers[i] = lb + idx - 1;
 					break;
-				}
-				
-			}
-					
+				}				
+			}					
 		}
 		
 		return random_int_numbers;
 		
 	}
  	
+	
+	//draws random int numbers with replacement for a supplied probability distribution
+	public static int [] getRandomIntNumbers(List<Double> probDist, int n){
+		
+		int nProbs = probDist.size();
+		int [] random_int_numbers = new int [n];
+		
+		for(int i=0; i<n; i++){			
+			double rand_number = Math.random();
+			double cumProbDist = 0.0;
+			for(int j=0; j<nProbs; j++){				
+				cumProbDist += probDist.get(j);			
+				if(rand_number <= cumProbDist){					
+					random_int_numbers[i] = j;
+					break;
+				}	
+			}					
+		}
+		
+		return random_int_numbers;
+		
+	}
+	
 	
 	public static List<Integer> get_idx_of_char_in_str(String str, String searchSymbol){
         		
@@ -1180,10 +1255,12 @@ public class Utilities {
     		a.add(-3.0);
     	}
     	
-    	List<Double> b = get_unique_sorted_elements_of_double_list(a);
-
+    	List<Double> b = get_sorted_elements_and_idxs_of_double_list(a).get("SortedValues");
+    	List<Double> idxs = get_sorted_elements_and_idxs_of_double_list(a).get("Idxs");
+    	
     	for(int i=0; i<b.size(); i++) {
-    		System.out.println(b.get(i));
+    		int idx = (int) Math.round(idxs.get(i));
+    		System.out.println(a.get(idx));
     	}
     	
     	

@@ -1083,6 +1083,16 @@ public class CART {
 	}
 	
 	
+	public static void set_CART_explaining_variables_data(double [][] X) {
+		explaining_variables = X;
+	}
+	
+	
+	public static void set_CART_explained_variable_data(double [][] y) {
+		explained_variable = y;
+	}
+	
+	
 	public static void set_CART_inputData() {
 		
 		n_explaining_variables = names_of_explaining_variables.length;
