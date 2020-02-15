@@ -13,54 +13,57 @@ public class CART {
 
 	static InputDataManager inputData;
 	static String [] selectedRows;
+	static String  sampleName = "";
 	
-	protected static double [][] explained_variable;
-	protected static double [][] explaining_variables;	
-	protected static String name_of_explained_variable;
-	protected static String [] names_of_explaining_variables;
+	protected double [][] explained_variable;
+	protected double [][] explaining_variables;	
+	protected String name_of_explained_variable;
+	protected String [] names_of_explaining_variables;
 	
-	protected static int n_observations;
-	protected static int n_explaining_variables;
+	protected int n_observations;
+	protected int n_explaining_variables;
 	
-	static boolean categorical_explained_var;
-	protected static double [] classes;
-	static String [] classNames;
-	protected static int nClasses;
+	boolean categorical_explained_var;
+	protected double [] classes;
+	String [] classNames;
+	protected int nClasses;
 	
 	//User specified values to control tree growing
-	static double minCostReduction = 0.0;
-	static double maxNumberOfClassesInKnot = 0.0;
-	static double minNumberOfElementsInKnot = 1.0;
-	static int maxTreeDepth = 0;
+	double minCostReduction = 0.0;
+	double maxNumberOfClassesInKnot = 0.0;
+	double minNumberOfElementsInKnot = 1.0;
+	int maxTreeDepth = 0;
 	
 	//Cost Measures
 	static String costMeasure = "Gini";
 	
 	//Number of layers of the tree
-	static int treeDepth;
+	int treeDepth;
 	
 	//Tree
-	static HashMap <String, HashMap<String, HashMap<String,List<String>>>> tree;
+	HashMap <String, HashMap<String, HashMap<String,List<String>>>> tree;
 	
 	//CART model
-	static boolean useConstant = true;
-	static double [][] regressor_matrix;
-	static LinearRegression obj_linearReg;
+	boolean useConstant = true;
+	double [][] regressor_matrix;
+	LinearRegression obj_linearReg;
 	
 	//Graph 
-	static DecisionTreeGraphics obj_graph;
-	static boolean showLeafs = true;
+	DecisionTreeGraphics obj_graph;
+	boolean showLeafs = true;
 	
 	//Weights (for AdaBoost)
-	static List<Double> weights;
+	List<Double> weights;
+	
+	double [][] predicted_var;
 	
 	
-	public static void fit_tree() {
+	public void fit_tree() {
 		fit_tree(true);
 	}
 	
 
-	public static void fit_tree(boolean returnKnotIdxs) {
+	public void fit_tree(boolean returnKnotIdxs) {
 		
 		if(categorical_explained_var == false) {
 			costMeasure = "Regression";
@@ -245,7 +248,7 @@ public class CART {
 	}
 	
 	
-	public static HashMap<String, List<String>> get_knot_structure(){
+	public HashMap<String, List<String>> get_knot_structure(){
 		
 		HashMap<String, List<String>> knot_struct = new HashMap<String, List<String>>();
 		
@@ -288,7 +291,7 @@ public class CART {
      * 4. IndicesLeftKnot,
      * 5. IndicesRightKnot)
      */
-	public static HashMap<String,List<String>> get_split_infos_for_knot(List<Integer> knotIdxs, boolean returnKnotIdxs) {
+	public HashMap<String,List<String>> get_split_infos_for_knot(List<Integer> knotIdxs, boolean returnKnotIdxs) {
 		
 		double minCost      = Double.MAX_VALUE;
 		double minLeftCost  = Double.MAX_VALUE;
@@ -409,29 +412,13 @@ public class CART {
 			throw new RuntimeException("No tree calculated yet");
 		}
 		
-		if(obj_linearReg == null) {
-			throw new RuntimeException("No regression coefficients estimated yet for tree.");
-		}
-		
 		HashMap<String, String> posInfosOfLeaf = new HashMap<String, String>();
 			
 		String curKnot = "Knot1";
 		String relevantLayer = "";
 		for(int i=1; i<treeDepth; i++) {
 			
-			int curKnotNumber = Integer.parseInt(curKnot.substring(4));
 			int nextLayer = i+1;
-			String splitFeature = get_knot_splitFeature(nextLayer,curKnotNumber);
-			int [] featureIdxs = Utilities.Utilities.get_idx(names_of_explaining_variables, splitFeature);
-			int featureIdx = 0;
-			if(featureIdxs[0] != -1) {
-				featureIdx = featureIdxs[0];
-			}else {
-				throw new RuntimeException("Invalid splitting feature in tree.");
-			}
-			
-			double threshold = get_knot_threshold(nextLayer,curKnotNumber);
-			double value = x[0][featureIdx];
 						
 			String layerLabel = "Layer"+nextLayer;
 			int nKnots = tree.get(layerLabel).size();
@@ -440,13 +427,13 @@ public class CART {
 			int c = 0;
 			
 			for(int j=0; j<nKnots; j++) {
-				String nextLayerKnot = get_parent_knot(nextLayer, j);
+				String nextLayerKnot = get_parent_knot(nextLayer, (j+1));
 				if(nextLayerKnot.contentEquals(curKnot)==true) {
 					relevantLayer = "Layer"+nextLayer;
 					nextKnots[c] = j;
 					c++;
-				}else {
-					relevantLayer = "Layer"+i;
+				}
+				if(c==2) {
 					break;
 				}
 			}
@@ -454,6 +441,21 @@ public class CART {
 			int stopCriteria = nextKnots[0]+nextKnots[1];
 			
 			if(stopCriteria != 0) {
+				
+				int curKnotNumber = nextKnots[0]+1;//Integer.parseInt(curKnot.substring(4));
+				
+				String splitFeature = get_knot_splitFeature(nextLayer,curKnotNumber);
+				int [] featureIdxs = Utilities.Utilities.get_idx(names_of_explaining_variables, splitFeature);
+				int featureIdx = 0;
+				if(featureIdxs[0] != -1) {
+					featureIdx = featureIdxs[0];
+				}else {
+					throw new RuntimeException("Invalid splitting feature in tree.");
+				}
+				
+				double threshold = get_knot_threshold(nextLayer,curKnotNumber);
+				double value = x[0][featureIdx];
+				
 				if(value <= threshold) {
 					curKnot = "Knot"+(nextKnots[0]+1);
 				}else {
@@ -476,37 +478,82 @@ public class CART {
 	
 	
 	//Prediction of label y (discrete -class- or continuous) for 1xn vector of features x
-	@SuppressWarnings("static-access")
 	public double makePrediction(double [][] x) {
+		
+		double prediction = 0.0;
 		
 		HashMap<String, String> posInfosOfLeaf = identifyLeafPos4Prediction(x);
 		
 		String relevantLayer = posInfosOfLeaf.get("Layer");
 	    String relevantKnot  = posInfosOfLeaf.get("Knot");
-		
-		int posInRegMatrix = get_colPosOfLeafInRegressionMatrix(relevantLayer, relevantKnot);
-		
-		double prediction = 0.0;
-		double regConst = 0.0;
-		double regWeight = 0.0;
-		
-		if(useConstant == true) {
-			regConst = obj_linearReg.get_est_constant();
+	    
+		if(categorical_explained_var == false) {
+			
+			int posInRegMatrix = get_colPosOfLeafInRegressionMatrix(relevantLayer, relevantKnot);
+				
+			double regConst = 0.0;
+			double regWeight = 0.0;
+			
+			if(useConstant == true) {
+				regConst = obj_linearReg.get_est_constant();
+			}
+					
+			regWeight = obj_linearReg.get_est_parameters()[posInRegMatrix][0];
+			
+			prediction = regConst + regWeight;			
 		}
 		
-		regWeight = obj_linearReg.get_est_parameters()[posInRegMatrix][0];
-		
-		prediction = regConst + regWeight;
-		
+		if(categorical_explained_var == true) {
+			
+			int layerNumber = Integer.parseInt(relevantLayer.substring(5));
+			int knotNumber  = Integer.parseInt(relevantKnot.substring(4));
+			
+			int [][] classDist = get_knot_class_distribution(layerNumber, knotNumber);			
+			int maxClassIdx = Utilities.Utilities.getMaxFromVec(classDist).get("Idx");
+			
+			prediction = classes[maxClassIdx];			
+		}
+			
 		return prediction;
 		
+	}
+	
+	
+	public void makeInSamplePrediction() {
+		
+		if(categorical_explained_var == false) {
+		
+			LinearRegression obj_linearReg = get_linearRegObject();
+		
+			if(obj_linearReg == null) {
+				System.out.println("No results of linear regression supplied for plot.");
+				return;
+			}
+
+			predicted_var = obj_linearReg.get_fitted_values();		
+		}
+		
+		if(categorical_explained_var == true) {
+			
+			predicted_var = new double [n_observations][1];
+			
+			for(int i=0; i<n_observations; i++) {
+				double [][] x = new double [1][n_explaining_variables];
+				for(int j=0; j<n_explaining_variables; j++) {
+					x[0][j] = explaining_variables[i][j];
+				}
+				
+				predicted_var[i][0] = makePrediction(x);
+			}
+			
+		}
 	}
 	
 	
 	public double[][] makeProbabilityPrediction(double [][] x) {
 		
 		HashMap<String, String> posInfosOfLeaf = identifyLeafPos4Prediction(x);
-		
+			
 		int layerNumber = Integer.parseInt(posInfosOfLeaf.get("Layer").substring(5));
 	    int knotNumber  = Integer.parseInt(posInfosOfLeaf.get("Knot").substring(4));
 		
@@ -607,7 +654,7 @@ public class CART {
 	}
 	
 	
-	public static int count_classes_of_knot(double [] explained_vars_in_knot) {
+	public int count_classes_of_knot(double [] explained_vars_in_knot) {
 		
 		double [] unique_classes = Utilities.Utilities.get_unique_elements(explained_vars_in_knot);
 		int n_classes = unique_classes.length;
@@ -617,7 +664,7 @@ public class CART {
 	}
 	
 	
-	public static int count_classes_of_knot(List<Integer> explained_vars_in_knot) {
+	public int count_classes_of_knot(List<Integer> explained_vars_in_knot) {
 		
 		List<Integer> unique_classes = Utilities.Utilities.get_unique_elements(explained_vars_in_knot);
 		int n_classes = unique_classes.size();
@@ -627,7 +674,7 @@ public class CART {
 	}
 	
 	
-	public static List<String> count_elements_of_classes(List<Integer> idxs){
+	public List<String> count_elements_of_classes(List<Integer> idxs){
 		
 		int n = idxs.size();
 		List<String> class_counts = new ArrayList<String>(nClasses);
@@ -652,7 +699,7 @@ public class CART {
 	}
 	
 	
-	public static List<String> count_elements_of_classes_with_str_idxs(List<String> idxs){
+	public List<String> count_elements_of_classes_with_str_idxs(List<String> idxs){
 		
 		int n = idxs.size();
 		List<String> class_counts = new ArrayList<String>(nClasses);
@@ -677,7 +724,7 @@ public class CART {
 	}
 	
 	
-	public static ArrayList<List<Double>> sort_sample_data(List<Integer> knotIdxs){
+	public ArrayList<List<Double>> sort_sample_data(List<Integer> knotIdxs){
 		
 		int n_idxs = knotIdxs.size();
 		
@@ -702,7 +749,7 @@ public class CART {
 	}
 	
 	
-	public static double [][] calc_class_conditional_probs(List<Integer> idxs) {
+	public double [][] calc_class_conditional_probs(List<Integer> idxs) {
 		
 		int n = idxs.size();
 		
@@ -740,7 +787,7 @@ public class CART {
 	}
 	
 	
-	public static double calc_misclassification_rate(List<Integer> idxs) {
+	public double calc_misclassification_rate(List<Integer> idxs) {
 		
 		double [][] probs = calc_class_conditional_probs(idxs);
 		
@@ -772,7 +819,7 @@ public class CART {
 	}
 	
 	
-	public static double calc_entropy(List<Integer> idxs) {
+	public double calc_entropy(List<Integer> idxs) {
 		
 		double [][] class_cond_probs = calc_class_conditional_probs(idxs);
 		
@@ -787,7 +834,7 @@ public class CART {
 	}
 	
 	
-	public static double calc_gini_index(List<Integer> idxs) {
+	public double calc_gini_index(List<Integer> idxs) {
 		
 		double [][] class_cond_probs = calc_class_conditional_probs(idxs);
 		
@@ -804,7 +851,7 @@ public class CART {
 	}
 	
 	
-	public static double calc_regression_cost(List<Integer> idxs) {
+	public double calc_regression_cost(List<Integer> idxs) {
 		
 		int n_idxs     = idxs.size();
 		double mean    = 0.0;
@@ -826,7 +873,7 @@ public class CART {
 	}
 	
 	
-	public static double calc_cost(List<Integer> idxs) {
+	public double calc_cost(List<Integer> idxs) {
 		
 		double cost = 0.0;
 		
@@ -848,7 +895,7 @@ public class CART {
 	}
 		
 	
-	public static String [] get_valid_cost_measures() {
+	public String [] get_valid_cost_measures() {
 		
 		String [] valid_measures = new String [4];
 		
@@ -861,13 +908,13 @@ public class CART {
 	}
 	
 	
-	public static HashMap <String, HashMap<String, HashMap<String,List<String>>>>  get_tree(){
+	public HashMap <String, HashMap<String, HashMap<String,List<String>>>>  get_tree(){
 		
 		return tree;
 		
 	}
 	
-	public static HashMap<String, List<String>> get_knot_infos(int layerNumber, int knotNumber){
+	public HashMap<String, List<String>> get_knot_infos(int layerNumber, int knotNumber){
 		
 		if(layerNumber <= 0 || layerNumber > treeDepth) {
 			throw new RuntimeException("Invalid layer number supplied.");
@@ -890,7 +937,7 @@ public class CART {
 	}
 	
 	
-	public static String get_knot_splitFeature(int layerNumber, int knotNumber) {
+	public String get_knot_splitFeature(int layerNumber, int knotNumber) {
 		
 		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
 		
@@ -901,7 +948,7 @@ public class CART {
 	}
 	
 	
-	public static double get_knot_threshold(int layerNumber, int knotNumber) {
+	public double get_knot_threshold(int layerNumber, int knotNumber) {
 		
 		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
 		
@@ -912,7 +959,7 @@ public class CART {
 	}
 	
 	
-	public static double get_knot_costReduction(int layerNumber, int knotNumber) {
+	public double get_knot_costReduction(int layerNumber, int knotNumber) {
 		
 		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
 		
@@ -923,7 +970,7 @@ public class CART {
 	}
 	
 	
-	public static int get_knot_number_of_elements(int layerNumber, int knotNumber) {
+	public int get_knot_number_of_elements(int layerNumber, int knotNumber) {
 		
 		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
 		
@@ -934,7 +981,7 @@ public class CART {
 	}
 	
 	
-	public static int [][] get_knot_class_distribution(int layerNumber, int knotNumber) {
+	public int [][] get_knot_class_distribution(int layerNumber, int knotNumber) {
 		
 		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
 		
@@ -951,7 +998,7 @@ public class CART {
 	}
 	
 	
-	public static double get_knot_cost(int layerNumber, int knotNumber) {
+	public double get_knot_cost(int layerNumber, int knotNumber) {
 		
 		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
 		
@@ -962,7 +1009,7 @@ public class CART {
 	}
 	
 	
-	public static List<Integer> get_knot_idxs(int layerNumber, int knotNumber){
+	public List<Integer> get_knot_idxs(int layerNumber, int knotNumber){
 		
 		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
 		
@@ -980,7 +1027,7 @@ public class CART {
 	}
 	
 	
-	public static double [][] get_knot_explained_variables(int layerNumber, int knotNumber){
+	public double [][] get_knot_explained_variables(int layerNumber, int knotNumber){
 		
 		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
 		
@@ -999,7 +1046,7 @@ public class CART {
 	}
 	
 	
-	public static double [][] get_knot_explaining_variables(int layerNumber, int knotNumber){
+	public double [][] get_knot_explaining_variables(int layerNumber, int knotNumber){
 		
 		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
 		
@@ -1021,7 +1068,7 @@ public class CART {
 	}
 	
 	
-	public static String get_parent_knot(int layerNumber, int knotNumber) {
+	public String get_parent_knot(int layerNumber, int knotNumber) {
 		
 		HashMap<String, List<String>> knot_info = get_knot_infos(layerNumber, knotNumber);
 		
@@ -1032,7 +1079,7 @@ public class CART {
 	}
 	
 	
-	public static void read_CART_input_data(boolean classData, String fileName, boolean hasRowNames, boolean hasColNames) throws Exception{
+	public void read_CART_input_data(boolean classData, String fileName, boolean hasRowNames, boolean hasColNames) throws Exception{
 		
 		inputData = new InputDataManager();	
 		
@@ -1049,7 +1096,7 @@ public class CART {
 	}
 	
 	
-	public static void set_CART_explained_variable(String var_name) {
+	public void set_CART_explained_variable(String var_name) {
 		name_of_explained_variable = var_name;
 		if(inputData != null) {
 			String [] colNames = inputData.colnames;
@@ -1068,7 +1115,7 @@ public class CART {
 	}
 	
 	
-	public static void set_CART_explaining_variables(String [] var_names) {
+	public void set_CART_explaining_variables(String [] var_names) {
 		names_of_explaining_variables = var_names;
 	}
 	
@@ -1079,21 +1126,24 @@ public class CART {
 	
 	
 	public static void set_CART_sampleName(String name) {
-		inputData.setSampleName(name);
+		sampleName = name;
+		if(inputData != null) {
+			inputData.setSampleName(name);
+		}		
 	}
 	
 	
-	public static void set_CART_explaining_variables_data(double [][] X) {
+	public void set_CART_explaining_variables_data(double [][] X) {
 		explaining_variables = X;
 	}
 	
 	
-	public static void set_CART_explained_variable_data(double [][] y) {
+	public void set_CART_explained_variable_data(double [][] y) {
 		explained_variable = y;
 	}
 	
 	
-	public static void set_CART_inputData() {
+	public void set_CART_inputData() {
 		
 		n_explaining_variables = names_of_explaining_variables.length;
 		
@@ -1160,22 +1210,72 @@ public class CART {
 	}
 	
 	
-	public static int getTreeDepth() {
+	public void set_CART_inputData(double [][] y, double X[][], String y_name, String [] X_names, boolean classData) {
+		
+		categorical_explained_var = true;	
+		if(classData != true) {
+			categorical_explained_var = false;
+		}
+		
+		names_of_explaining_variables = X_names;		
+		n_explaining_variables = names_of_explaining_variables.length;
+		
+		name_of_explained_variable = y_name;		
+		n_observations = y.length;
+			
+		explained_variable = new double [n_observations][1];
+		explaining_variables = new double [n_observations][n_explaining_variables];
+		
+		//set default number:
+		maxNumberOfClassesInKnot = 1;
+		
+		if(categorical_explained_var == true) {			
+			
+			List<Double> classNameList = Utilities.Utilities.get_unique_sorted_elements_for_matrix_column(y,0);
+			nClasses = classNameList.size();
+			
+			classNames = new String [nClasses];
+			
+			classes = new double [nClasses];
+			
+			for(int i=0; i<nClasses; i++) {
+				classes[i] = i;
+				classNames[i] = Double.toString(classNameList.get(i));
+			}	
+			
+			for(int i=0; i<n_observations; i++) {
+				String y_i = Double.toString(y[i][0]);
+				int [] idx = Utilities.Utilities.get_idx(classNames, y_i);
+				y[i][0] = classes[idx[0]];
+			}			
+		}
+		
+		explained_variable = y;
+		explaining_variables = X;		
+	}
+	
+	
+	public int getTreeDepth() {
 		return treeDepth;
 	}
 	
 	
-	public static boolean isCategoricalTree() {
+	public String getSampleName4Tree() {
+		return sampleName;
+	}
+	
+	
+	public boolean isCategoricalTree() {
 		return categorical_explained_var;
 	}
 	
 	
-	public static void useCategoricalTree() {
+	public void useCategoricalTree() {
 		categorical_explained_var = true;
 	}
 	
 	
-	public static HashMap<String,List<String>> get_leafs_4_layers(){
+	public HashMap<String,List<String>> get_leafs_4_layers(){
 		
 		HashMap<String,List<String>> leafs = new HashMap<String,List<String>>();
 		
@@ -1234,7 +1334,7 @@ public class CART {
 	}
 	
 	
-	public static HashMap<String, Integer> get_distOfSplittingFeatures() {
+	public HashMap<String, Integer> get_distOfSplittingFeatures() {
 		
 		HashMap<String, Integer> distOfSplitFeat = new HashMap<String, Integer>(n_explaining_variables);
 		
@@ -1262,24 +1362,29 @@ public class CART {
 	}
 	
 	
-	public static void set_maxTreeDepth(int maxDepth) {
+	public void set_maxTreeDepth(int maxDepth) {
 		maxTreeDepth = maxDepth;
 	}
 	
 	
-	public static void set_minNumberOfElementsInKnot(int minNumber) {
+	public void set_minNumberOfElementsInKnot(int minNumber) {
 		minNumberOfElementsInKnot = minNumber;
 	}
 	
 	
-	public static void set_maxNumberOfClassesInKnot(int maxNumberOfClasses) {
+	public void set_maxNumberOfClassesInKnot(int maxNumberOfClasses) {
 		if(categorical_explained_var == true) {
 			maxNumberOfClassesInKnot = maxNumberOfClasses;
 		}
 	}
 	
 	
-	public static HashMap<String, HashMap<String,Integer>> get_colPosOfLeafsInRegressionMatrix() {
+	public void set_weightsOfBoostingMachines(List<Double> weights) {
+		this.weights = weights;		
+	}
+	
+	
+	public HashMap<String, HashMap<String,Integer>> get_colPosOfLeafsInRegressionMatrix() {
 		
 		HashMap<String,List<String>> leafs = get_leafs_4_layers();
 		int nLayers = leafs.size();		
@@ -1304,7 +1409,7 @@ public class CART {
 	}
 	
 	
-	public static int get_colPosOfLeafInRegressionMatrix(String leafLayerLabel, String leafKnotLabel) {
+	public int get_colPosOfLeafInRegressionMatrix(String leafLayerLabel, String leafKnotLabel) {
 		
 		HashMap<String,List<String>> leafs = get_leafs_4_layers();
 		int nLayers = leafs.size();		
@@ -1331,7 +1436,7 @@ public class CART {
 	}
 	
 	
-	public static void calc_regressor_matrix() {
+	public void calc_regressor_matrix() {
 		
 		HashMap<String, HashMap<String,Integer>> colPosInRegMatrix = get_colPosOfLeafsInRegressionMatrix();
 		
@@ -1371,7 +1476,7 @@ public class CART {
 	}
 	
 	
-	public static void calc_least_square_regressor_weights() {
+	public void calc_least_square_regressor_weights() {
 		
 		calc_regressor_matrix();
 		
@@ -1388,32 +1493,41 @@ public class CART {
 	}
 	
 	
-	public static double [][] get_explained_variable() {
+	public double [][] get_explained_variable() {
 		return explained_variable;
 	}
 	
 	
-	public static double [][] get_explaining_variables() {
+	public double [][] get_explaining_variables() {
 		return explaining_variables;
 	}
 	
 	
-	public static String get_name_of_explained_variable() {
+	public String get_name_of_explained_variable() {
 		return name_of_explained_variable;
 	}
 	
 	
-	public static String [] get_names_of_explaining_variables() {
+	public String [] get_names_of_explaining_variables() {
 		return names_of_explaining_variables;
 	}
 	
 	
-	public static String [] get_class_names() {
+	public String [] get_class_names() {
 		return classNames;
 	}
 	
 	
-	public static LinearRegression get_linearRegObject() {
+	public double [][] get_predicted_var() {
+		if(predicted_var == null) {
+			System.out.println("No insample prediction found yet.");
+			return null;
+		}
+		return predicted_var;
+	}
+	
+	
+	public LinearRegression get_linearRegObject() {
 		if(obj_linearReg == null) {
 			System.out.println("Linear regression not done yet for fitted tree.");
 		}
@@ -1421,32 +1535,35 @@ public class CART {
 	}
 	
 	
-	public static InputDataManager get_CART_inputData() {
+	public InputDataManager get_CART_inputData() {
 		return inputData;
 	}
 	
 	
-	public static void showLeafs(boolean show) {
+	public void showLeafs(boolean show) {
 		showLeafs = show;
 	}
 	
 	
 	@SuppressWarnings("static-access")
-	public static CART clone_CART_obj_4_plots() {
+	public CART clone_CART_obj_4_plots() {
 				   
 		CART cart_obj = new CART();
-		cart_obj.tree                       = tree;
-		cart_obj.classes                    = classes;
-		cart_obj.classNames                 = classNames;
-		cart_obj.nClasses                   = nClasses;
-		cart_obj.treeDepth                  = treeDepth;
-		cart_obj.explaining_variables       = explaining_variables;
-		cart_obj.n_explaining_variables     = n_explaining_variables;
-		cart_obj.explained_variable         = explained_variable;
-		cart_obj.name_of_explained_variable = name_of_explained_variable;
-		cart_obj.categorical_explained_var  = categorical_explained_var;
-		cart_obj.obj_linearReg              = obj_linearReg;
-		cart_obj.inputData                  = inputData;
+		cart_obj.tree                          = tree;
+		cart_obj.classes                       = classes;
+		cart_obj.classNames                    = classNames;
+		cart_obj.nClasses                      = nClasses;
+		cart_obj.treeDepth                     = treeDepth;
+		cart_obj.explaining_variables          = explaining_variables;
+		cart_obj.n_explaining_variables        = n_explaining_variables;
+		cart_obj.explained_variable            = explained_variable;
+		cart_obj.name_of_explained_variable    = name_of_explained_variable;
+		cart_obj.names_of_explaining_variables = names_of_explaining_variables;
+		cart_obj.categorical_explained_var     = categorical_explained_var;
+		cart_obj.obj_linearReg                 = obj_linearReg;
+		cart_obj.inputData                     = inputData;
+		cart_obj.sampleName                    = sampleName;
+		cart_obj.predicted_var                 = predicted_var;
 		
 		return cart_obj;
 		
@@ -1454,7 +1571,7 @@ public class CART {
 	
 	
 	@SuppressWarnings("static-access")
-	public static void plot_tree() {
+	public void plot_tree() {
 				   
 		CART cart_obj = clone_CART_obj_4_plots();
 		
@@ -1481,7 +1598,7 @@ public class CART {
 		
 	
 	@SuppressWarnings("static-access")
-	public static void plotFittedExplainedVariable() {
+	public void plotFittedExplainedVariable() {
 		
 		CART cart_obj = clone_CART_obj_4_plots();
 		
@@ -1498,7 +1615,7 @@ public class CART {
 	
 	
 	@SuppressWarnings("static-access")
-	public static void plotHistOfResiduals() {
+	public void plotHistOfResiduals() {
 		
 		CART cart_obj = clone_CART_obj_4_plots();
 		
@@ -1515,7 +1632,7 @@ public class CART {
 	
 	
 	@SuppressWarnings("static-access")
-	public static void plotLeafWeights() {
+	public void plotLeafWeights() {
 		
 		CART cart_obj = clone_CART_obj_4_plots();
 		
@@ -1532,7 +1649,7 @@ public class CART {
 	
 	
 	@SuppressWarnings("static-access")
-	public static void plot_DistOfSplittingFeature() {
+	public void plot_DistOfSplittingFeature() {
    
 		CART cart_obj = clone_CART_obj_4_plots();
 		

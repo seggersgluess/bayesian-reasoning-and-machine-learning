@@ -7,21 +7,31 @@ import Mathematics.MatrixOperations;
 
 public class NormalDistribution {
 
-	static double [][] my;
-	static double [][] sigma;
+	double [][] my;
+	double [][] sigma;
 	
-	static double [][] L = null;
+	double [][] L = null;
 	
-	@SuppressWarnings("static-access")	
-	public NormalDistribution(double [][] my, double [][] sigma){
-		
+	public NormalDistribution(double [][] my, double [][] sigma) {		
 		this.my   = my;
-		this.sigma = sigma;
-		
+		this.sigma = sigma;	
 	}
 	
 	
-	public static double [][] sample(){
+	public NormalDistribution(double my, double sigma){
+		
+		double [][] myArray = new double [1][1];
+		double [][] sigmaArray = new double [1][1];
+		
+		myArray[0][0] = my;
+		sigmaArray[0][0] = sigma;
+		
+		this.my   = myArray;
+		this.sigma = sigmaArray;		
+	}
+	
+	
+	public double [][] sample(){
 		
 		int n = my.length;
 		
@@ -39,20 +49,52 @@ public class NormalDistribution {
 		
 		x = MatrixOperations.add(my, MatrixOperations.multiplication(L, x));
 		
-		return x;
-		
+		return x;	
 	}
 	
 	
-	public static double get_univariateNormalPDF(double x){
+	public double [][] sample(int n){
 		
-		return 1.0/(Math.sqrt(2.0*Math.PI*Math.pow(sigma[0][0],2.0)))*Math.exp(-Math.pow(x-my[0][0], 2.0)/(2.0*Math.pow(sigma[0][0], 2.0)));
+		int n_vars = my.length;
+		
+		double [][] X = new double [n_vars][n];
+		
+		for(int i=0; i<n; i++){			
+			if(i==0){				
+				X = sample();				
+			}else{				
+				X = MatrixOperations.cbind(X, sample());				
+			}
 			
+		}
+		
+		L = null;
+		
+		return X;		
+	}
+	
+	
+	public double get_univariateNormalPDF(double x){	
+		return 1.0/(Math.sqrt(2.0*Math.PI*Math.pow(sigma[0][0],2.0)))*Math.exp(-Math.pow(x-my[0][0], 2.0)/(2.0*Math.pow(sigma[0][0], 2.0)));			
+	}
+	
+	
+	public double [][] get_univariateNormalPDF(double [][] x){
+		
+		int n=x.length;
+		
+		double [][] pdf = new double [n][0];
+		
+		for(int i=0; i<n; i++) {
+			pdf[i][0] = get_univariateNormalPDF(x[i][0]);
+		}
+		
+		return pdf;
 	}
 	
 	
 	//Zelen & Severo (1964) procedure for numerical approximation of the normal CDF
-	public static double get_univariateNormalCDF(double x){
+	public double get_univariateNormalCDF(double x){
 		
 		double [][] orgSigma = new double [1][1];
 		double [][] orgMy = new double [1][1];
@@ -82,12 +124,11 @@ public class NormalDistribution {
 		sigma[0][0] = orgSigma[0][0];
 		my[0][0] = orgMy[0][0];
 		
-		return cdf;
-		
+		return cdf;		
 	}
 	
 	
-	public static double get_univariateNormalQuantile(double p){
+	public double get_univariateNormalQuantile(double p){
 	
 		double q = p;
 		if(p<0.5){
@@ -102,10 +143,10 @@ public class NormalDistribution {
 			z=-z;
 		}
 		
-		return z;
-		
+		return z;		
 	}	
 		
+	
 	public double get_multivariateNormalPDF(double [][] x){
 		
 		int n = x.length;
@@ -124,35 +165,11 @@ public class NormalDistribution {
 		double density = MatrixOperations.multiplication(MatrixOperations.multiplication(termTrans, sigma_inv),term)[0][0];		
 		density = Math.pow(2.0*Math.PI, -1.0*(my.length/2.0))*1.0/Math.sqrt(det)*Math.exp(-1.0/2.0*density);
 		
-		return density;
-		
-	}
-	
-	
-	public static double [][] sample(int n){
-		
-		int n_vars = my.length;
-		
-		double [][] X = new double [n_vars][n];
-		
-		for(int i=0; i<n; i++){			
-			if(i==0){				
-				X = sample();				
-			}else{				
-				X = MatrixOperations.cbind(X, sample());				
-			}
-			
-		}
-		
-		L = null;
-		
-		return X;
-		
+		return density;	
 	}
 	
 	
     // test client
-    @SuppressWarnings("static-access")
 	public static void main(String[] args) {
     	
     	//my = new double [2][1];
@@ -171,6 +188,5 @@ public class NormalDistribution {
     	System.out.println(nd.get_univariateNormalQuantile(0.05));
     	
     }
-	
-	
+		
 }

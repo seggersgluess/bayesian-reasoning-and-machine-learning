@@ -1,53 +1,53 @@
 package Regression;
-import DataManagement.ReadTextFile;
+import DataManagement.InputDataManager;
 import Mathematics.GeneralMath;
 import Mathematics.MatrixOperations;
 
 public class LinearRegression {
 
-	static boolean use_constant;
+	boolean use_constant;
 	
 	//Observations
-	static double [][] explained_variable;
-	static double [][] explaining_variables;
+	double [][] explained_variable;
+	double [][] explaining_variables;
 	
-	static int n_observations;
-	static int n_explaining_variables;
+	int n_observations;
+	int n_explaining_variables;
 	
 	//Estimated parameters & residuals
-	static double  constant;
-	static double  constant_error;
-	static double  constant_t_value;
-	static double  constant_p_value;
+	double  constant;
+	double  constant_error;
+    double  constant_t_value;
+	double  constant_p_value;
 	
-	static double [][] parameters;
-	static double [][] parameter_errors;
-	static double [][] parameter_t_values;
-	static double [][] parameter_p_values;
+	double [][] parameters;
+	double [][] parameter_errors;
+	double [][] parameter_t_values;
+	double [][] parameter_p_values;
 	
-	static double [][] ss_pars;
+	double [][] ss_pars;
 	
-	static double [][] fitted_explained_variable;
+	double [][] fitted_explained_variable;
 	
-	static double [][] covariance;
+	double [][] covariance;
 	
-	static double ss_total;
-	static double ss_reg;
+	double ss_total;
+	double ss_reg;
 	
-	static double [][] residuals;
-	static double [][] standardized_residuals;
-	static double [][] studentized_residuals;
-	static double [][] external_studentized_residuals;
-	static double [][] cooks_distance;
-	static double [][] leverage;
+	double [][] residuals;
+	double [][] standardized_residuals;
+	double [][] studentized_residuals;
+	double [][] external_studentized_residuals;
+	double [][] cooks_distance;
+	double [][] leverage;
 	
-	static double ss_res;
-	static double sigma;
+	double ss_res;
+	double sigma;
 		
-	static double F;
+	double F;
 	
-	static double R_squared;
-	static double adj_R_squared;
+	double R_squared;
+	double adj_R_squared;
 	
 	
 	public LinearRegression(double [][] y, double [][] X, boolean constant_usage){
@@ -147,7 +147,7 @@ public class LinearRegression {
 	
 	
 	// returns matrix of ones
-	public static double [][] get_J_matrix(){
+	public double [][] get_J_matrix(){
 		
 		double [][] J_matrix = new double [n_observations][n_observations];
 		
@@ -167,7 +167,7 @@ public class LinearRegression {
 	
 	
 	// returns the t-values for the estimated parameters
-	public static void calculate_t_statistics_4_est_pars(){
+	public void calculate_t_statistics_4_est_pars(){
 		
 		parameter_t_values = new double [n_explaining_variables][1];
 		
@@ -181,7 +181,7 @@ public class LinearRegression {
 	
 	
 	// calculates studentized, external studentized and Cook´s distance
-	public static void calculate_residual_measures(double [][] hat_matrix){
+	public void calculate_residual_measures(double [][] hat_matrix){
 		
 		standardized_residuals         = new double [n_observations][1];
 		studentized_residuals          = new double [n_observations][1];
@@ -206,7 +206,7 @@ public class LinearRegression {
 	
 	
 	// calculates sums of squares for the parameters beta_1, beta_2, ...
-	public static void calculate_sums_of_squares_4_est_pars(double [][] regressor_matrix){
+	public void calculate_sums_of_squares_4_est_pars(double [][] regressor_matrix){
 		
 		ss_pars = new double [n_explaining_variables][1];
 		
@@ -246,7 +246,7 @@ public class LinearRegression {
 	
 		
 	// prints estimated parameters, standard errors, t-values and p-values
-	public static void print_estimation_res(){
+	public void print_estimation_res(){
 		
 		int n_est_pars = n_explaining_variables;
 		
@@ -297,7 +297,7 @@ public class LinearRegression {
 	
 	
 	// prints estimated F-test, R^2, adjusted R^2, sigma
-	public static void print_linear_model_stats(){
+	public void print_linear_model_stats(){
 			
 		String [][] stats = new String [1][8];
 		
@@ -330,7 +330,7 @@ public class LinearRegression {
 	
 	
 	// prints observed variable y, fitted variable, residuals and residual measures 
-	public static void print_linear_model_diagnostics(){
+	public void print_linear_model_diagnostics(){
 		
 		String [][] diagnostics = new String [n_observations+1][8];
 		
@@ -365,94 +365,94 @@ public class LinearRegression {
 	}
 	
 	
-	public static double get_est_constant(){
+	public double get_est_constant(){
 		
 		return constant;
 		
 	}
 	
 	
-	public static double get_constant_error(){
+	public double get_constant_error(){
 		
 		return constant_error;
 		
 	}
 	
 	
-	public static double get_constant_t_value(){
+	public double get_constant_t_value(){
 		
 		return constant_t_value;
 		
 	}
 	
 	
-	public static double get_constant_p_value(){
+	public double get_constant_p_value(){
 		
 		return constant_p_value;
 		
 	}
 	
 	
-	public static double [][] get_est_parameters(){
+	public double [][] get_est_parameters(){
 		
 		return parameters;
 		
 	}
 	
 	
-	public static double [][] get_parameter_errors(){
+	public double [][] get_parameter_errors(){
 		
 		return parameter_errors;
 		
 	}
 	
 	
-	public static double [][] get_parameter_t_values(){
+	public double [][] get_parameter_t_values(){
 		
 		return parameter_t_values;
 		
 	}
 	
 	
-	public static double [][] get_parameter_p_values(){
+	public double [][] get_parameter_p_values(){
 		
 		return parameter_p_values;
 		
 	}
 	
 	
-	public static double get_sigma(){		
+	public double get_sigma(){		
 		return sigma;		
 	}
 	
 	
-	public static double get_R_squared(){		
+	public double get_R_squared(){		
 		return R_squared;		
 	}
 	
 	
-	public static double get_adj_R_squared(){		
+	public double get_adj_R_squared(){		
 		return adj_R_squared;		
 	}
 	
 	
-	public static double get_F_stat(){		
+	public double get_F_stat(){		
 		return F;		
 	}
 	
 	
-	public static double [][] get_residuals(){		
+	public double [][] get_residuals(){		
 		return residuals;		
 	}
 	
 	
-	public static double [][] get_fitted_values(){
+	public double [][] get_fitted_values(){
 		return fitted_explained_variable;
 	}
 	
 	
 	// prints observed variable y, fitted variable, residuals and residual measures 
-	public static void print_covariance_matrix(){
+	public void print_covariance_matrix(){
 			
 		int n_est_pars = n_explaining_variables;
 		
@@ -520,13 +520,79 @@ public class LinearRegression {
 	}
 	
 	
-	// test client
-    public static void main(String[] args) {
-    	
+	public static void test1() {
+		
     	double[][] data = null;
     	
     	try {
-    		data = ReadTextFile.readfile("C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/RegTest.txt");
+    		//data = ReadTextFile.readfile("C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/RegTest.txt");
+    		String file = "C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Test_MS_Models/InterestRates.txt";
+    		String [] colnames = {"Germany"};
+        	
+    		InputDataManager inputData = new InputDataManager();		
+    		inputData.fileReader(file, true, true, true);
+        	
+        	int nData = inputData.numberOfRows-1;
+        	String [] rownames = new String [nData];
+        	for(int i=0; i<nData;i++){
+        		rownames[i] = Integer.toString(i+1);
+        	}
+    		
+    		inputData.selectLoadedData(rownames, colnames);
+    		data = inputData.selectedDblFileData;
+    		
+    	} catch (Exception e) {
+    		e.printStackTrace();
+    	}
+		
+    	int lag = 30;
+    	int n_usedObs = data.length-lag;
+    	double [][] laggedData = new double [n_usedObs][lag];
+    	double [][] unlaggedData = new double [n_usedObs][1];
+    	
+    	int startIdx = lag-1;
+    	
+        for(int i=0; i<n_usedObs; i++) {
+        	unlaggedData[i][0] = data[startIdx+i+1][0];
+        	for(int l=0; l<lag; l++) {
+        		laggedData[i][l] = data[startIdx-l+i][0];
+        	}	
+        }
+    	
+        double [][] y = MatrixOperations.get_sub_matrix_between_column_idxs(unlaggedData, 0, 0);
+    	double [][] X = MatrixOperations.get_sub_matrix_between_column_idxs(laggedData, 1, lag-1); 
+    	
+    	LinearRegression obj_lm = new LinearRegression(y, X, true);
+    	long startTime = System.currentTimeMillis();
+    	obj_lm.do_parameter_estimation();
+    	MatrixOperations.print_matrix(obj_lm.get_est_parameters());
+    	long endTime = System.currentTimeMillis();
+    	System.out.println("Finished AR-regression after " + ((endTime-startTime)/1000.0) + " secs.");
+    	
+	}
+	
+	
+	public static void test2() {
+		
+    	double[][] data = null;
+    	
+    	try {
+    		//data = ReadTextFile.readfile("C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/RegTest.txt");
+    		String file = "C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/RegTest.txt";
+    		String [] colnames = {"2", "3", "4", "5", "6"};
+        	
+    		InputDataManager inputData = new InputDataManager();		
+    		inputData.fileReader(file, true, true, true);
+        	
+        	int nData = inputData.numberOfRows-1;
+        	String [] rownames = new String [nData];
+        	for(int i=0; i<nData;i++){
+        		rownames[i] = Integer.toString(i+1);
+        	}
+    		
+    		inputData.selectLoadedData(rownames, colnames);
+    		data = inputData.selectedDblFileData;
+    		
     	} catch (Exception e) {
     		e.printStackTrace();
     	}
@@ -535,8 +601,18 @@ public class LinearRegression {
     	double [][] X = MatrixOperations.get_sub_matrix_between_column_idxs(data, 0, 3);    	
     	
     	LinearRegression obj_lm = new LinearRegression(y, X, true);
-    	
+    	long startTime = System.currentTimeMillis();
     	obj_lm.do_parameter_estimation();
+    	MatrixOperations.print_matrix(obj_lm.get_est_parameters());
+    	long endTime = System.currentTimeMillis();
+    	System.out.println("Finished regression after " + ((endTime-startTime)/1000.0) + " secs.");
+	}
+	
+	
+	// test client
+    public static void main(String[] args) {
+    	
+    	test1();
     	
     }
 	 	

@@ -158,6 +158,45 @@ public class Utilities {
 	}
 	
 	
+	public static HashMap<String, List<Double>> get_sorted_elements_and_idxs_of_double_vector(double [][] x){
+		
+		HashMap<String, List<Double>> sorted_elements_and_idxs = new HashMap<String, List<Double>>();
+		
+		List<Double> sorted_vec = new ArrayList<Double>();
+		List<Double> idxs = new ArrayList<Double>();
+		
+		int n=x.length;
+		
+		for(int i=0; i<n; i++) {
+			sorted_vec.add(x[i][0]);
+		}
+		
+		Collections.sort(sorted_vec);
+		
+		sorted_elements_and_idxs.put("SortedValues", sorted_vec);
+		
+		int idx = 0;
+		
+		while(n>0) {
+			
+			int [] org_min_idxs = get_idx(x, sorted_vec.get(idx));
+			int nIdxs = org_min_idxs.length;
+				
+			for(int j=0; j<nIdxs; j++){				
+				idxs.add((double) org_min_idxs[j]);
+			}
+						
+			idx += nIdxs;			
+			n -= nIdxs;
+		}
+		
+		sorted_elements_and_idxs.put("Idxs", idxs);
+		
+		return sorted_elements_and_idxs;		
+		
+	}
+	
+	
 	// returns indices of sorted elements in unsorted vector
 	public static int [] get_idxs_for_sorted_vec(double [] x){
 		
@@ -359,6 +398,43 @@ public class Utilities {
 	}
 	
 	
+	// returns unique elements of a supplied n x 1 column vector
+	public static ArrayList<String> get_unique_elements(ArrayList<String> x){
+		
+		int n_elements = x.size();
+		int idx = 0;
+		
+		String [] unique_vec = new String [n_elements];		
+				
+		unique_vec[0] = x.get(0);
+		
+		for(int i=1; i<n_elements; i++){
+			
+			int match = 0;
+			
+			for(int j=0; j<idx; j++){				
+				if(unique_vec[j].contentEquals(x.get(i)) == true){				
+					match = 1;
+					break;				
+				}			
+			}
+			
+			if(match == 0){			
+				unique_vec[idx] = x.get(i);
+				idx++;				
+			}		
+		}
+	
+		ArrayList<String> unique_vec_2 = new ArrayList<String>(idx);
+		
+		for(int i=0; i<idx; i++){			
+			unique_vec_2.add(unique_vec[i]);			
+		}
+		
+		return unique_vec_2;				
+	}
+	
+	
 	// returns maximum of a supplied vector
 	public static double getMax(double[] x){ 
 		    
@@ -411,13 +487,36 @@ public class Utilities {
 		
 		for(int i=0; i<nRows;i++){ 
 			for(int j=0; j<nCols; j++) {
-				if(x[i][0] > maxValue){ 			    	  
+				if(x[i][j] > maxValue){ 			    	  
 					maxValue = x[i][j]; 
 				} 
 			}      
 		} 
 		
 		return maxValue; 
+		    
+	}
+	
+	
+	public static HashMap<String, Integer> getMaxFromVec(int[][] x){ 
+	    
+		int nRows = x.length; 
+		
+		int maxValue = Integer.MIN_VALUE; 
+		int idx = -1;
+		
+		for(int i=0; i<nRows;i++){ 
+			if(x[i][0] > maxValue){ 			    	  
+				maxValue = x[i][0]; 
+				idx = i;
+			}     
+		} 
+		
+		HashMap<String, Integer> res = new HashMap<String, Integer>();
+		res.put("Value", maxValue);
+		res.put("Idx", idx);
+		
+		return res; 
 		    
 	}
 	
@@ -1067,6 +1166,20 @@ public class Utilities {
 	}
 	
 	
+	public static double [][] dblGenerator(double lower, double upper, int n_steps) {
+				
+		double [][] x = new double [(n_steps+1)][1];
+		double step = (upper-lower)/n_steps;
+		
+		x[0][0] = lower;
+		for(int i=1; i<(n_steps+1); i++) {
+			x[i][0] = x[(i-1)][0]+step;
+		}
+		
+		return x;		
+	}
+	
+	
 	//draws random int numbers over supplied interval
 	public static int [] getRandomIntNumbers(int lb, int ub, int n){
 		
@@ -1233,11 +1346,8 @@ public class Utilities {
 	
     // test client
     public static void main(String[] args) {
-    	
-    	//double [] a = {-2.0, -1.0, 8.0, -7.0, -2.0, -7.0, 8.0};
-    	//MatrixOperations.print_vector(get_unique_elements(a));
-    	  
-    	List<Double> a = new ArrayList<Double>();
+    	    	  
+    	/*List<Double> a = new ArrayList<Double>();
     	
     	for(int i=0; i<5; i++) {
     		a.add(8.0);
@@ -1262,7 +1372,10 @@ public class Utilities {
     		int idx = (int) Math.round(idxs.get(i));
     		System.out.println(a.get(idx));
     	}
+    	*/
     	
+    	double [][] a = dblGenerator(6.0, 1.0, 10);
+    	MatrixOperations.print_matrix(a);
     	
     }
 	

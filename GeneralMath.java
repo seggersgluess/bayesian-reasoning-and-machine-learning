@@ -1,5 +1,7 @@
 package Mathematics;
+import java.util.Arrays;
 import java.util.List;
+
 
 public class GeneralMath {
 
@@ -106,7 +108,7 @@ public class GeneralMath {
 					for(int k=0; k<n_obs; k++){
 						cov[i][j] += Math.pow(X[k][i]-mean[i][0],2.0);
 					}
-					cov[i][j] = cov[i][j]/(n_obs-1);
+					cov[i][j] = cov[i][j]/(n_obs-1.0);
 				}
 				
 				if(i!=j){
@@ -131,7 +133,7 @@ public class GeneralMath {
 		double fact = 1.0;
 		
 		for(int i=0; i<x; i++){			
-			fact = fact*(i+1);			
+			fact *= (i+1);			
 		}
 		
 		return fact;
@@ -180,7 +182,7 @@ public class GeneralMath {
 		double mean = 0.0;
 		
 		for(int i=0; i<n_elements; i++){			
-			mean = mean + x[i][0];			
+			mean += x[i][0];			
 		}
 		
 		mean = mean/(double)n_elements;
@@ -333,7 +335,37 @@ public class GeneralMath {
 		return sqrt_vec;
 		
 	}
-				
+	
+	
+	public static double quantile(double [] sample, double p){
+		
+		if(p>1.0 || p<0.0){		
+			throw new RuntimeException("Invalid probability p supplied.");			
+		}
+		
+		int n = sample.length;
+		double quantile;
+		double idx;
+		
+	    Arrays.sort(sample, 0, n);
+			
+	    idx = p*n;
+	    if(Math.ceil(idx)-idx > 0.5){	        		
+	    	idx = idx-1;        		
+	    }
+	    	
+	    if(idx >= 0.0){        		
+	        idx = Math.ceil(idx)-1.0; 		
+	    }else{	
+	        idx = 0.0;	        		
+	    }
+	    	
+	    quantile = sample[(int)idx];
+	        	
+		return quantile;
+		
+	}
+	
 	
     // test client
     public static void main(String[] args) {
