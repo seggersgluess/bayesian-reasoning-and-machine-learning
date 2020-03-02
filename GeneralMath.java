@@ -337,6 +337,17 @@ public class GeneralMath {
 	}
 	
 	
+	public static double sincf(double x) {
+		
+		if(x==0.0) {
+			return 1.0;
+		}
+		
+		double p = Math.PI*x;
+		return Math.sin(p)/p;
+	}
+	
+	
 	public static double quantile(double [] sample, double p){
 		
 		if(p>1.0 || p<0.0){		

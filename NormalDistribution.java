@@ -59,13 +59,26 @@ public class NormalDistribution {
 		
 		double [][] X = new double [n_vars][n];
 		
-		for(int i=0; i<n; i++){			
-			if(i==0){				
-				X = sample();				
-			}else{				
-				X = MatrixOperations.cbind(X, sample());				
+		if(n_vars == 1) {
+			for(int i=0; i<n; i++){			
+				if(i==0){				
+					X = sample();				
+				}else{
+					X = MatrixOperations.rbind(X, sample());				
+				}
+				
 			}
-			
+		}
+		
+		if(n_vars > 1) {
+			for(int i=0; i<n; i++){			
+				if(i==0){				
+					X = sample();				
+				}else{
+					X = MatrixOperations.cbind(X, sample());				
+				}
+				
+			}
 		}
 		
 		L = null;
@@ -83,7 +96,7 @@ public class NormalDistribution {
 		
 		int n=x.length;
 		
-		double [][] pdf = new double [n][0];
+		double [][] pdf = new double [n][1];
 		
 		for(int i=0; i<n; i++) {
 			pdf[i][0] = get_univariateNormalPDF(x[i][0]);

@@ -1,9 +1,12 @@
 package Mathematics;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.jblas.DoubleMatrix;
+import org.jblas.Eigen;
+import org.jblas.Singular;
 import org.jblas.Solve;
 
 import Utilities.Utilities;
@@ -384,7 +387,6 @@ public class MatrixOperations {
 			double pivot = A[p][p];
 			
 			if(pivot == 0.0){			
-				MatrixOperations.print_matrix(A);
 				throw new RuntimeException("Inverse matrix cannot calculated.");						
 			}
 			
@@ -850,30 +852,16 @@ public class MatrixOperations {
 			throw new RuntimeException("Mismatch between column number and number of matrix columns.");			
 		}
 		
-		for(int i=0; i<n_rows; i++){
-			
-			column_vec[i] = A[i][col_number];
-			
+		for(int i=0; i<n_rows; i++){		
+			column_vec[i] = A[i][col_number];			
 		}
 		
 		return column_vec;		
 	}
 	
 	
-	public static double [][] get_column_vec_from_matrix(double [][] A, int col_number){
-		
-		DoubleMatrix A_dbl = new DoubleMatrix(A);
-		
-		double [][] c = A_dbl.getColumn(col_number).toArray2();
-		
-		return c;
-	}
-	
-	
-	
-	
 	// returns specific column of a matrix
-	public static double [][] get_column_vec_from_matrix_old(double [][] A, int col_number){
+	public static double [][] get_column_vec_from_matrix(double [][] A, int col_number){
 		
 		int n_cols = A[0].length;
 		int n_rows = A.length;
@@ -883,10 +871,8 @@ public class MatrixOperations {
 			throw new RuntimeException("Mismatch between column number and number of matrix columns.");			
 		}
 		
-		for(int i=0; i<n_rows; i++){
-			
-			column_vec[i][0] = A[i][col_number];
-			
+		for(int i=0; i<n_rows; i++){			
+			column_vec[i][0] = A[i][col_number];			
 		}
 		
 		return column_vec;		
@@ -1454,12 +1440,121 @@ public class MatrixOperations {
 	}
 	
 	
+	 /**
+     * Method for calculating eigendecomposition of a symmetric matrix X.
+     * (JBLAS library is used)
+     * @param X symmetric double matrix
+     * @return HashMap of double arrays with keys eigenvalues and eigenvectors. 
+     * Key eigenvalues returns diagonal matrix with eigenvalues on its diagonal.
+     * Key eigenvectors returns matrix with eigenvectors in its columns)
+     */
+	@SuppressWarnings("static-access")
+	public static HashMap<String, double [][]> get_eigen_dec_4_symmetric_matrix(double [][] X) {
+		
+		HashMap<String, double [][]> eigenDecRes = new HashMap<String, double [][]>();
+		
+		Eigen eigen = new Eigen();
+		DoubleMatrix X_new = new DoubleMatrix(X);	
+		DoubleMatrix [] eigenDec = eigen.symmetricEigenvectors(X_new);
+		
+		eigenDecRes.put("eigenvectors", eigenDec[0].toArray2());
+		eigenDecRes.put("eigenvalues", eigenDec[1].toArray2());
+		
+		return eigenDecRes;
+	}
+	
+	
+	 /**
+     * Method for calculating square root X^1/2 of a square matrix X by
+     * eigendecomposition (JBLAS library is used)
+     * @param X square double matrix
+     * @return double [][] X^1/2. 
+     */
+	public static double [][] get_square_root_of_matrix(double [][] X) {
+		
+		int n_vars = X.length;
+		
+		if(n_vars != X[0].length) {
+			throw new RuntimeException("No square matrix supplied. Can´t compute square root of matrix.");
+		}
+		
+		HashMap<String, double [][]> eigenDec = get_eigen_dec_4_symmetric_matrix(X);
+		
+		double [][] e_val = eigenDec.get("eigenvalues");
+		double [][] e_vec = eigenDec.get("eigenvectors");
+		
+		for(int i=0; i<n_vars; i++) {
+			e_val[i][i] = Math.sqrt(e_val[i][i]);
+		}
+		
+		double [][] sq_root_X = MatrixOperations.multiplication(MatrixOperations.multiplication(e_vec, e_val),MatrixOperations.transpose(e_vec));
+		
+		return sq_root_X;		
+	}
+	
+	
+	 /**
+     * Method for calculating inverse square root X^(-1/2) of a square matrix X by
+     * eigendecomposition (JBLAS library is used)
+     * @param X square double matrix
+     * @return double [][] X^(-1/2). 
+     */
+	public static double [][] get_inv_square_root_of_matrix(double [][] X) {
+		
+		int n_vars = X.length;
+		
+		if(n_vars != X[0].length) {
+			throw new RuntimeException("No square matrix supplied. Can´t compute square root of matrix.");
+		}
+		
+		HashMap<String, double [][]> eigenDec = get_eigen_dec_4_symmetric_matrix(X);
+		
+		double [][] e_val = eigenDec.get("eigenvalues");
+		double [][] e_vec = eigenDec.get("eigenvectors");
+		
+		for(int i=0; i<n_vars; i++) {
+			e_val[i][i] = 1.0/Math.sqrt(e_val[i][i]);
+		}
+		
+		double [][] sq_root_X = MatrixOperations.multiplication(MatrixOperations.multiplication(e_vec, e_val),MatrixOperations.transpose(e_vec));
+		
+		return sq_root_X;		
+	}
+	
+	
+    /**
+     * Method for calculating singular value decomposition of matrix X.
+     * (JBLAS library is used)
+     * @param X double matrix
+     * @return HashMap of double arrays with keys U,S,V for the respective matrices U,S,V
+     */
+	@SuppressWarnings("static-access")
+	public static HashMap<String, double [][]> get_fullSVD(double [][] X) {
+		
+		HashMap<String, double [][]> res_SVD = new HashMap<String, double [][]>();
+		
+		Singular singular = new Singular();		
+		DoubleMatrix X_new = new DoubleMatrix(X);		
+		DoubleMatrix[] singularValueDec = singular.fullSVD(X_new);
+		
+		res_SVD.put("U", singularValueDec[0].toArray2());
+		res_SVD.put("S", singularValueDec[1].toArray2());
+		res_SVD.put("V", singularValueDec[2].toArray2());
+		
+		return res_SVD;
+	}
+	
+	
     // test client
     public static void main(String[] args) {
     	    	
-    	double [][] A = {{1,2,3},{4,5,6},{7,8,9}};
+    	double [][] A = {{1,4,3},{4,5,6},{3,6,10}};
     	
-    	print_matrix(rbind(A,A));
+    	print_matrix(A);
+    	
+    	print_matrix(get_eigen_dec_4_symmetric_matrix(A).get("eigenvectors"));
+    	
+    	print_matrix(get_eigen_dec_4_symmetric_matrix(A).get("eigenvalues"));
     	
     }
 	

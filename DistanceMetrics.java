@@ -36,6 +36,24 @@ public class DistanceMetrics {
 	}
 	
 	
+	public double sqeuclidian() {
+		
+		int n = x.length;
+		
+		if(n != y.length) {
+			throw new RuntimeException("Unequal length of supplied vectors x and y.");
+		}
+		
+		double d = 0.0;
+		
+		for(int i=0; i<n; i++) {
+			d += (x[i][0]-y[i][0])*(x[i][0]-y[i][0]);
+		}
+				
+		return d;
+	}
+	
+
 	public double seuclidian() {
 		
 		if(additionalInputPars == null) {
@@ -61,6 +79,33 @@ public class DistanceMetrics {
 		}
 
 		d = Math.sqrt(d);
+		
+		return d;
+	}
+	
+	
+	public double cosine() {
+		
+		int n = x.length;
+		
+		if(n != y.length) {
+			throw new RuntimeException("Unequal length of supplied vectors x and y.");
+		}
+		
+		double p  = 0.0;
+		double d1 = 0.0;
+		double d2 = 0.0;
+		
+		for(int i=0; i<n; i++) {
+			p  += x[i][0]*y[i][0];
+			d1 += x[i][0]*x[i][0];
+			d2 += y[i][0]*y[i][0];
+		}
+		
+		d1 = Math.sqrt(d1);
+		d2 = Math.sqrt(d2);
+		
+		double d = 1.0-p/(d1*d2);
 		
 		return d;
 	}
@@ -209,7 +254,7 @@ public class DistanceMetrics {
 		p_mod[0][0] = p;
 		
 		additionalInputPars.put("p", p_mod);
-		additionalInputPars.put("w", p_mod);
+		additionalInputPars.put("w", w);
 	}
 	
 	
@@ -239,6 +284,10 @@ public class DistanceMetrics {
 		if(metric.contentEquals("euclidian")) {
 			d = euclidian(); 
 		}
+				
+		if(metric.contentEquals("sqeuclidian")) {
+			d = sqeuclidian(); 
+		}
 		
 		if(metric.contentEquals("manhatten")) {
 			d = manhatten(); 
@@ -246,6 +295,10 @@ public class DistanceMetrics {
 		
 		if(metric.contentEquals("chebyshev")) {
 			d = chebyshev(); 
+		}
+		
+		if(metric.contentEquals("cosine")) {
+			d = cosine(); 
 		}
 		
 		if(metric.contentEquals("seuclidean")) {
@@ -294,7 +347,7 @@ public class DistanceMetrics {
 			throw new RuntimeException(metric + " is not a valid distance metric.");
 		}
 		
-		if(metric.contentEquals("seuclidian")) {
+		if(metric.contentEquals("seuclidean")) {
 			setInput4StandardizedEuclidian(w);
 		}
 		
@@ -316,7 +369,7 @@ public class DistanceMetrics {
 	
 	public String [] getListOfDistanceMetrics() {
 		
-		String [] metrics = new String [7];
+		String [] metrics = new String [9];
 		
 		metrics[0] = "euclidian";
 		metrics[1] = "manhatten";
@@ -325,8 +378,10 @@ public class DistanceMetrics {
 		metrics[4] = "wminkowski";
 		metrics[5] = "seuclidean";
 		metrics[6] = "mahalanobis";
+		metrics[7] = "cosine";
+		metrics[8] = "sqeuclidian";
 		
 		return metrics;
 	}
-	
+		
 }

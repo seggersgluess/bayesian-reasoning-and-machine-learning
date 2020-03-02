@@ -57,6 +57,9 @@ public class HistGraphics extends GraphicDevice{
 	    g2 = (Graphics2D) g;     
 	    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 	    
+	    setOpaque(true);
+        setBackground(backroundColor);
+	    
 	    set_rectangular();
 	        
 	    createHistogram();
@@ -1021,7 +1024,6 @@ public class HistGraphics extends GraphicDevice{
    	}
    	
    	
-   	@SuppressWarnings("static-access")
 	public static ArrayList<List<Double>> calcNormalPDF(int sampleIdx){
    		
 	   	double [][] my    = new double [1][1];

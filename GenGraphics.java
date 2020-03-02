@@ -48,6 +48,9 @@ public class GenGraphics extends GraphicDevice{
 	      
 	    g2 = (Graphics2D) g;     
 	    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+	    	 
+	    setOpaque(true);
+        setBackground(backroundColor);
 	    
 	    calc_and_set_scaled_points();
 	        
@@ -131,16 +134,12 @@ public class GenGraphics extends GraphicDevice{
 		
 		drawShadedAreas = true;
 		
-		if(yValues[0][0]<yValues[0][1]){
-			
-			for(int i=0; i<nValues; i++){
-				
+		if(yValues[0][0]<yValues[0][1]){		
+			for(int i=0; i<nValues; i++){				
 				double yVal = yValues[i][0];
 				yValues[i][0] = yValues[i][1];
-				yValues[i][1] = yVal;
-				
-			}
-			
+				yValues[i][1] = yVal;				
+			}			
 		}
 				
 		plotLines(xValues, yValues, false, areaColor);
@@ -957,7 +956,7 @@ public class GenGraphics extends GraphicDevice{
 	}
 	
     
-    private static void createAndShowGui() {
+	private static void createAndShowGui() {
 
     	GenGraphics mainPanel = new GenGraphics();
 
