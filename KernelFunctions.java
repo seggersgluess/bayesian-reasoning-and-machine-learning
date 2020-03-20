@@ -224,7 +224,7 @@ public class KernelFunctions {
 	}
 	
 	
-	//Calculates Gram matrix for rmf kernel
+	//Calculates Gram matrix for rbf kernel
 	public double [][] calc_gram_matrix(double [][] X, double sigma) {
 		
 		int n_obs = X.length;

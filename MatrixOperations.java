@@ -66,22 +66,15 @@ public class MatrixOperations {
 		int n_rows = B.length;
 		int n_cols = B[0].length;
 		
-		if(n_rows != (end_row-start_row+1) || n_cols != (end_col-start_col+1)){
-			
+		if(n_rows != (end_row-start_row+1) || n_cols != (end_col-start_col+1)){			
 			throw new RuntimeException("Mismatch between supplied indices and matrix dimensionality.");
-			
 		}
 		
-		for(int i = 0; i < n_rows; i++){
-			
-			for(int j = 0; j < n_cols; j++){
-				
-				A[start_row+i][start_col+j] = B[i][j];
-				
-			}
-			
-		}
-		
+		for(int i = 0; i < n_rows; i++){			
+			for(int j = 0; j < n_cols; j++){				
+				A[start_row+i][start_col+j] = B[i][j];				
+			}			
+		}		
 		return A;
 	}
 	
@@ -254,10 +247,8 @@ public class MatrixOperations {
 		
 		double [][] I = MatrixOperations.matrix(n, n);
 		
-		for(int i = 0; i < n; i++){
-			
-			I[i][i] = 1;
-			
+		for(int i = 0; i < n; i++){			
+			I[i][i] = 1;			
 		}
 				
 		return I;
@@ -698,14 +689,21 @@ public class MatrixOperations {
 		int n = a.length;
 		double [] b = new double [n];
 		
-		for(int i = 0; i < n; i++){
-			
-			b[i] = a[i][0];
-			
+		for(int i = 0; i < n; i++){			
+			b[i] = a[i][0];			
 		}
 		
 		return b;		
 	}
+	
+	
+	public static double [][] convNumberToArray(double x) {
+		double [][] array = new double [1][1];
+		array[0][0] = x;
+		
+		return array;
+	}
+	
 	
 	
 	// returns c = A*b
@@ -967,12 +965,9 @@ public class MatrixOperations {
 		
 		int idx = 0	;	
 				
-		for(int i = start_idx; i < (end_idx+1); i++){
-			
-			sub_vec[idx][0] = x[i][0];
-			
-			idx  =  idx + 1;
-					
+		for(int i = start_idx; i < (end_idx+1); i++){			
+			sub_vec[idx][0] = x[i][0];			
+			idx  =  idx + 1;					
 		}
 		
 		return sub_vec;	
@@ -985,10 +980,8 @@ public class MatrixOperations {
 		int n_idxs = idxs.length;
 		double [] sub_vec = new double [n_idxs];
 		
-		for(int i=0; i<n_idxs; i++){
-			
-			sub_vec[i] = x[idxs[i]];
-			
+		for(int i=0; i<n_idxs; i++){			
+			sub_vec[i] = x[idxs[i]];			
 		}
 				
 		return sub_vec;	
@@ -1008,13 +1001,10 @@ public class MatrixOperations {
 			
 			int [] valid_idxs = Utilities.get_idx(dbl_idxs, (double) i);
 				
-			if(valid_idxs[0] == -1){
-					
+			if(valid_idxs[0] == -1){					
 				comp_sub_vec[idx] = x[i];
-				idx = idx + 1;
-					
-			}
-				 			
+				idx = idx + 1;					
+			}				 			
 		}
 				
 		return comp_sub_vec;		
@@ -1542,6 +1532,19 @@ public class MatrixOperations {
 		res_SVD.put("V", singularValueDec[2].toArray2());
 		
 		return res_SVD;
+	}
+	
+	
+	public static double [][] get_matrix_with_equal_elments(double x, int n_rows, int n_cols) {
+		
+		double [][] m = new double [n_rows][n_cols];
+		for(int i=0; i<n_rows; i++) {
+			for(int j=0; j<n_cols; j++) {
+				m[i][j] = x;
+			}
+			
+		}
+		return m;
 	}
 	
 	

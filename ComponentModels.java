@@ -8,13 +8,13 @@ public class ComponentModels {
     //--- parent class for component models ---	
 	
 	double [][] X;
-	int n_variables;
-	int n_observations;
+	protected int n_variables;
+	protected int n_observations;
 	
-	double [][] X_scaled;
+	protected double [][] X_scaled;
 	
-	boolean center = true;
-	boolean scale  = false;
+	protected boolean center = true;
+	protected boolean scale  = false;
 	
 	double [][] center_pars;
 	double [][] scale_pars;
@@ -148,7 +148,7 @@ public class ComponentModels {
 	
 	public double [][] get_rotated_input() {
 		if(rotated_X == null) {
-			System.out.println("No PCA done yet.");
+			System.out.println("No rotation matrix calculated.");
 			return null;
 		}else {
 			return rotated_X;

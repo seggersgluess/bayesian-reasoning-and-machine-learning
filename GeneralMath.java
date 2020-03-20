@@ -378,6 +378,19 @@ public class GeneralMath {
 	}
 	
 	
+	public static double [][] rotation_matrix(double angle) {
+		
+		double [][] rotation_matrix = new double [2][2];
+		
+		rotation_matrix[0][0] = Math.cos(angle);
+		rotation_matrix[1][1] = rotation_matrix[0][0];
+		rotation_matrix[0][1] = -Math.sin(angle);
+		rotation_matrix[1][0] = -rotation_matrix[0][1];
+		
+		return rotation_matrix;
+	}
+	
+	
     // test client
     public static void main(String[] args) {
     	

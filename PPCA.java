@@ -6,93 +6,34 @@ import java.util.HashMap;
 import Distributions.NormalDistribution;
 import Mathematics.MatrixOperations;
 
-public class FactorAnalysis extends ComponentModels{
+public class PPCA extends FactorAnalysis{
+	
+	public PPCA(double[][] X, int n_factors, boolean scale) {
+		super(X, n_factors, scale);
+	}
 
-	int n_factors = 1; 
-	int n_analyzers = 1;
-
-	ArrayList<double [][]> factors;
-	ArrayList<ArrayList<double [][]>> factor_covariances;
 	
-	ArrayList<double [][]> rotation_matrices;
-	ArrayList<double [][]> my;	
-	
-	double [][] Psi;
-	
-	double [][] pi_k;
-	double [][] r_ik;
-	
-	int iterations = 500;
-	boolean convergence = false;
-	double convergence_criterion = 1e-06;
-	int n_iterations_done = 0;
-	
-	HashMap<String,ArrayList<double [][]>> ext_init_values;
-	
-	double logLikelihood = -Double.MAX_VALUE;
-	
-	
-	public FactorAnalysis(double [][] X, int n_factors,  boolean scale) {
-		
-		super(X, scale);
-		
-		int n_vars = X[0].length;
-		
-		if(n_factors<1 || n_factors>n_vars) {
-			throw new RuntimeException("Invalid number of principal components supplied. Only values between 1 and " + n_vars + " allowed.");
-		}
-		
-		this.n_factors = n_factors;
-
+	public PPCA(double [][] X, int n_factors, boolean center, boolean scale) {		
+		super(X, n_factors, center, scale);		
 	}
 	
 	
-	public FactorAnalysis(double [][] X, int n_factors, boolean center, boolean scale) {
-		
-		super(X, center, scale);
-		
-		int n_vars = X[0].length;
-
-		if(n_factors<1 || n_factors>n_vars) {
-			throw new RuntimeException("Invalid number of principal components supplied. Only values between 1 and " + n_vars + " allowed.");
-		}
-		
-		this.n_factors = n_factors;
-	
+	public PPCA(double [][] X, int n_factors, int n_analyzers, boolean center, boolean scale) {		
+		super(X, n_factors, n_analyzers, center, scale);		
 	}
 	
 	
-	public FactorAnalysis(double [][] X, int n_factors, int n_analyzers, boolean center, boolean scale) {
-		
-		super(X, center, scale);
-		
-		int n_vars = X[0].length;
-
-		if(n_factors<1 || n_factors>n_vars) {
-			throw new RuntimeException("Invalid number of principal components supplied. Only values between 1 and " + n_vars + " allowed.");
-		}
-		
-		if(n_analyzers < 1) {
-			throw new RuntimeException("Number of factor analyzers has to be larger than 1.");
-		}
-		
-		this.n_factors = n_factors;
-	    this.n_analyzers = n_analyzers;
-		
-	}
-	
-	
-	public void do_factorAnalysis() {		
-		em_mixtureFactorAnalyzers();
+	public void do_PPCA() {		
+		em_mixtureFactorAnalyzers4PPCA();
 		calc_rotated_X();
 	}
 	
 	
-	public void em_mixtureFactorAnalyzers() {
+	public void em_mixtureFactorAnalyzers4PPCA() {
 		
 		HashMap<String, ArrayList<double [][]>> pars = new HashMap<String, ArrayList<double [][]>>();
 		if(ext_init_values == null)	{
-			pars = get_input_pars_4_em();
+			pars = get_input_pars_4_PPCA_em();
 		}else {
 			pars = ext_init_values;
 		}
@@ -104,9 +45,9 @@ public class FactorAnalysis extends ComponentModels{
 		
 		pi_k = new double [n_analyzers][1];
 		r_ik = new double [n_observations][n_analyzers];
-				
-		double [][] diag_L = MatrixOperations.identity(n_factors);
-	
+			
+		double [][] diag_L = MatrixOperations.identity(n_factors);	
+		
 		for(int j=0; j<iterations; j++) {	
 			
 			factors = new ArrayList<double [][]>(n_analyzers);
@@ -123,9 +64,11 @@ public class FactorAnalysis extends ComponentModels{
 			ArrayList<double [][]> W_tilde = new ArrayList<double [][]>(n_analyzers);
 			
 			Psi = pars.get("Psi").get(0);
-			double [][] Psi_inv = MatrixOperations.inverse(Psi);
-			double [][] Psi_sum = new double [n_variables][n_variables];
-			
+			double [][] Psi_inv = new double [n_variables][n_variables];
+			for(int i=0; i<n_variables; i++) {
+				Psi_inv[i][i] = 1.0/Psi[i][i];
+			}
+						
 			double newLogLikelihood = Math.log(2.0*Math.PI)*n_observations*n_variables/2.0;
 			newLogLikelihood -= n_observations*MatrixOperations.determinant(Psi)/2.0;
 			
@@ -161,7 +104,7 @@ public class FactorAnalysis extends ComponentModels{
 				piList.add(new double [1][1]);
 				piList.get(k)[0][0] = r_sum/n_observations;
 			}
-	
+						
 			for(int k=0; k<n_analyzers; k++ ) {
 					
 				ArrayList<double [][]> bList4Analyzer = new ArrayList<double [][]>();
@@ -175,7 +118,7 @@ public class FactorAnalysis extends ComponentModels{
 				double [][] matrixTerm1 = new double [n_variables][(n_factors+1)];
 				double [][] matrixTerm2 = new double [(n_factors+1)][(n_factors+1)];
 				
-				double [][] W_k_trans = MatrixOperations.transpose(W_k);	
+				double [][] W_k_trans = MatrixOperations.transpose(W_k);		
 				double [][] matrixProd = MatrixOperations.multiplication(W_k, W_k_trans);
 				matrixProd = MatrixOperations.add(Psi, matrixProd);
 				matrixProd = MatrixOperations.inverse(matrixProd);
@@ -194,7 +137,7 @@ public class FactorAnalysis extends ComponentModels{
 					
 					double [][] mean_adj_x_i = MatrixOperations.substract(x_i, my_k);
 					double [][] m_ik = MatrixOperations.multiplication(beta, mean_adj_x_i);
-					double [][] factor_cov_k = MatrixOperations.multiplication(m_ik,MatrixOperations.transpose(m_ik));
+					double [][] factor_cov_k = MatrixOperations.multiplication(m_ik, MatrixOperations.transpose(m_ik));
 					factor_cov_k = MatrixOperations.add(const_4_factor_cov_k, factor_cov_k);
 					
 					C_ik = MatrixOperations.set_sub_matrix_to_matrix(C_ik, factor_cov_k, 0, (n_factors-1), 0, (n_factors-1));
@@ -228,18 +171,33 @@ public class FactorAnalysis extends ComponentModels{
 			}
 	
 			double [][] x_i_trans = new double [1][n_variables];
+			double sigma = 0.0;
 			for(int k=0; k<n_analyzers; k++) {
+				
 				double [][] matrixProdTerm3 = MatrixOperations.multiplication(MatrixOperations.multiplication(MatrixOperations.transpose(W_tilde.get(k)),Psi_inv),W_tilde.get(k));
+				double [][] W_k_matrix = W.get(k);
+				double [][] W_k_matrix_trans = MatrixOperations.transpose(W_k_matrix);
+				double [][] W_prod = MatrixOperations.multiplication(W_k_matrix_trans, W_k_matrix);
+				double [][] my_k_vec   = myList.get(k);
+	
 				for(int i=0; i<n_observations; i++) {
-					
+
+					//Sigma
+					double [][] m_ik = MatrixOperations.get_sub_matrix_between_row_idxs(bList.get(k).get(i),0,(n_factors-1));
+					double [][] factor_cov_ik = MatrixOperations.get_sub_matrix_between_row_and_col_idxs(C_ik_List.get(k).get(i), 0, (n_factors-1), 0, (n_factors-1));
+				
 					x_i = MatrixOperations.get_row_vec_from_matrix(X_scaled, i);
 					x_i_trans = MatrixOperations.transpose(x_i);
-					
+					double [][] mean_adj_x_i = MatrixOperations.substract(x_i, my_k_vec);
+					double [][] mean_adj_x_i_trans = MatrixOperations.transpose(mean_adj_x_i);
+					sigma += r_ik[i][k]*MatrixOperations.multiplication(mean_adj_x_i_trans, mean_adj_x_i)[0][0];
+					sigma -= 2.0*r_ik[i][k]*MatrixOperations.multiplication(mean_adj_x_i_trans,MatrixOperations.multiplication(W_k_matrix, m_ik))[0][0];
+					sigma += r_ik[i][k]*MatrixOperations.trace(MatrixOperations.multiplication(factor_cov_ik, W_prod));
+			
+	                //Log likelihood
 					double [][] prod = MatrixOperations.multiplication(W_tilde.get(k), bList.get(k).get(i));
 										
-					prod =  MatrixOperations.substract(x_i,prod);
-					Psi_sum = MatrixOperations.add(Psi_sum, MatrixOperations.scalar_multiplication(r_ik[i][k],MatrixOperations.multiplication(prod,x_i_trans)));
-						
+					prod =  MatrixOperations.substract(x_i,prod);	
 					double [][] matrixProd = MatrixOperations.multiplication(x_i_trans, Psi_inv);
 					newLogLikelihood -= MatrixOperations.multiplication(matrixProd, x_i)[0][0]/2.0;
 					newLogLikelihood += MatrixOperations.multiplication(MatrixOperations.multiplication(matrixProd, W_tilde.get(k)),bList.get(k).get(i))[0][0];
@@ -250,8 +208,10 @@ public class FactorAnalysis extends ComponentModels{
 				}
 			}
 
+			sigma /= (n_observations*n_variables);
+					
 			for(int i=0; i<n_variables; i++) {
-				Psi[i][i] = Psi_sum[i][i]/n_observations;
+				Psi[i][i] = sigma;
 			}
 			
 			PsiList.add(Psi);
@@ -277,27 +237,7 @@ public class FactorAnalysis extends ComponentModels{
 	}
 	
 	
-	public void calc_rotated_X() {
-		
-		if(factors == null) {
-			throw new RuntimeException("Factor Analysis not done yet. No factors found.");
-		}
-		
-		rotated_X = new double [n_observations][n_variables];
-		
-		for(int i=0; i<n_observations; i++) {
-			for(int k=0; k<n_analyzers; k++) {
-				double [][] factor = MatrixOperations.get_row_vec_from_matrix(factors.get(k), i);
-				double [][] x_ik = MatrixOperations.scalar_multiplication(r_ik[i][k],MatrixOperations.add(my.get(k), MatrixOperations.multiplication(rotation_matrices.get(k), factor)));
-				for(int j=0; j<n_variables; j++) {
-					rotated_X[i][j] = x_ik[j][0];
-				}
-			}
-		}	
-	}
-	
-	
-	public HashMap<String, ArrayList<double [][]>> get_input_pars_4_em() {
+	public HashMap<String, ArrayList<double [][]>> get_input_pars_4_PPCA_em() {
 		
 		HashMap<String, ArrayList<double [][]>> input_pars = new HashMap<String, ArrayList<double [][]>>();
 		
@@ -315,7 +255,7 @@ public class FactorAnalysis extends ComponentModels{
 			double [][] W_k  = new double [n_variables][n_factors];
 				
 			//TODO: Use standard normal!
-			NormalDistribution normalDist = new NormalDistribution(0.0, 0.00001);
+			NormalDistribution normalDist = new NormalDistribution(0.0, 0.1);
 			for(int i=0; i<n_variables; i++) {
 				my_k[i][0] = normalDist.sample()[0][0];
 				for(int j=0; j<n_factors; j++) {
@@ -333,7 +273,7 @@ public class FactorAnalysis extends ComponentModels{
 		double [][] Psi_matrix = new double [n_variables][n_variables];
 		
 		for(int i=0; i<n_variables; i++) {
-			Psi_matrix[i][i] = 1.0;//GeneralMath.variance(MatrixOperations.get_column_from_matrix(X_scaled, i));			
+			Psi_matrix[i][i] = 1.0;			
 		}
 		Psi.add(Psi_matrix);
 		
@@ -343,148 +283,6 @@ public class FactorAnalysis extends ComponentModels{
 		input_pars.put("Psi", Psi);
 		
 		return input_pars;
-	}
-	
-		
-	//k=0,1,...,n_analyzers-1
-	public double [][] get_rotation_matrix(int k) {
-		if(rotation_matrices == null) {
-			throw new RuntimeException("Factor Analysis not done yet. No calculated rotation matrix found.");
-		}
-		if(k<0 || k>=n_analyzers) {
-			throw new RuntimeException("Invalid no. of factor analyzer supplied.");
-		}
-		return rotation_matrices.get(k);
-	}
-	
-	
-	public double [][] get_my(int k) {
-		if(my == null) {
-			throw new RuntimeException("Factor Analysis not done yet. No calculated my vector found.");
-		}
-		if(k<0|| k>=n_analyzers) {
-			throw new RuntimeException("Invalid no. of factor analyzer supplied.");
-		}
-		return my.get(k);
-	}
-	
-	
-	public double [][] get_factors(int k) {
-		if(factors == null) {
-			throw new RuntimeException("Factor Analysis not done yet. No calculated factors found.");
-		}
-		if(k<0 || k>=n_analyzers) {
-			throw new RuntimeException("Invalid no. of factor analyzer supplied.");
-		}
-		return factors.get(k);
-	}
-	
-	
-	public ArrayList<double [][]> get_factor_covariance(int k) {
-		if(factor_covariances == null) {
-			throw new RuntimeException("Factor Analysis not done yet. No calculated factor covariance found.");
-		}
-		if(k<0 || k>=n_analyzers) {
-			throw new RuntimeException("Invalid no. of factor analyzer supplied.");
-		}
-		return factor_covariances.get(k);
-	}
-	
-	
-	public double [][] get_psi_matrix() {
-		if(Psi == null) {
-			throw new RuntimeException("Factor Analysis not done yet. No calculated Psi matrix found.");
-		}
-		return Psi;
-	}
-	
-
-	public double [][] get_pi_k(){
-		if(pi_k == null) {
-			throw new RuntimeException("Factor Analysis not done yet. No calculated probability vector pi_k found.");
-		}
-		return pi_k;
-	}
-	
-	
-	public double [][] get_r_ik(){
-		if(r_ik == null) {
-			throw new RuntimeException("Factor Analysis not done yet. No calculated probability vector r_ik found.");
-		}
-		return r_ik;
-	}
-	
-	
-	public int get_number_of_factor_analyzers() {
-		return n_analyzers;
-	}
-	
-	
-	public int get_number_of_factors() {
-		return n_factors;
-	}
-	
-	
-	public boolean isConverged() {
-		return convergence;
-	}
-	
-	
-	public int get_numberOfIterationsDone() {
-		return n_iterations_done;
-	}
-	
-	
-	public void set_iterations4EM(int iterations) {
-		if(iterations < 1) {
-			throw new RuntimeException("Invalid iterations for EM supplied.");
-		}
-		this.iterations = iterations;
-	}
-	
-	
-	public void set_convergence_criterion4EM(double criterion) {
-		this.convergence_criterion = criterion;
-	}
-		
-	
-	public void set_external_init_pars(HashMap<String, ArrayList<double [][]>> init_pars) {
-		ext_init_values = init_pars;
-	}
-	
-	
-	public void set_external_init_pars(ArrayList<double [][]> my, ArrayList<double [][]> W, double [][] pi_k, double [][] Psi) {
-		
-		if(my.size() != n_analyzers) {
-			throw new RuntimeException("Number of supplied my parameters does not equal number of analyzers (n=" + n_analyzers + ").");
-		}
-		
-		if(W.size() != n_analyzers) {
-			throw new RuntimeException("Number of supplied factor loading matrices does not equal number of analyzers (n=" + n_analyzers + ").");
-		}
-		
-		if(pi_k.length != n_analyzers) {
-			throw new RuntimeException("Number of supplied probabilities does not equal number of analyzers (n=" + n_analyzers + ").");			
-		}
-		
-		ArrayList<double [][]> PsiList = new ArrayList<double [][]>();
-		PsiList.add(Psi);
-		
-		ArrayList<double [][]> piList = new ArrayList<double [][]>();
-		
-		for(int i=0; i<n_analyzers; i++) {
-			double [][] pi = new double [1][1];
-			pi[0][0] = pi_k[i][0];
-			piList.add(pi);	
-		}
-		
-		HashMap<String, ArrayList<double [][]>> init_pars = new HashMap<String, ArrayList<double [][]>>();		
-		init_pars.put("my", my);
-		init_pars.put("W", W);
-		init_pars.put("pi", piList);
-		init_pars.put("Psi", PsiList);
-		
-		ext_init_values = init_pars;
 	}
 	
 }

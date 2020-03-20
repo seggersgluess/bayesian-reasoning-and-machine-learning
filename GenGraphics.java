@@ -23,8 +23,9 @@ import Utilities.Utilities;
 public class GenGraphics extends GraphicDevice{
 
     public static List<Color> graph_line_color = new ArrayList<Color>();
+    public static float graph_line_width = 3;
     public static ArrayList<List<Color>> graph_point_color = new ArrayList<List<Color>>();
-    public static Stroke graph_stroke = new BasicStroke(3f);
+    public static Stroke graph_stroke = new BasicStroke(graph_line_width);
     public static int graph_point_width = 6;
    	
     public static List<List<Point>> graphPoints4Samples = new ArrayList<List<Point>>();
@@ -48,7 +49,8 @@ public class GenGraphics extends GraphicDevice{
 	      
 	    g2 = (Graphics2D) g;     
 	    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-	    	 
+	    
+	    graph_stroke = new BasicStroke(graph_line_width);	    
 	    setOpaque(true);
         setBackground(backroundColor);
 	    
@@ -536,6 +538,11 @@ public class GenGraphics extends GraphicDevice{
 	}
 	
 	
+	public void set_line_widht(float line_width) {
+		graph_line_width = line_width;
+	}
+	
+	
 	public void set_x_axis(){
         
 		Font orgFont = g2.getFont();
@@ -956,6 +963,16 @@ public class GenGraphics extends GraphicDevice{
 	}
 	
     
+    public static double [][] get_default_x_axis_labels(int x_max) {
+    	
+    	double [][] x = new double [x_max][1];
+    	for(int i=0; i<x_max; i++) {
+    		x[i][0] = i;
+    	}
+    	return x;
+    }
+    
+    
 	private static void createAndShowGui() {
 
     	GenGraphics mainPanel = new GenGraphics();
@@ -964,7 +981,7 @@ public class GenGraphics extends GraphicDevice{
     	
     	frameLabel = "Graph";    		
 
-    	JFrame frame = new JFrame(frameLabel);
+    	JFrame frame = new JFrame(frameLabel);   	
     	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     	frame.getContentPane().add(mainPanel);
     	frame.pack();

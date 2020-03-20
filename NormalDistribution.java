@@ -3,6 +3,7 @@ package Distributions;
 import java.util.*;
 
 import Mathematics.Cholesky;
+import Mathematics.GeneralMath;
 import Mathematics.MatrixOperations;
 
 public class NormalDistribution {
@@ -51,7 +52,7 @@ public class NormalDistribution {
 		
 		return x;	
 	}
-	
+		
 	
 	public double [][] sample(int n){
 		
@@ -76,8 +77,7 @@ public class NormalDistribution {
 					X = sample();				
 				}else{
 					X = MatrixOperations.cbind(X, sample());				
-				}
-				
+				}			
 			}
 		}
 		
@@ -179,6 +179,65 @@ public class NormalDistribution {
 		density = Math.pow(2.0*Math.PI, -1.0*(my.length/2.0))*1.0/Math.sqrt(det)*Math.exp(-1.0/2.0*density);
 		
 		return density;	
+	}
+	
+	
+	public double [][] get_2d_confidence_ellipse(int nRandomNumbers, double [][] mean_vec, double [][] cov_matrix, double confidence) {
+		
+		HashMap<String, double[][]> eigenDec = MatrixOperations.get_eigen_dec_4_symmetric_matrix(cov_matrix);
+		double [][] eigenvalues = eigenDec.get("eigenvalues");
+		double [][] eigenvectors = eigenDec.get("eigenvectors");
+		
+		int idx = 0;
+		if(eigenvalues[0][0]<eigenvalues[1][1]) {
+			idx = 1;
+		}
+		
+		if(confidence != 0.9 && confidence != 0.95) {
+			throw new RuntimeException("Invalid confidence levels. Only 0.9 or 0.95 allowed.");
+		}
+		
+		//confidence 0.9
+		double conf = 4.605;
+		if(confidence == 0.95) {
+			//confidence 0.95
+			conf = 5.991;
+		}
+		
+		double majorLength = Math.sqrt(conf*eigenvalues[1][1]);
+		double minorLength = Math.sqrt(conf*eigenvalues[0][0]);
+		double angle       = Math.atan(eigenvectors[1][idx]/eigenvectors[0][idx]);
+		
+		int n = (int) (nRandomNumbers/2.0);
+		double steps = majorLength/n;
+		double q = minorLength/majorLength;
+		
+		double [][] ellipse = new double [4*n][2];
+				
+		for(int i=0;i<n; i++) {
+			ellipse[i][0]     = -steps*(n-i);
+			ellipse[i][1]     = -q*Math.sqrt((Math.pow(majorLength,2.0)-Math.pow(ellipse[i][0], 2.0)));
+			ellipse[n+i][0]   = +steps*(i+1);
+			ellipse[n+i][1]   = -q*Math.sqrt((Math.pow(majorLength,2.0)-Math.pow(ellipse[n+i][0], 2.0)));
+			ellipse[2*n+i][0] = +steps*(n-i-1);
+			ellipse[2*n+i][1] = +q*Math.sqrt((Math.pow(majorLength,2.0)-Math.pow(ellipse[2*n+i][0], 2.0)));
+			ellipse[3*n+i][0] = -steps*(i+1);
+			ellipse[3*n+i][1] = +q*Math.sqrt((Math.pow(majorLength,2.0)-Math.pow(ellipse[3*n+i][0], 2.0)));	
+		}
+		
+
+		if(angle != 0.0) {
+			double [][] rotation_matrix = GeneralMath.rotation_matrix(angle);
+			ellipse = MatrixOperations.multiplication(ellipse, MatrixOperations.transpose(rotation_matrix));
+		}
+		
+		n = ellipse.length;
+		for(int i=0; i<n; i++) {
+			ellipse[i][0] += mean_vec[0][0];
+			ellipse[i][1] += mean_vec[1][0];
+		}
+		
+		return ellipse;
 	}
 	
 	

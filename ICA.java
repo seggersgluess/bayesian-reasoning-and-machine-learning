@@ -1,5 +1,6 @@
 package ComponentModels;
 
+import java.util.ArrayList;
 import java.util.function.BiFunction;
 
 import Mathematics.MatrixOperations;
@@ -17,11 +18,12 @@ public class ICA extends ComponentModels {
 	double [][] factors;
 	
 	int iterations = 500;
+	int iterationsDone = 0;
 	boolean convergence = false;
 	double convergence_criterion = 1e-04;
 	
-	BiFunction <Double, Double, Double> [] g;
-	BiFunction <Double, Double, Double> [] g_dev;
+	ArrayList<BiFunction <Double, Double, Double>>  g;
+	ArrayList<BiFunction <Double, Double, Double>>  g_dev;
 	
 	
 	public ICA(double [][] X, int n_factors, boolean center, boolean whitening) {
@@ -37,8 +39,11 @@ public class ICA extends ComponentModels {
 		this.n_factors = n_factors;
 		this.whitening = whitening;
 		
-		//parent class method with: center = center, scale = false (only centering is done).
-		scale_and_center_data();		
+		//parent class method with: center = center, scale = false (only centering is done -> see super() constructor!).
+		scale_and_center_data();	
+		if(whitening == true) {
+			do_whitening();
+		}
 	}
 	
 	
@@ -57,14 +62,18 @@ public class ICA extends ComponentModels {
 		if(valid_prior == false) {
 			throw new RuntimeException(prior + " is not a valid prior for ICA.");
 		}
-		this.prior = prior.toLowerCase();
-		set_priors();
 		
 		this.n_factors = n_factors;
 		this.whitening = whitening;
-		
+
+		this.prior = prior.toLowerCase();
+		set_priors();
+				
 		//parent class method with: center = center, scale = false (only centering is done).
-		scale_and_center_data();	
+		scale_and_center_data();
+		if(whitening == true) {
+			do_whitening();
+		}
 	}
 	
 	
@@ -78,26 +87,30 @@ public class ICA extends ComponentModels {
 	
 	public void do_ICA() {
 			
-		//TODO: initialize W
-		double [][] W = new double [n_factors][n_variables];
+		double [][] W = get_init_mixing_matrix_W();
+		double [][] C = MatrixOperations.multiplication(MatrixOperations.transpose(X_scaled), X_scaled);
 		
 		for(int i=0; i<iterations; i++) {
 			double [][] betas = new double [n_factors][1];
 			double [][] alphas = new double [n_factors][n_factors];
 			double [][] A = new double [n_factors][n_factors];
 			double [][] g_dev_sum = new double [n_factors][1];
-			double [][] Z = MatrixOperations.multiplication(X, MatrixOperations.transpose(W));
+			double [][] Z = MatrixOperations.multiplication(X_scaled, MatrixOperations.transpose(W));
 			
 			if(g == null) {
+				
+				this.g = new ArrayList<BiFunction <Double, Double, Double>>(n_factors);
+				this.g_dev = new ArrayList<BiFunction <Double, Double, Double>>(n_factors);
+				
 				for(int k=0; k<n_factors; k++) {
 					double [][] z_k = MatrixOperations.get_column_vec_from_matrix(Z, k);
 					double sel_criterion = calc_criterion_4_prior_selection(z_k);
 					if(sel_criterion > 0.0) {
-						this.g[k] = ICA::g_superGaussian;
-						this.g_dev[k] = ICA::g_dev_superGaussian;
+						this.g.add(ICA::g_superGaussian);
+						this.g_dev.add(ICA::g_dev_superGaussian);
 					}else {
-						this.g[k] = ICA::g_subGaussian;
-						this.g_dev[k] = ICA::g_dev_subGaussian;
+						this.g.add(ICA::g_subGaussian);
+						this.g_dev.add(ICA::g_dev_subGaussian);
 					}
 				}
 			}
@@ -108,20 +121,23 @@ public class ICA extends ComponentModels {
 				double [][] g_vec = new double [n_factors][1];				
 				for(int k=0; k<n_factors; k++) {
 					z_j_trans[0][k] = z_j[k][0];
-					g_vec[k][0] = g[k].apply(z_j[k][0],0.0);
+					g_vec[k][0] = g.get(k).apply(z_j[k][0],0.0);
 					betas[k][0] -= z_j[k][0]*g_vec[k][0];
-					g_dev_sum[k][0] += g_dev[k].apply(z_j[k][0], 0.0);
+					g_dev_sum[k][0] += g_dev.get(k).apply(z_j[k][0], 0.0);
 				}
 				A = MatrixOperations.add(A, MatrixOperations.multiplication(g_vec, z_j_trans));
 			}
 			
 			for(int k=0; k<n_factors; k++) {
-				alphas[k][k] = -n_observations/(betas[k][0]+g_dev_sum[k][0]);
+				betas[k][0] /= n_observations;
+				g_dev_sum[k][0] /= n_observations;
+				alphas[k][k] = -1.0/(betas[k][0]+g_dev_sum[k][0]);
 				for(int l=0; l<n_factors; l++) {
+					A[k][l] /= n_observations;
 					if(k==l) {
-						A[k][l] = (betas[k][0]+A[k][l])/n_observations;
+						A[k][l] = betas[k][0]+A[k][l];
 					}else {
-						A[k][l] = (A[k][l])/n_observations;
+						A[k][l] = A[k][l];
 					}
 				}
 			}
@@ -129,23 +145,49 @@ public class ICA extends ComponentModels {
 			A = MatrixOperations.multiplication(alphas, A);
 			double [][] W_new = new double [n_factors][n_variables];
 			W_new = MatrixOperations.add(W, A);
-			
-			double [][] W_W_t = MatrixOperations.multiplication(W, MatrixOperations.transpose(W));
+				
+			double [][] W_W_t = MatrixOperations.multiplication(W_new,C);
+			W_W_t = MatrixOperations.multiplication(W_W_t, MatrixOperations.transpose(W_new));
 			double [][] inv_sqr_W_W_t = MatrixOperations.get_inv_square_root_of_matrix(W_W_t);
-			W = MatrixOperations.multiplication(inv_sqr_W_W_t, W);
+			W_new = MatrixOperations.multiplication(inv_sqr_W_W_t, W_new);			
 			
-			check_convergence(W, W_new);
+			check_convergence(W, W_new);	
+						
 			W = W_new;
 			
-			if(convergence == true) {
+			iterationsDone = i+1;
+			if(convergence == true) {					
 				break;
-			}		
+			}	
 		}	
 		
 		mixing_matrix = MatrixOperations.transpose(W);
-		factors = MatrixOperations.multiplication(X_scaled, W);
+		factors = MatrixOperations.multiplication(X_scaled, mixing_matrix);
+		calc_rotated_X();
 	}
 	
+	
+	public double [][] get_init_mixing_matrix_W() {
+		double [][] W = new double [n_factors][n_variables];
+		for(int i=0; i<n_factors; i++) {
+			for(int j=0; j<n_variables; j++) {
+				if(i==j) {
+					W[i][i] = 1.0;
+				}else {
+					W[i][j] = 0.01;
+				}			
+			}
+		}
+		return W;
+	}
+	
+	
+	public double [][] get_factors() {
+		if(factors == null) {
+			System.out.println("ICA factors not calculated yet.");
+		}
+		return factors;
+	}
 	
 	public void check_convergence(double [][] W_prev, double [][] W_new) {
 		convergence = true;
@@ -174,7 +216,7 @@ public class ICA extends ComponentModels {
 		for(int i=0; i<n_observations; i++) {
 
 			double [][] factor = MatrixOperations.get_row_vec_from_matrix(factors, i);
-			double [][] x_ik =MatrixOperations.multiplication(mixing_matrix, factor);
+			double [][] x_ik = MatrixOperations.multiplication(mixing_matrix, factor);
 			for(int j=0; j<n_variables; j++) {
 					rotated_X[i][j] = x_ik[j][0];
 			}	
@@ -190,7 +232,7 @@ public class ICA extends ComponentModels {
 			for(int i=0; i<n_observations; i++) {
 				unadjusted_rotated_X[i][j] -=center_pars[0][j];
 			}		
-		}
+		}		
 		return unadjusted_rotated_X;
 	}
 	
@@ -232,24 +274,26 @@ public class ICA extends ComponentModels {
 	
 	
 	public void set_priors() {
+		this.g = new ArrayList<BiFunction <Double, Double, Double>>(n_factors);
+		this.g_dev = new ArrayList<BiFunction <Double, Double, Double>>(n_factors);
 		if(prior == "cosh") {
 			for(int k=0; k<n_factors; k++) {
-				g[k] = ICA::g_cosh;
-				g_dev[k] = ICA::g_dev_cosh;
+				g.add(ICA::g_cosh);
+				g_dev.add(ICA::g_dev_cosh);
 			}
 		}
 		
 		if(prior == "cube") {
 			for(int k=0; k<n_factors; k++) {
-				g[k] = ICA::g_cube;
-				g_dev[k] = ICA::g_dev_cube;
+				g.add(ICA::g_cube);
+				g_dev.add(ICA::g_dev_cube);
 			}
 		}
 		
 		if(prior == "exp") {
 			for(int k=0; k<n_factors; k++) {
-				g[k] = ICA::g_exp;
-				g_dev[k] = ICA::g_dev_exp;
+				g.add(ICA::g_exp);
+				g_dev.add(ICA::g_dev_exp);
 			}
 		}		
 	}
@@ -306,6 +350,11 @@ public class ICA extends ComponentModels {
 	
 	public static double g_dev_exp(double x, double furtherArg) {
 		return -4.0*x*Math.exp(-x*x/2.0);
+	}
+	
+	
+	public int get_done_iterations() {
+		return iterationsDone;
 	}
 	
 }

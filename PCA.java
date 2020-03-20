@@ -1,5 +1,6 @@
 package ComponentModels;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -7,20 +8,22 @@ import Mathematics.MatrixOperations;
 
 public class PCA extends ComponentModels{
 	
-	int n_pcs = 1;
+	protected int n_pcs = 1;
 	
 	String method = "eigen";
 	
 	//Matrix of factor loadings W
-	double [][] rotation_matrix;
+	protected double [][] rotation_matrix;
 	
 	//Matrix of factors (or loadings) z
-	double [][] factors;
+	protected double [][] factors;
 		
 	double [][] factor_variance;
 	double [][] explained_variance_by_factors;
 	double [][] cum_explained_variance_by_factors;
 	
+	//Covariance for eigendecompostion
+	protected double [][] cov_matrix;
 	
 	public PCA(double [][] X, int n_pcs,  boolean scale) {
 		
@@ -83,6 +86,9 @@ public class PCA extends ComponentModels{
 	public void do_PCA() {
 		
 		if(method.contentEquals("eigen") == true) {
+			//Here X is N times M (N: sample length, M number of variables)
+			//-> so (XX^T) becomes here (X^T X)
+			cov_matrix = MatrixOperations.multiplication(MatrixOperations.transpose(X_scaled), X_scaled);			
 			do_PCA_by_EigenDec();
 		}
 		
@@ -93,27 +99,27 @@ public class PCA extends ComponentModels{
 		if(center == false && scale == false) {
 			//free memory
 			X_scaled = null;
-		}
-		
+		}		
 	}
 	
 	
 	public void do_PCA_by_SVD() {
 		
-		double [][] cov_matrix = MatrixOperations.multiplication(MatrixOperations.transpose(X_scaled), X_scaled);
-		HashMap<String, double [][]> svd = MatrixOperations.get_fullSVD(cov_matrix);
+		HashMap<String, double [][]> svd = MatrixOperations.get_fullSVD(X_scaled);
 		double [][] right_singular_vectors = svd.get("V");
         double [][] singular_values        = svd.get("S");
 		double [][] eigenValues            = new double [n_variables][1];
         
 		//--- squared singular values ---
 		for(int i=0; i<n_variables; i++) {
-			eigenValues[i][0] = singular_values[i][i]*singular_values[i][i];
+			eigenValues[i][0] = singular_values[i][0]*singular_values[i][0];
 		}
 		
 		HashMap<String, List<Double>> sortedValues = Utilities.Utilities.get_sorted_elements_and_idxs_of_double_vector(eigenValues);
 		List<Double> sortedEigenValues = sortedValues.get("SortedValues");
 		List<Double> sortIdxs = sortedValues.get("Idxs");
+		Collections.reverse(sortedEigenValues);
+		Collections.reverse(sortIdxs);
 		double [][] eigenVectors = right_singular_vectors;
 		
 		calc_pca_from_eigenvalues_and_eigenvectors(sortedEigenValues, eigenVectors, sortIdxs);		
@@ -121,10 +127,6 @@ public class PCA extends ComponentModels{
 	
 
 	public void do_PCA_by_EigenDec() {
-		
-		//Here X is N times M (N: sample length, M number of variables)
-		//-> so (XX^T) becomes here (X^T X)
-		double [][] cov_matrix = MatrixOperations.multiplication(MatrixOperations.transpose(X_scaled), X_scaled);
 		
 		HashMap<String, double [][]> eigenDec = MatrixOperations.get_eigen_dec_4_symmetric_matrix(cov_matrix);
 		
@@ -134,6 +136,8 @@ public class PCA extends ComponentModels{
 		HashMap<String, List<Double>> sortedValues = Utilities.Utilities.get_sorted_elements_and_idxs_of_double_vector(eigenValues);
 		List<Double> sortedEigenValues = sortedValues.get("SortedValues");
 		List<Double> sortIdxs = sortedValues.get("Idxs");
+		Collections.reverse(sortedEigenValues);
+		Collections.reverse(sortIdxs);
 		
 		calc_pca_from_eigenvalues_and_eigenvectors(sortedEigenValues, eigenVectors, sortIdxs);
 	}
@@ -160,7 +164,7 @@ public class PCA extends ComponentModels{
 			}	
 			cum_variance += sortedEigenValues.get(i)/(n_observations-n_pcs);		
 		}
-		
+				
 		factors = MatrixOperations.multiplication(X_scaled, rotation_matrix);
 		rotated_X = MatrixOperations.multiplication(factors, MatrixOperations.transpose(rotation_matrix));
 		
@@ -201,7 +205,24 @@ public class PCA extends ComponentModels{
 	}
 	
 	
+	public void clearCovMatrix() {
+		cov_matrix = null;
+	}
 
+
+	public double [][] get_cov_matrix() {
+		if(method == "eigen") {
+			if(cov_matrix != null) {
+				return cov_matrix;
+			}else {
+				System.out.println("No covariance matrix found.");
+				return null;
+			}
+		}else {
+			System.out.println("Method for PCA not eigendecomposition. No covariance found.");
+			return null;
+		}
+	}
 	
 	
 	public String get_method() {
@@ -220,6 +241,21 @@ public class PCA extends ComponentModels{
 			return null;
 		}else {
 			return factor_variance;
+		}
+	}
+	
+	
+	public double [][] get_sd_of_factors() {
+		if(factor_variance == null) {
+			System.out.println("No PCA done yet.");
+			return null;
+		}else {
+			
+			double [][] factor_sd = new double [1][n_pcs];
+			for(int i=0; i<n_pcs; i++) {
+				factor_sd[0][i] = Math.sqrt(factor_variance[0][i]);
+			}
+			return factor_sd;
 		}
 	}
 	
