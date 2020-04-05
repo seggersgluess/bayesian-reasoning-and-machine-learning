@@ -21,6 +21,9 @@ public class SSPPCA extends SPPCA{
 	double [][] labeled_factor_covariance;
 	double [][] unlabeled_factor_covariance;
 	
+	double [][] rotated_X_1;
+	double [][] rotated_X_2;
+	
 
 	public SSPPCA(double[][] X_1, double[][] Y, double [][] X_2, int n_factors, boolean center) {
 		super(X_1, Y, n_factors, center);		
@@ -28,7 +31,7 @@ public class SSPPCA extends SPPCA{
 		X = null;
 		X_scaled = null;
 		
-		if(X_1[0].length != X_2[0].length) {
+		if(X_2[0].length!=n_variables) {
 			throw new RuntimeException("Inequal number of input features for labeled and unlabeled data X1 and X2 supplied.");
 		}
 		
@@ -57,6 +60,13 @@ public class SSPPCA extends SPPCA{
 	}
 
 	
+	public void do_SSPPCA() {
+		em_4_SSPPCA();
+		calc_rotated_X();	
+		calc_rotated_Y();
+	}
+	
+	
 	public void em_4_SSPPCA() {
 		
 		HashMap<String, double [][]> pars = new HashMap<String, double [][]>();
@@ -71,8 +81,8 @@ public class SSPPCA extends SPPCA{
 		sigma_x = pars.get("sigma_x")[0][0];
 		sigma_y = pars.get("sigma_y")[0][0];
 			
-		double [][] Z1_trans = new double [n_x1][n_factors];
-		double [][] Z2_trans = new double [n_x2][n_factors];
+		double [][] Z1_trans = new double [n_factors][n_x1];
+		double [][] Z2_trans = new double [n_factors][n_x2];
 		double [][] M = new double [n_factors][n_factors];
 		double [][] A_inv   = new double [n_factors][n_factors];
 		double [][] diag_L = MatrixOperations.identity(n_factors);
@@ -148,9 +158,9 @@ public class SSPPCA extends SPPCA{
 			double [][] Cov_z_i_sum_inv = MatrixOperations.inverse(Cov_z_i_sum);
 			
 			double [][] W_x_sum = MatrixOperations.add(W1_x_new, W2_x_new);
-			W_x_new = MatrixOperations.add(W_x_sum, Cov_z_i_sum_inv);
+			W_x_new = MatrixOperations.multiplication(W_x_sum, Cov_z_i_sum_inv);
 			double [][] W_x_new_trans = MatrixOperations.transpose(W_x_new);
-			W_y_new = MatrixOperations.add(W_y_new, MatrixOperations.inverse(Cov_z1_i_sum));
+			W_y_new = MatrixOperations.multiplication(W_y_new, MatrixOperations.inverse(Cov_z1_i_sum));
 			double [][] W_y_new_trans = MatrixOperations.transpose(W_y_new);	
 			
 			double sigma_x_new = 0.0;
@@ -176,7 +186,6 @@ public class SSPPCA extends SPPCA{
 				d += Math.pow((pars_prev[i][0] - pars_new[i][0]),2.0);
 			}
 			
-			//TODO: Does W_x not change when W_x_new is changed?
 			W_x     = W_x_new;
 			W_y     = W_y_new;
 			sigma_x = sigma_x_new;
@@ -194,6 +203,39 @@ public class SSPPCA extends SPPCA{
 		labeled_factor_covariance = A_inv;		
 		unlabeled_factor_covariance = M;
 	}
+	
+	
+	public void calc_rotated_X() {
+		
+		if(W_x == null) {
+			throw new RuntimeException("No rotation matrix W_x calculated yet. Do SPPCA estimation at first.");
+		}
+		rotated_X_1 = MatrixOperations.multiplication(labeled_factors,MatrixOperations.transpose(W_x));
+		for(int i=0; i<n_x1; i++) {
+			for(int j=0; j<n_variables; j++) {
+				rotated_X_1[i][j] += my_x[j][0];
+			}
+		}
+		rotated_X_2 = MatrixOperations.multiplication(unlabeled_factors,MatrixOperations.transpose(W_x));
+		for(int i=0; i<n_x2; i++) {
+			for(int j=0; j<n_variables; j++) {
+				rotated_X_2[i][j] += my_x[j][0];
+			}
+		}
+	};	
+	
+	
+	public void calc_rotated_Y() {
+		if(W_y == null) {
+			throw new RuntimeException("No rotation matrix W_y calculated yet. Do SPPCA estimation at first.");
+		}
+		rotated_Y = MatrixOperations.multiplication(labeled_factors,MatrixOperations.transpose(W_y));
+		for(int i=0; i<n_observations; i++) {
+			for(int j=0; j<n_y; j++) {
+				rotated_Y[i][j] += my_y[j][0];
+			}
+		}
+	};
 	
 	
 	public double calc_sq_euclidian_X_4_SSPPCA() {
@@ -216,6 +258,19 @@ public class SSPPCA extends SPPCA{
 	
 	public double calc_sq_euclidian_Y_4_SSPPCA() {
 		return calc_sq_euclidian_Y_4_SPPCA();
+	}
+	
+	
+	public HashMap<String, double [][]> get_rotated_X_1_and_X_2() {
+		
+		if(rotated_X_1 == null || rotated_X_2 == null) {
+			throw new RuntimeException("SSPPCA not trained yet. No learned input data found.");
+		}
+		
+		HashMap<String, double [][]> est_input = new HashMap<String, double [][]>();
+		est_input.put("X_1", rotated_X_1);
+		est_input.put("X_2", rotated_X_2);
+		return est_input;
 	}
 	
 	

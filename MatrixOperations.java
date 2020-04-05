@@ -16,9 +16,7 @@ public class MatrixOperations {
 	
 	// returns matrix A of zeros
 	public static double [][] matrix(int n_row, int n_cols){
-		
-		double [][] A = new double [n_row][n_cols];
-		
+		double [][] A = new double [n_row][n_cols];		
 		return A;
 	}
 	
@@ -31,16 +29,11 @@ public class MatrixOperations {
 		
 		double [][] A = MatrixOperations.matrix(n_rows, n_cols);
 		
-		for(int i = 0; i < n_rows; i++){
-			
-			for(int j = 0; j < n_cols; j++){
-				
+		for(int i = 0; i < n_rows; i++){			
+			for(int j = 0; j < n_cols; j++){			
 				A[i][j] = data[i][j];
-				
-			}
-			
-		}
-		
+			}		
+		}		
 		return A;	
 	}
 	
@@ -50,12 +43,9 @@ public class MatrixOperations {
 		
 		int n_rows = A.length;
 		
-		for(int i = 0; i < n_rows; i++){
-				
+		for(int i = 0; i < n_rows; i++){				
 			A[i][col_number] = c[i];
-				
 		}
-		
 		return A;	
 	}
 	
@@ -91,12 +81,9 @@ public class MatrixOperations {
 		for(int i = 0; i < n_cols; i++){		
 			for(int j = 0; j<n_rows; j++){				
 				sub_matrix[j][i] = A[j][col_idx];					
-			}
-				
+			}				
 			col_idx = col_idx + 1;
-			
 		}
-		
 		return sub_matrix;	
 	}
 	
@@ -666,20 +653,38 @@ public class MatrixOperations {
 		return C;		
 	}
 	
-	
+		
 	// returns n x 1 vector b
 	public static double [][] convArrayToVec(double [] a){
 		
 		int n = a.length;
 		double [][] b = new double [n][1];
 		
-		for(int i = 0; i < n; i++){
-			
+		for(int i = 0; i < n; i++){			
 			b[i][0] = a[i];
-			
 		}
 		
 		return b;		
+	}
+	
+	
+	public static double [][] convVecToMatrix(double [] x, int n_rows, int n_cols) {
+		
+		int n = x.length;
+		if(n != (n_rows*n_cols)) {
+			throw new RuntimeException("Number of matrix elements not equal to number of supplied vector elements.");
+		}
+		
+		double [][] M = matrix(n_rows, n_cols);
+		
+		int c=0; 
+		for(int i=0; i<n_cols; i++) {
+			for(int j=0; j<n_rows; j++) {
+				M[j][i] = x[c];
+				c++;
+			}
+		}
+		return M;
 	}
 	
 	
@@ -1187,14 +1192,10 @@ public class MatrixOperations {
 		int n = a.length;
 		double sum = 0.0;
 		
-		for(int i = 0; i < n; i++){
-			
-			sum += a[i]*a[i];
-			
-		}
-		
-		sum = Math.sqrt(sum);
-		
+		for(int i = 0; i < n; i++){			
+			sum += a[i]*a[i];			
+		}		
+		sum = Math.sqrt(sum);		
 		return sum;		
 	}
 	

@@ -319,17 +319,15 @@ public class ICA extends ComponentModels {
 	}
 	
 	
-	//TODO: Check function (Murphy 2012 p. 415)!
 	public static double g_cosh(double x, double furtherArg) {
-		double c = Math.PI/(2.0*Math.sqrt(3));
-		return c*Math.sinh(x*c)/Math.cosh(x*c);
+		double c = Math.PI/(2.0*Math.sqrt(3.0));
+		return -Math.PI/Math.sqrt(3.0)*Math.sinh(x*c)/Math.cosh(x*c);
 	}
 	
 	
-	//TODO: Check derivation of g_cosh!
 	public static double g_dev_cosh(double x, double furtherArg) {
 		double c = Math.PI/(2.0*Math.sqrt(3));
-		return 2.0*Math.pow(c,3.0)*Math.cosh(x*c)/Math.pow(Math.cosh(x*c),2.0);
+		return Math.pow(Math.PI, 2.0)/6.0*(Math.pow(Math.sinh(x*c),2.0)/Math.pow(Math.cosh(x*c),2.0)+1.0);
 	}
 	
 	

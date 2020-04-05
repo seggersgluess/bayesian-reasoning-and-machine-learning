@@ -33,7 +33,6 @@ public class SPPCA extends ComponentModels{
 	boolean convergence = false;
 	double convergence_criterion = 1e-06;
 	
-	double [][] rotated_X;
 	double [][] rotated_Y;
 	
 	HashMap<String, double [][]> ext_init_values;
@@ -49,15 +48,15 @@ public class SPPCA extends ComponentModels{
 		
 		this.n_factors = n_factors;
 		this.Y = Y;
-		this.n_y = Y.length;
+		this.n_y = Y[0].length;
 		
 		my_x = MatrixOperations.transpose(center_pars);
 		
-		Y_scaled = new double [n_variables][n_y];
+		Y_scaled = new double [n_observations][n_y];
 		my_y = get_sample_means(Y);
 		for(int k=0; k<n_y; k++) {
 			double [][] y = MatrixOperations.get_column_vec_from_matrix(Y, k);
-			for(int i=0; i<n_variables; i++) {
+			for(int i=0; i<n_observations; i++) {
 				Y_scaled[i][k] = y[i][0]-my_y[k][0];
 			}
 		}
@@ -78,7 +77,7 @@ public class SPPCA extends ComponentModels{
 		sigma_x = pars.get("sigma_x")[0][0];
 		sigma_y = pars.get("sigma_y")[0][0];
 			
-		double [][] Z_trans = new double [n_observations][n_factors];
+		double [][] Z_trans = new double [n_factors][n_observations];
 		double [][] A_inv   = new double [n_factors][n_factors];
 		double [][] diag_L = MatrixOperations.identity(n_factors);
 			
@@ -121,9 +120,9 @@ public class SPPCA extends ComponentModels{
 			}
 				
 			double [][] Cov_z_i_sum_inv = MatrixOperations.inverse(Cov_z_i_sum);
-			W_x_new = MatrixOperations.add(W_x_new, Cov_z_i_sum_inv);
+			W_x_new = MatrixOperations.multiplication(W_x_new, Cov_z_i_sum_inv);
 			double [][] W_x_new_trans = MatrixOperations.transpose(W_x_new);
-			W_y_new = MatrixOperations.add(W_y_new, Cov_z_i_sum_inv);
+			W_y_new = MatrixOperations.multiplication(W_y_new, Cov_z_i_sum_inv);
 			double [][] W_y_new_trans = MatrixOperations.transpose(W_y_new);	
 			
 			double sigma_x_new = 0.0;
@@ -133,11 +132,11 @@ public class SPPCA extends ComponentModels{
 			sigma_y_new += normY;
 						
 			sigma_x_new += MatrixOperations.trace(MatrixOperations.multiplication(MatrixOperations.multiplication(W_x_new_trans, W_x_new),Cov_z_i_sum));
-			sigma_x_new -= 2.0*MatrixOperations.trace(MatrixOperations.multiplication(MatrixOperations.multiplication(X_scaled,W_x),Z_trans));
+			sigma_x_new -= 2.0*MatrixOperations.trace(MatrixOperations.multiplication(MatrixOperations.multiplication(X_scaled,W_x_new),Z_trans));
 			sigma_x_new /= (n_variables*n_observations);
 			
 			sigma_y_new += MatrixOperations.trace(MatrixOperations.multiplication(MatrixOperations.multiplication(W_y_new_trans, W_y_new),Cov_z_i_sum));
-			sigma_y_new -= 2.0*MatrixOperations.trace(MatrixOperations.multiplication(MatrixOperations.multiplication(Y_scaled,W_y),Z_trans));
+			sigma_y_new -= 2.0*MatrixOperations.trace(MatrixOperations.multiplication(MatrixOperations.multiplication(Y_scaled,W_y_new),Z_trans));
 			sigma_y_new /= (n_y*n_observations);
 				
 			double [][] pars_prev = get_vectorized_pars(W_x, W_y, sigma_x, sigma_y);
@@ -149,7 +148,6 @@ public class SPPCA extends ComponentModels{
 				d += Math.pow((pars_prev[i][0] - pars_new[i][0]),2.0);
 			}
 			
-			//TODO: Does W_x not change when W_x_new is changed?
 			W_x     = W_x_new;
 			W_y     = W_y_new;
 			sigma_x = sigma_x_new;
@@ -187,7 +185,7 @@ public class SPPCA extends ComponentModels{
 		double norm = 0.0;
 		
 		for(int i=0; i<n_observations; i++) {
-			for(int j=0; j<n_variables; j++) {
+			for(int j=0; j<n_y; j++) {
 				norm += Y_scaled[i][j]*Y_scaled[i][j];
 			}
 		}
@@ -249,27 +247,35 @@ public class SPPCA extends ComponentModels{
 	
 	public void do_SPPCA() {
 		em_4_SPPCA();
-		calc_SPPCA_rotated_X();	
-		calc_SPPCA_rotated_Y();
+		calc_rotated_X();	
+		calc_rotated_Y();
 	}
 	
 	
-	public void calc_SPPCA_rotated_X() {
+	public void calc_rotated_X() {
 		
 		if(W_x == null) {
 			throw new RuntimeException("No rotation matrix W_x calculated yet. Do SPPCA estimation at first.");
 		}
 		rotated_X = MatrixOperations.multiplication(factors,MatrixOperations.transpose(W_x));
-		rotated_X = MatrixOperations.add(my_x, rotated_X);	
+		for(int i=0; i<n_observations; i++) {
+			for(int j=0; j<n_variables; j++) {
+				rotated_X[i][j] += my_x[j][0];
+			}
+		}
 	}
 	
 	
-	public void calc_SPPCA_rotated_Y() {
+	public void calc_rotated_Y() {
 		if(W_y == null) {
 			throw new RuntimeException("No rotation matrix W_y calculated yet. Do SPPCA estimation at first.");
 		}
-		rotated_Y = MatrixOperations.multiplication(factors,MatrixOperations.transpose(W_y));
-		rotated_Y = MatrixOperations.add(my_y, rotated_Y);
+		rotated_Y = MatrixOperations.multiplication(factors, MatrixOperations.transpose(W_y));
+		for(int i=0; i<n_observations; i++) {
+			for(int j=0; j<n_y; j++) {
+				rotated_Y[i][j] += my_y[j][0];
+			}
+		}
 	}
 	
 	
@@ -302,7 +308,7 @@ public class SPPCA extends ComponentModels{
 		double [][] Z_pred = new double [n][n_factors];
 		
 		for(int i=0; i<n; i++) {
-			double [][] x = MatrixOperations.get_column_vec_from_matrix(X_new, i);
+			double [][] x = MatrixOperations.get_row_vec_from_matrix(X_new, i);
 			double [][] mean_adj_x = MatrixOperations.substract(x, my_x);
 			double [][] z = MatrixOperations.multiplication(M, mean_adj_x);
 			for(int j=0; j<n_factors; j++) {
@@ -311,10 +317,18 @@ public class SPPCA extends ComponentModels{
 		}
 		
 		double [][] X_pred = MatrixOperations.multiplication(Z_pred, MatrixOperations.transpose(W_x));
-		X_pred = MatrixOperations.add(X_pred, my_x);
+		for(int i=0; i<n; i++) {
+			for(int j=0; j<n_variables; j++) {
+				X_pred[i][j] += my_x[j][0];
+			}
+		}
 		
 		double [][] Y_pred = MatrixOperations.multiplication(Z_pred, MatrixOperations.transpose(W_y));
-		Y_pred = MatrixOperations.add(Y_pred, my_y);
+		for(int i=0; i<n; i++) {
+			for(int j=0; j<n_y; j++) {
+				Y_pred[i][j] += my_y[j][0];
+			}
+		}
 		
 		pred_res.put("Z", Z_pred);
 		pred_res.put("X",X_pred);
@@ -324,17 +338,33 @@ public class SPPCA extends ComponentModels{
 	}
 	
 	
+	public double [][] get_factors() {
+		if(factors == null) {
+			throw new RuntimeException("No factors calculated yet. Do SPPCA estimation at first.");
+		}
+		return factors;
+	}
+	
+	
 	public double [][] get_W_x() {
 		if(W_x == null) {
 			throw new RuntimeException("No rotation matrix W_x calculated yet. Do SPPCA estimation at first.");
 		}
-		return rotated_X;
+		return W_x;
 	}
 	
 	
 	public double [][] get_W_y() {
 		if(W_y == null) {
 			throw new RuntimeException("No rotation matrix W_y calculated yet. Do SPPCA estimation at first.");
+		}
+		return W_y;
+	}
+	
+	
+	public double [][] get_rotated_Y() {
+		if(rotated_Y == null) {
+			throw new RuntimeException("No rotated y calculated yet. Do SPPCA estimation at first.");
 		}
 		return rotated_Y;
 	}
@@ -400,14 +430,18 @@ public class SPPCA extends ComponentModels{
 	}
 	
 	
-	public void set_external_init_pars(double [][] my_x, double [][] W_x, double [][] my_y, double [][] W_y) {
+	public void set_external_init_pars(HashMap<String, double [][]> init_pars) {
+		ext_init_values = init_pars;
+	}
+	
+	
+	public void set_external_init_pars(double [][] W_x, double [][] sigma_x, double [][] W_y, double [][] sigma_y) {
 		
-		ext_init_values = new HashMap<String, double [][]>();		
-		ext_init_values.put("my_x", my_x);
+		ext_init_values = new HashMap<String, double [][]>();			
 		ext_init_values.put("W_x", W_x);
-		ext_init_values.put("my_y", my_y);
+		ext_init_values.put("sigma_x", sigma_x);		
 		ext_init_values.put("W_y", W_y);
-		
+		ext_init_values.put("sigma_y", sigma_y);		
 	}
 	
 	
@@ -415,8 +449,11 @@ public class SPPCA extends ComponentModels{
 		
 		HashMap<String, double [][]> init_pars = new HashMap<String, double [][]>();
 		
-		double [][] init_my_x = new double [n_variables][1];
-		double [][] init_my_y = new double [n_y][1];
+		double [][] init_sigma_x = new double [n_variables][1];
+		double [][] init_sigma_y = new double [n_y][1];
+		
+		init_sigma_x[0][0] = 1.0;
+		init_sigma_y[0][0] = 1.0;
 		
 		double [][] init_W_x = new double [n_variables][n_factors];
 		double [][] init_W_y = new double [n_y][n_factors];
@@ -435,11 +472,11 @@ public class SPPCA extends ComponentModels{
 			}
 		}
 		
-		init_pars.put("my_x", init_my_x);
 		init_pars.put("W_x", init_W_x);
-		init_pars.put("my_y", init_my_y);
+		init_pars.put("sigma_x", init_sigma_x);
 		init_pars.put("W_y", init_W_y);
-		
+		init_pars.put("sigma_y", init_sigma_y);
+			
 		return init_pars;
 	}
 	

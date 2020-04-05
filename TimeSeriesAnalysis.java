@@ -9,9 +9,9 @@ import Mathematics.MatrixOperations;
 
 public class TimeSeriesAnalysis {
 
-    static String model;
+	static String model;
 	
-	static double [][] observed_variables;
+    static double [][] observed_variables;
 	
 	static int n_observations;
 	static int n_usedObservations;
@@ -515,6 +515,10 @@ public class TimeSeriesAnalysis {
 		}
 		
 		return ic_values;
+	}
+	
+	public static double get_est_sigma() {
+		return sigma;
 	}
 	
 	
