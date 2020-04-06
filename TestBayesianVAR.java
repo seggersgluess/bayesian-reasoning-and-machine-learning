@@ -297,6 +297,14 @@ public class TestBayesianVAR {
 		return X;
 	}
 	
+	
+	public static String [][] get_prep_dates(){
+		if(prepared_data == null) {
+			throw new RuntimeException("No macroecnomic data prepared yet.");
+		}
+		return prepared_data.get("dates");
+	}
+	
 
 	public static String [][] get_macro_series_labels() {
 		if(data_labels == null) {
@@ -315,14 +323,26 @@ public class TestBayesianVAR {
 		set_dirName2MacroData("C:/Users/sven_/Documents/Bayesian_Reasoning_and_ML/Data/MacroData/Data_txt/");
 		load_macro_data();
 		prepare_loaded_data_matrix_4_analysis();
-		//Utilities.Utilities.print_string_array(prepared_data.get("dates"));
+		//Utilities.Utilities.print_string_array(get_prep_dates());
 		double [][] X = get_prep_data_matrix_X_for_analysis();
 		
-		BayesianVAR bVAR = new BayesianVAR(X, 3, 0.03);
+		BayesianVAR bVAR = new BayesianVAR(X, 1, 0.03);
 		bVAR.set_deltas(MatrixOperations.unit_vector(X[0].length));
 		bVAR.set_variable_names(data_labels);
 		bVAR.estimate_bayesianVAR();
-		bVAR.plot_time_series_and_fitted_values();
+		//bVAR.plot_time_series_and_fitted_values();
+		
+		//Impulse Response
+		String [] impulseVariable = {"FederalFundsRate"};
+		String [] responseVariables = {"FederalFundsRate", "TreasuryRates_3M", "TreasuryRates_1Y"};
+		int [] impulseIdx = bVAR.get_idxs_of_variables(impulseVariable);
+		int [] responseIdxs = bVAR.get_idxs_of_variables(responseVariables);
+		double [][] shock = new double [X[0].length][1];
+		shock[impulseIdx[0]][0] = 1.0;
+		bVAR.calc_orthogonal_ir(impulseIdx, responseIdxs, 50, shock);
+		bVAR.plotImpulseResponse(impulseIdx[0], responseIdxs[2], 50);
+		//bVAR.calc_ir_confidence_intervals();
+		
 	}
 	
 	
